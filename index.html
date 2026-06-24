@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="1.2.0">
+<meta name="app-version" content="1.3.0">
 
 <style>
 /* ── リセット & ベース ── */
@@ -474,6 +474,64 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
 .hist-item{padding:10px 0;border-bottom:0.5px solid var(--bd)}
 .hist-item:last-child{border-bottom:none}
 
+/* ── コツモーダル ── */
+.tips-modal-wrap{
+  position:fixed;inset:0;
+  background:rgba(15,12,30,.55);
+  z-index:100;
+  display:none;align-items:flex-end;justify-content:center;
+}
+.tips-modal-wrap.open{display:flex}
+.tips-modal{
+  background:#fff;border-radius:24px 24px 0 0;
+  padding:0 0 40px;width:100%;max-width:430px;
+  max-height:85vh;overflow-y:auto;
+}
+.tips-modal-handle{
+  width:36px;height:4px;border-radius:2px;
+  background:#e0ddf0;margin:12px auto 0;
+}
+.tips-modal-head{
+  padding:16px 20px 12px;
+  border-bottom:0.5px solid rgba(83,74,183,.1);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.tips-modal-title{
+  font-size:16px;font-weight:700;color:#1a1a2e;
+}
+.tips-modal-close{
+  width:30px;height:30px;border-radius:50%;
+  background:#f0eef8;border:none;cursor:pointer;
+  font-size:16px;color:#534AB7;
+  display:flex;align-items:center;justify-content:center;
+}
+.tips-modal-body{padding:16px 20px}
+.tips-item{
+  display:flex;gap:12px;
+  padding:12px 0;
+  border-bottom:0.5px solid rgba(83,74,183,.08);
+}
+.tips-item:last-child{border-bottom:none}
+.tips-bullet{
+  width:26px;height:26px;border-radius:50%;
+  background:#EEEDFE;color:#534AB7;
+  font-size:12px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  margin-top:1px;
+}
+.tips-text{font-size:14px;color:#1a1a2e;line-height:1.6;flex:1}
+.tips-text strong{color:#534AB7;font-weight:700}
+
+/* コツボタン */
+.tips-btn{
+  display:flex;align-items:center;gap:4px;
+  background:none;border:none;cursor:pointer;
+  font-size:12px;font-weight:600;color:#7F77DD;
+  padding:0;margin-left:auto;flex-shrink:0;
+  white-space:nowrap;
+}
+.tips-btn:active{opacity:.7}
+
 /* ── 更新ボタン（フローティング） ── */
 #refresh-fab{
   position:fixed;bottom:28px;right:16px;
@@ -490,6 +548,18 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
 </style>
 </head>
 <body>
+
+<!-- ════════ コツモーダル ════════ -->
+<div class="tips-modal-wrap" id="tips-modal" onclick="closeTips(event)">
+  <div class="tips-modal">
+    <div class="tips-modal-handle"></div>
+    <div class="tips-modal-head">
+      <div class="tips-modal-title" id="tips-title"></div>
+      <button class="tips-modal-close" onclick="closeTipsBtn()">✕</button>
+    </div>
+    <div class="tips-modal-body" id="tips-body"></div>
+  </div>
+</div>
 
 <!-- ════════ 更新バナー ════════ -->
 <div id="update-banner">
@@ -614,7 +684,7 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
     </div>
     <div class="sheet-scroll">
       <div class="s-card">
-        <div class="s-card-title"><div class="step-badge">1</div>ゴール設定</div>
+        <div class="s-card-title"><div class="step-badge">1</div>ゴール設定<button class="tips-btn" onclick="showTips('goal')">→ コツ</button></div>
         <label class="lbl">ゴール（定性）</label>
         <input type="text" id="p-goal" placeholder="例：営業成績1位" oninput="savePlan()">
         <div class="row2">
@@ -625,7 +695,7 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
         <input type="date" id="p-deadline" oninput="savePlan()">
       </div>
       <div class="s-card">
-        <div class="s-card-title"><div class="step-badge">2</div>現状とのギャップ</div>
+        <div class="s-card-title"><div class="step-badge">2</div>現状とのギャップ<button class="tips-btn" onclick="showTips('gap')">→ コツ</button></div>
         <div class="row2">
           <div><label class="lbl">現在値</label><input type="number" id="p-cur" placeholder="12" oninput="calcGap()"></div>
           <div><label class="lbl">単位</label><input type="text" id="p-cur-unit" placeholder="件/月" oninput="savePlan()"></div>
@@ -634,18 +704,18 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
         <div class="gap-lbl">差分（自動計算）</div>
       </div>
       <div class="s-card">
-        <div class="s-card-title"><div class="step-badge">3</div>課題の洗い出し</div>
+        <div class="s-card-title"><div class="step-badge">3</div>課題の洗い出し<button class="tips-btn" onclick="showTips('issues')">→ コツ</button></div>
         <div class="hint-box">インパクト・気軽さ　A=3点 B=2点 C=1点（最高6点）。スコア上位3つをKPIへ。</div>
         <div id="p-issues"></div>
         <button class="add-row-btn" onclick="addIssue()">＋ 課題を追加</button>
       </div>
       <div class="s-card">
-        <div class="s-card-title"><div class="step-badge">5</div>KPI設定（上位3つ）</div>
+        <div class="s-card-title"><div class="step-badge">5</div>KPI設定（上位3つ）<button class="tips-btn" onclick="showTips('kpi')">→ コツ</button></div>
         <div id="p-kpis"></div>
         <button class="add-row-btn" onclick="addKPI()">＋ KPIを追加</button>
       </div>
       <div class="s-card">
-        <div class="s-card-title"><div class="step-badge">6-7</div>解決案と優先度</div>
+        <div class="s-card-title"><div class="step-badge">6-7</div>解決案と優先度<button class="tips-btn" onclick="showTips('solutions')">→ コツ</button></div>
         <div class="hint-box">インパクト・気軽さ・実現可能性　A=3点（最高9点）</div>
         <div id="p-solutions"></div>
         <button class="add-row-btn" onclick="addSolution()">＋ 解決案を追加</button>
@@ -1460,6 +1530,84 @@ function nextCycle() {
 /* ══════════════════════════════════════════
    起動
 ══════════════════════════════════════════ */
+/* ══════════════════════════════════════════
+   コツデータ
+══════════════════════════════════════════ */
+const TIPS = {
+  goal: {
+    title: 'STEP 1 ゴール設定のコツ',
+    items: [
+      { num:'①', text:'全てのPDCAはまず<strong>ゴールを決めること</strong>から始まる。目的地のない旅は放浪であり、目的意識のない仕事は惰性。' },
+      { num:'②', text:'注意すべきポイントは３つ。<strong>①期日を決める　②定量化する　③適度に具体化する</strong>' },
+      { num:'③', text:'期日の理想は<strong>１〜３ヶ月</strong>。近すぎる期日には打つ手がなく、遠すぎる期日は手段が多すぎて迷うか後回しになる。' },
+      { num:'④', text:'定性的なままでは進捗の把握が困難なため、<strong>絶対に定量化（数値化）する</strong>。' },
+      { num:'⑤', text:'期日は自分に危機感を持たせて動かすためのテクニック。期日によって<strong>戦略も手段も変わる</strong>。' },
+    ]
+  },
+  gap: {
+    title: 'STEP 2 ギャップ分析のコツ',
+    items: [
+      { num:'①', text:'ギャップが大きければ大きいほど、<strong>必然的に課題は増える</strong>。それは当然のこと。' },
+      { num:'②', text:'定性的ギャップは「なぜこうなりたいか」など<strong>モチベーションの根源</strong>になる可能性がある。' },
+      { num:'③', text:'ギャップを因数分解して課題をリストアップすることが次のSTEPへの橋渡し。<strong>できるだけ多く書き出す</strong>。' },
+    ]
+  },
+  issues: {
+    title: 'STEP 3 課題の洗い出しのコツ',
+    items: [
+      { num:'①', text:'課題といっても、<strong>自分に足りないものばかり考える必要はない</strong>。得意分野の強化も立派な課題。' },
+      { num:'②', text:'コツは<strong>自分に質問を投げかける</strong>こと。
+・ゴールから逆算すると、自分は何をすべきか？
+・この道を進むとしたら何が不足しているか？
+・周りでうまくいってる人はどんな工夫をしているか？' },
+      { num:'③', text:'人はタスクを同時に抱えすぎると成果が出にくい。<strong>「やらないこと」を決めることこそ重要</strong>。' },
+      { num:'④', text:'どうしても優先順位がわからない時は<strong>AIに聞けばいい</strong>。正解かどうかより早くDOして検証すればいい。' },
+      { num:'⑤', text:'スコアの見方：<strong>インパクトA=3点・B=2点・C=1点、気軽さも同様</strong>。最高6点。上位3つをKPIへ。' },
+    ]
+  },
+  kpi: {
+    title: 'STEP 5 KPI設定のコツ',
+    items: [
+      { num:'①', text:'３つのKPIを選ぶとき：<strong>インパクトの最も大きいものを最低でも一つ選ぶ</strong>。' },
+      { num:'②', text:'<strong>インパクトが劣っていても短い時間でできそうなもの</strong>を一つ選ぶ。早い検証が成長を加速させる。' },
+      { num:'③', text:'同列の課題が並んでいたら<strong>気軽さを基準</strong>に絞る。気持ちが乗るものは継続する。' },
+      { num:'④', text:'KPIはあくまでも<strong>「目指すべき結果」</strong>であって行動の目標ではない。「どうなりたいか？」の基準となるのがKPI。' },
+      { num:'⑤', text:'KPI化しようとすると大抵複数の選択肢が出る。<strong>各課題のKPIは一つに絞る</strong>といい。' },
+    ]
+  },
+  solutions: {
+    title: 'STEP 6-7 解決案のコツ',
+    items: [
+      { num:'①', text:'まずは<strong>質より量！実現性を考えず思いつく限り書き出す</strong>。その後に優先度をつけてDOシートへ。' },
+      { num:'②', text:'解決案とは「大まかな方向性」のこと。この後の実行フェーズで<strong>アクション（DO）とタスク（TODO）でさらに割る</strong>。' },
+      { num:'③', text:'優先度をつけたら<strong>４つの課題の解決にあたるくらいが理想</strong>。
+・最重要KPIについては最低１つ、できれば２つ以上残す
+・それ以外のKPIもインパクト重視で一つは残す
+・短時間で終わるものはインパクトが弱くても残す' },
+      { num:'④', text:'スコアの見方：<strong>インパクト＋気軽さ＋実現可能性</strong>で最高9点。時間はスコア対象外（メモ欄のみ）。' },
+    ]
+  }
+};
+
+function showTips(key) {
+  const data = TIPS[key];
+  if (!data) return;
+  document.getElementById('tips-title').textContent = data.title;
+  document.getElementById('tips-body').innerHTML = data.items.map(item => `
+    <div class="tips-item">
+      <div class="tips-bullet">${item.num}</div>
+      <div class="tips-text">${item.text.replace(/\n/g,'<br>')}</div>
+    </div>`).join('');
+  document.getElementById('tips-modal').classList.add('open');
+}
+
+function closeTips(e) {
+  if (e.target === document.getElementById('tips-modal')) closeTipsBtn();
+}
+function closeTipsBtn() {
+  document.getElementById('tips-modal').classList.remove('open');
+}
+
 /* ══════════════════════════════════════════
    カテゴリー設定
 ══════════════════════════════════════════ */
