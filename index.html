@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#534AB7">
+<title>鬼速PDCA</title>
+<link rel="manifest" href="manifest.json">
+
+<!-- ════════════════════════════════
+     APP VERSION — ここを変更すると
+     自動更新チェックが走る
+     ════════════════════════════════ -->
+<meta name="app-version" content="1.0.0">
+
+<style>
+/* ── リセット & ベース ── */
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Noto Sans JP',sans-serif;
+  background:#F1EFF8;
+  color:#1a1a2e;
+  font-size:16px;
+  line-height:1.5;
+}
+
+/* ── CSS変数 ── */
+:root{
+  --p:#534AB7;--p2:#7F77DD;--p3:#EEEDFE;--p4:#CECBF6;--p8:#3C3489;
+  --teal:#1D9E75;--teal2:#E1F5EE;--teal3:#085041;
+  --amber:#BA7517;--amber2:#FAEEDA;--amber3:#633806;
+  --red:#A32D2D;--red2:#FCEBEB;
+  --surf:#ffffff;--surf2:#F4F3FA;
+  --bd:rgba(83,74,183,0.12);--bd2:rgba(83,74,183,0.25);
+  --tx:#1a1a2e;--tx2:#6B6880;--tx3:#A8A4BC;
+  --r:12px;--r2:8px;
+}
+
+/* ── アプリシェル ── */
+#app{
+  max-width:430px;
+  margin:0 auto;
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+  background:#F1EFF8;
+  position:relative;
+  overflow:hidden;
+}
+
+/* ── スクリーン管理 ── */
+.screen{
+  flex:1;
+  overflow-y:auto;
+  overflow-x:hidden;
+  display:none;
+  -webkit-overflow-scrolling:touch;
+}
+.screen.active{display:flex;flex-direction:column}
+
+/* ── ヘッダー ── */
+.hdr{
+  background:var(--surf);
+  border-bottom:0.5px solid var(--bd);
+  padding:14px 16px 12px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-shrink:0;
+  position:sticky;top:0;z-index:20;
+}
+.hdr-back{
+  width:34px;height:34px;
+  border:0.5px solid var(--bd2);border-radius:9px;
+  background:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;color:var(--p);flex-shrink:0;
+}
+.hdr-title{font-size:16px;font-weight:600;color:var(--tx);flex:1}
+.hdr-badge{
+  font-size:11px;background:var(--p3);color:var(--p8);
+  padding:3px 10px;border-radius:20px;flex-shrink:0;font-weight:500;
+}
+
+/* ── 更新バナー ── */
+#update-banner{
+  display:none;
+  background:var(--p);color:#fff;
+  padding:10px 16px;
+  display:none;
+  align-items:center;gap:10px;
+  font-size:13px;flex-shrink:0;
+}
+#update-banner.show{display:flex}
+#update-banner button{
+  margin-left:auto;padding:5px 14px;
+  background:#fff;color:var(--p);border:none;
+  border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;
+  white-space:nowrap;flex-shrink:0;
+}
+
+/* ── ホーム ── */
+.home-scroll{flex:1;overflow-y:auto;padding:16px;-webkit-overflow-scrolling:touch}
+.home-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.home-logo{font-size:22px;font-weight:700;color:var(--p);letter-spacing:-0.5px}
+.home-logo span{color:var(--tx);font-weight:400;font-size:14px;margin-left:6px}
+.new-btn{
+  padding:8px 16px;background:var(--p);color:#fff;
+  border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;
+}
+
+.section-label{
+  font-size:11px;font-weight:600;color:var(--tx2);
+  margin-bottom:8px;letter-spacing:.8px;text-transform:uppercase;
+}
+
+/* ── PDCAカード ── */
+.pdca-cards{display:flex;flex-direction:column;gap:10px;margin-bottom:20px}
+.pdca-card{
+  background:var(--surf);border:0.5px solid var(--bd);
+  border-radius:var(--r);padding:16px;cursor:pointer;
+  transition:border-color .15s,transform .1s;
+  -webkit-user-select:none;
+}
+.pdca-card:active{transform:scale(0.98);border-color:var(--bd2)}
+.pdca-card.paused{opacity:.42}
+.pdca-card-row1{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px}
+.pdca-card-title{font-size:16px;font-weight:600;color:var(--tx);flex:1;padding-right:8px}
+.status-pill{
+  font-size:11px;font-weight:600;padding:3px 10px;
+  border-radius:20px;flex-shrink:0;white-space:nowrap;
+}
+.pill-active{background:var(--teal2);color:var(--teal3)}
+.pill-paused{background:#eeeeee;color:var(--tx2)}
+.pdca-kgi{font-size:13px;color:var(--tx2);margin-bottom:12px}
+.card-foot{display:flex;align-items:center;gap:10px}
+.prog-wrap{flex:1;height:5px;background:var(--surf2);border-radius:3px;overflow:hidden}
+.prog-fill{height:100%;background:var(--p);border-radius:3px;transition:width .4s}
+.prog-pct{font-size:12px;color:var(--tx2);min-width:36px;text-align:right;font-weight:500}
+.cycle-tag{font-size:11px;color:var(--tx3);min-width:56px;text-align:right}
+
+.empty-home{
+  text-align:center;padding:60px 20px;color:var(--tx2);font-size:14px;
+}
+.empty-home p{margin-top:8px;font-size:13px;color:var(--tx3)}
+
+/* ── モーダル（新規作成） ── */
+.modal-wrap{
+  position:absolute;inset:0;
+  background:rgba(26,26,46,.45);
+  z-index:50;
+  display:none;
+  align-items:flex-end;justify-content:center;
+}
+.modal-wrap.open{display:flex}
+.modal{
+  background:var(--surf);border-radius:20px 20px 0 0;
+  padding:20px 20px 36px;width:100%;max-width:430px;
+}
+.modal-title{font-size:17px;font-weight:700;color:var(--tx);margin-bottom:16px}
+.modal-actions{display:flex;gap:8px;margin-top:16px}
+.modal-cancel{
+  flex:1;padding:12px;border:0.5px solid var(--bd2);
+  border-radius:10px;background:none;color:var(--tx2);cursor:pointer;font-size:14px;
+}
+.modal-ok{
+  flex:1;padding:12px;background:var(--p);color:#fff;
+  border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;
+}
+
+/* ── フォーム部品 ── */
+.lbl{font-size:13px;color:var(--tx2);display:block;margin:12px 0 5px}
+.lbl:first-child{margin-top:0}
+input[type=text],input[type=number],input[type=date],select,textarea{
+  width:100%;font-size:15px;padding:10px 13px;
+  border:0.5px solid var(--bd2);border-radius:9px;
+  background:var(--surf);color:var(--tx);
+  font-family:inherit;
+  -webkit-appearance:none;appearance:none;
+  outline:none;
+}
+input:focus,select:focus,textarea:focus{border-color:var(--p)}
+textarea{resize:vertical;min-height:72px;line-height:1.5}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+
+/* ── メニュー画面 ── */
+.menu-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.menu-hero{padding:20px 16px 16px;background:var(--surf);border-bottom:0.5px solid var(--bd)}
+.menu-pdca-name{font-size:20px;font-weight:700;color:var(--tx);margin-bottom:4px}
+.menu-kgi-text{font-size:14px;color:var(--tx2);margin-bottom:14px}
+.menu-prog-row{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.menu-prog-bar{flex:1;height:8px;background:var(--surf2);border-radius:4px;overflow:hidden}
+.menu-prog-fill{height:100%;background:var(--p);border-radius:4px;transition:width .4s}
+.menu-prog-pct{font-size:15px;font-weight:600;color:var(--p);min-width:42px;text-align:right}
+.menu-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:14px 16px}
+.menu-stat{
+  background:var(--surf);border:0.5px solid var(--bd);
+  border-radius:var(--r2);padding:12px 8px;text-align:center;
+}
+.menu-stat-val{font-size:22px;font-weight:700;color:var(--tx);margin-bottom:2px}
+.menu-stat-lbl{font-size:11px;color:var(--tx2)}
+.menu-btns{padding:0 16px;display:flex;flex-direction:column;gap:10px;margin-bottom:16px}
+.menu-btn{
+  display:flex;align-items:center;gap:14px;
+  padding:16px;background:var(--surf);
+  border:0.5px solid var(--bd);border-radius:var(--r);
+  cursor:pointer;width:100%;text-align:left;
+  transition:border-color .15s;
+}
+.menu-btn:active{border-color:var(--bd2)}
+.menu-icon{
+  width:42px;height:42px;border-radius:11px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;flex-shrink:0;
+}
+.icon-plan{background:var(--p3)}
+.icon-do{background:var(--teal2)}
+.icon-ca{background:var(--amber2)}
+.menu-text{flex:1}
+.menu-btn-title{font-size:15px;font-weight:600;color:var(--tx);margin-bottom:2px}
+.menu-btn-desc{font-size:12px;color:var(--tx2)}
+.menu-arr{font-size:20px;color:var(--tx3)}
+.menu-footer{padding:0 16px 32px;display:flex;gap:8px}
+.pause-btn{
+  flex:1;padding:11px;border:0.5px solid var(--bd2);
+  border-radius:9px;background:none;color:var(--tx2);cursor:pointer;font-size:14px;
+}
+.del-pdca-btn{
+  flex:1;padding:11px;border:0.5px solid #F7C1C1;
+  border-radius:9px;background:none;color:var(--red);cursor:pointer;font-size:14px;
+}
+
+/* ── シート共通 ── */
+.sheet-scroll{flex:1;overflow-y:auto;padding:16px;-webkit-overflow-scrolling:touch}
+.s-card{
+  background:var(--surf);border:0.5px solid var(--bd);
+  border-radius:var(--r);padding:16px;margin-bottom:12px;
+}
+.s-card-title{
+  display:flex;align-items:center;gap:9px;
+  font-size:15px;font-weight:600;color:var(--tx);margin-bottom:13px;
+}
+.step-badge{
+  width:26px;height:26px;border-radius:50%;
+  background:var(--p);color:#fff;
+  font-size:12px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.hint-box{
+  font-size:12px;color:var(--tx2);
+  background:var(--surf2);padding:10px 12px;
+  border-radius:8px;margin-bottom:12px;line-height:1.6;
+}
+.add-row-btn{
+  width:100%;padding:11px;
+  border:0.5px dashed var(--p4);border-radius:9px;
+  background:var(--p3);color:var(--p);
+  font-size:14px;cursor:pointer;margin-top:10px;font-weight:500;
+}
+
+/* ── ABC ボタン ── */
+.abc-row{display:flex;gap:6px}
+.abc-b{
+  flex:1;padding:9px 4px;border:0.5px solid var(--bd);
+  border-radius:8px;font-size:13px;font-weight:500;
+  text-align:center;cursor:pointer;
+  background:var(--surf);color:var(--tx2);
+  transition:all .12s;
+}
+.abc-b.sA{background:var(--teal2);color:var(--teal3);border-color:#9FE1CB}
+.abc-b.sB{background:var(--amber2);color:var(--amber3);border-color:#FAC775}
+.abc-b.sC{background:var(--red2);color:var(--red);border-color:#F7C1C1}
+.score-row{display:flex;justify-content:flex-end;margin-top:9px}
+.score-pill{
+  background:var(--p3);color:var(--p8);
+  border-radius:20px;padding:3px 13px;font-size:12px;font-weight:600;
+}
+.del-btn{
+  font-size:12px;color:var(--red);background:none;
+  border:none;cursor:pointer;padding:2px 6px;flex-shrink:0;
+}
+.gap-val{font-size:26px;font-weight:700;color:var(--p);margin-top:10px}
+.gap-lbl{font-size:12px;color:var(--tx2);margin-top:2px}
+
+/* ── DO ── */
+.todo-item{
+  display:flex;align-items:flex-start;gap:11px;
+  padding:11px 0;border-bottom:0.5px solid var(--bd);
+}
+.todo-item:last-child{border-bottom:none}
+.st-dot{
+  width:30px;height:30px;border-radius:50%;
+  border:1.5px solid var(--bd2);background:var(--surf2);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-size:13px;flex-shrink:0;color:var(--tx2);
+  transition:all .15s;
+}
+.st-doing{background:var(--teal2);color:var(--teal);border-color:#9FE1CB}
+.st-done{background:var(--p3);color:var(--p);border-color:var(--p4)}
+.st-hold{background:var(--amber2);color:var(--amber);border-color:#FAC775}
+.st-stop{background:var(--red2);color:var(--red);border-color:#F7C1C1}
+.todo-body{flex:1;min-width:0}
+.todo-name{font-size:14px;color:var(--tx);margin-bottom:3px;word-break:break-all}
+.todo-meta{font-size:12px;color:var(--tx2)}
+.done-text{text-decoration:line-through;color:var(--tx2)}
+.todo-add-form{
+  background:var(--surf);border:0.5px solid var(--bd);
+  border-radius:var(--r);padding:16px;margin-bottom:12px;
+  display:none;
+}
+.todo-add-form.open{display:block}
+.form-actions{display:flex;gap:8px;margin-top:12px}
+.form-cancel{flex:1;padding:11px;border:0.5px solid var(--bd2);border-radius:9px;background:none;color:var(--tx2);cursor:pointer;font-size:14px}
+.form-ok{flex:1;padding:11px;background:var(--p);color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer}
+
+/* ── ルーティン ── */
+.hab-row{
+  display:grid;grid-template-columns:1fr repeat(7,30px);
+  gap:4px;align-items:center;margin-bottom:10px;
+}
+.hab-name{font-size:13px;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hab-day{
+  width:30px;height:30px;border-radius:6px;
+  border:0.5px solid var(--bd);background:var(--surf2);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:500;color:var(--tx2);
+}
+.hab-day.done{background:var(--p3);color:var(--p);border-color:var(--p4);font-size:12px}
+
+/* ── CHECK/ADJUST ── */
+.ca-divider{
+  display:flex;align-items:center;gap:10px;
+  padding:18px 16px 12px;
+}
+.ca-div-line{flex:1;height:0.5px;background:var(--bd2)}
+.ca-div-lbl{font-size:12px;font-weight:600;color:var(--tx3);white-space:nowrap}
+.kpi-dash-row{
+  display:grid;grid-template-columns:3fr 1fr 1fr;
+  gap:8px;align-items:end;padding:10px 0;
+  border-bottom:0.5px solid var(--bd);
+}
+.kpi-dash-row:last-child{border-bottom:none}
+.star-row{display:flex;gap:8px;margin-top:4px}
+.star{font-size:24px;cursor:pointer;opacity:.2;color:var(--amber)}
+.star.on{opacity:1}
+.save-btn{
+  width:100%;padding:14px;background:var(--p);color:#fff;
+  border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;margin-top:13px;
+}
+.adj-row{
+  display:flex;align-items:center;gap:10px;
+  padding:11px 0;border-bottom:0.5px solid var(--bd);
+}
+.adj-row:last-child{border-bottom:none}
+.adj-lbl{flex:1;font-size:14px;color:var(--tx)}
+.adj-row select{width:auto;font-size:12px;padding:6px 8px;border-radius:7px}
+.next-cycle-btn{
+  width:100%;padding:14px;background:var(--teal);color:#fff;
+  border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;margin-top:12px;
+}
+.hist-item{padding:10px 0;border-bottom:0.5px solid var(--bd)}
+.hist-item:last-child{border-bottom:none}
+
+/* ── 更新ボタン（フローティング） ── */
+#refresh-fab{
+  position:fixed;bottom:28px;right:16px;
+  width:48px;height:48px;border-radius:50%;
+  background:var(--surf);border:0.5px solid var(--bd2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;cursor:pointer;color:var(--p);
+  box-shadow:0 2px 12px rgba(83,74,183,.15);
+  transition:transform .2s;z-index:30;
+}
+#refresh-fab:active{transform:scale(0.9)}
+#refresh-fab.spinning svg{animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<!-- ════════ 更新バナー ════════ -->
+<div id="update-banner">
+  <span>🎉 新しいバージョンが利用可能です</span>
+  <button onclick="doUpdate()">今すぐ更新</button>
+</div>
+
+<div id="app">
+
+  <!-- ════════════ SCREEN: HOME ════════════ -->
+  <div class="screen active" id="s-home">
+    <div class="hdr">
+      <div class="hdr-title" style="font-size:20px;font-weight:700;color:var(--p)">鬼速PDCA</div>
+      <button class="new-btn" onclick="showNewModal()">＋ 新規</button>
+    </div>
+    <div class="home-scroll">
+      <div id="active-section">
+        <div class="section-label">アクティブ</div>
+        <div class="pdca-cards" id="active-list"></div>
+      </div>
+      <div id="paused-section" style="display:none">
+        <div class="section-label">一時停止中</div>
+        <div class="pdca-cards" id="paused-list"></div>
+      </div>
+      <div id="empty-home" class="empty-home" style="display:none">
+        <div style="font-size:40px">📋</div>
+        <div style="font-size:16px;font-weight:600;margin-top:12px">PDCAを始めよう</div>
+        <p>「＋ 新規」から新しいPDCAサイクルを作成できます</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════ SCREEN: MENU ════════════ -->
+  <div class="screen" id="s-menu">
+    <div class="hdr">
+      <button class="hdr-back" onclick="goHome()">‹</button>
+      <div class="hdr-title" id="menu-hdr-title"></div>
+      <div class="hdr-badge" id="menu-cycle-badge"></div>
+    </div>
+    <div class="menu-scroll">
+      <div class="menu-hero">
+        <div class="menu-pdca-name" id="menu-pdca-name"></div>
+        <div class="menu-kgi-text" id="menu-kgi-text"></div>
+        <div class="menu-prog-row">
+          <div class="menu-prog-bar"><div class="menu-prog-fill" id="menu-prog-fill" style="width:0%"></div></div>
+          <div class="menu-prog-pct" id="menu-prog-pct">0%</div>
+        </div>
+      </div>
+      <div class="menu-stats">
+        <div class="menu-stat"><div class="menu-stat-val" id="ms-total">0</div><div class="menu-stat-lbl">タスク総数</div></div>
+        <div class="menu-stat"><div class="menu-stat-val" id="ms-done">0</div><div class="menu-stat-lbl">完了</div></div>
+        <div class="menu-stat"><div class="menu-stat-val" id="ms-doing">0</div><div class="menu-stat-lbl">実行中</div></div>
+      </div>
+      <div class="menu-btns">
+        <button class="menu-btn" onclick="goScreen('s-plan')">
+          <div class="menu-icon icon-plan">📝</div>
+          <div class="menu-text">
+            <div class="menu-btn-title">PLAN — 計画</div>
+            <div class="menu-btn-desc">ゴール設定・課題整理・KPI決定</div>
+          </div>
+          <div class="menu-arr">›</div>
+        </button>
+        <button class="menu-btn" onclick="goScreen('s-do')">
+          <div class="menu-icon icon-do">📋</div>
+          <div class="menu-text">
+            <div class="menu-btn-title">DO — 実行</div>
+            <div class="menu-btn-desc">タスク管理・ルーティン習慣</div>
+          </div>
+          <div class="menu-arr">›</div>
+        </button>
+        <button class="menu-btn" onclick="goScreen('s-ca')">
+          <div class="menu-icon icon-ca">🔍</div>
+          <div class="menu-text">
+            <div class="menu-btn-title">CHECK / ADJUST — 検証・調整</div>
+            <div class="menu-btn-desc">振り返り・改善判断・次サイクルへ</div>
+          </div>
+          <div class="menu-arr">›</div>
+        </button>
+      </div>
+      <div class="menu-footer">
+        <button class="pause-btn" id="pause-toggle-btn" onclick="togglePause()">一時停止</button>
+        <button class="del-pdca-btn" onclick="deletePDCA()">削除</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════ SCREEN: PLAN ════════════ -->
+  <div class="screen" id="s-plan">
+    <div class="hdr">
+      <button class="hdr-back" onclick="goScreen('s-menu')">‹</button>
+      <div class="hdr-title">PLAN — 計画</div>
+    </div>
+    <div class="sheet-scroll">
+      <div class="s-card">
+        <div class="s-card-title"><div class="step-badge">1</div>ゴール設定</div>
+        <label class="lbl">ゴール（定性）</label>
+        <input type="text" id="p-goal" placeholder="例：営業成績1位" oninput="savePlan()">
+        <div class="row2">
+          <div><label class="lbl">KGI数値</label><input type="number" id="p-kgi-val" placeholder="25" oninput="savePlan()"></div>
+          <div><label class="lbl">単位</label><input type="text" id="p-kgi-unit" placeholder="件/月" oninput="savePlan()"></div>
+        </div>
+        <label class="lbl">達成期日</label>
+        <input type="date" id="p-deadline" oninput="savePlan()">
+      </div>
+      <div class="s-card">
+        <div class="s-card-title"><div class="step-badge">2</div>現状とのギャップ</div>
+        <div class="row2">
+          <div><label class="lbl">現在値</label><input type="number" id="p-cur" placeholder="12" oninput="calcGap()"></div>
+          <div><label class="lbl">単位</label><input type="text" id="p-cur-unit" placeholder="件/月" oninput="savePlan()"></div>
+        </div>
+        <div class="gap-val" id="gap-val">—</div>
+        <div class="gap-lbl">差分（自動計算）</div>
+      </div>
+      <div class="s-card">
+        <div class="s-card-title"><div class="step-badge">3</div>課題の洗い出し</div>
+        <div class="hint-box">インパクト・気軽さ　A=3点 B=2点 C=1点（最高6点）。スコア上位3つをKPIへ。</div>
+        <div id="p-issues"></div>
+        <button class="add-row-btn" onclick="addIssue()">＋ 課題を追加</button>
+      </div>
+      <div class="s-card">
+        <div class="s-card-title"><div class="step-badge">5</div>KPI設定（上位3つ）</div>
+        <div id="p-kpis"></div>
+        <button class="add-row-btn" onclick="addKPI()">＋ KPIを追加</button>
+      </div>
+      <div class="s-card">
+        <div class="s-card-title"><div class="step-badge">6-7</div>解決案と優先度</div>
+        <div class="hint-box">インパクト・気軽さ・実現可能性　A=3点（最高9点）</div>
+        <div id="p-solutions"></div>
+        <button class="add-row-btn" onclick="addSolution()">＋ 解決案を追加</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════ SCREEN: DO ════════════ -->
+  <div class="screen" id="s-do">
+    <div class="hdr">
+      <button class="hdr-back" onclick="goScreen('s-menu')">‹</button>
+      <div class="hdr-title">DO — 実行</div>
+    </div>
+    <div class="sheet-scroll">
+      <div class="s-card">
+        <div class="s-card-title" style="margin-bottom:8px">TODOリスト</div>
+        <div id="d-todos"></div>
+        <button class="add-row-btn" onclick="openAddTodo()">＋ タスクを追加</button>
+      </div>
+      <div class="todo-add-form" id="d-add-form">
+        <div style="font-size:15px;font-weight:600;color:var(--tx);margin-bottom:12px">新しいタスク</div>
+        <label class="lbl">DOアクション（解決案から転記）</label>
+        <input type="text" id="d-action" placeholder="例：ヒアリング細分化">
+        <label class="lbl">TODOタスク詳細</label>
+        <input type="text" id="d-name" placeholder="例：ヒアリングシートを作成する">
+        <label class="lbl">期日</label>
+        <input type="date" id="d-date">
+        <label class="lbl">担当者</label>
+        <input type="text" id="d-person" placeholder="例：自分">
+        <div class="form-actions">
+          <button class="form-cancel" onclick="closeAddTodo()">キャンセル</button>
+          <button class="form-ok" onclick="addTodo()">追加</button>
+        </div>
+      </div>
+      <div class="s-card">
+        <div class="s-card-title" style="margin-bottom:10px">ルーティン習慣</div>
+        <div style="display:grid;grid-template-columns:1fr repeat(7,30px);gap:4px;margin-bottom:10px">
+          <div style="font-size:11px;color:var(--tx2)">習慣</div>
+          <div style="font-size:11px;color:var(--tx2);text-align:center">月</div>
+          <div style="font-size:11px;color:var(--tx2);text-align:center">火</div>
+          <div style="font-size:11px;color:var(--tx2);text-align:center">水</div>
+          <div style="font-size:11px;color:var(--tx2);text-align:center">木</div>
+          <div style="font-size:11px;color:var(--tx2);text-align:center">金</div>
+          <div style="font-size:11px;color:var(--tx2);text-align:center">土</div>
+          <div style="font-size:11px;color:var(--tx2);text-align:center">日</div>
+        </div>
+        <div id="d-routines"></div>
+        <button class="add-row-btn" onclick="addRoutine()">＋ 習慣を追加</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════ SCREEN: CHECK/ADJUST ════════════ -->
+  <div class="screen" id="s-ca">
+    <div class="hdr">
+      <button class="hdr-back" onclick="goScreen('s-menu')">‹</button>
+      <div class="hdr-title">CHECK / ADJUST</div>
+    </div>
+    <div class="sheet-scroll">
+      <div class="ca-divider">
+        <div class="ca-div-line"></div>
+        <div class="ca-div-lbl">CHECK — 検証</div>
+        <div class="ca-div-line"></div>
+      </div>
+      <div class="s-card">
+        <div class="s-card-title" style="margin-bottom:8px">KGI / KPI 達成状況</div>
+        <div id="ca-kpis"></div>
+      </div>
+      <div class="s-card">
+        <div class="s-card-title" style="margin-bottom:10px">振り返り（3日ごと）</div>
+        <label class="lbl">検証日</label>
+        <input type="date" id="ca-date" oninput="saveCheck()">
+        <label class="lbl">うまくいったこと</label>
+        <textarea id="ca-good" placeholder="例：朝のルーティンを3日継続できた" oninput="saveCheck()"></textarea>
+        <label class="lbl">できなかったこと</label>
+        <textarea id="ca-bad" placeholder="例：夕方の電話タスクを2日サボった" oninput="saveCheck()"></textarea>
+        <label class="lbl">気づき</label>
+        <textarea id="ca-insight" placeholder="例：夕方は集中力が落ちる傾向あり" oninput="saveCheck()"></textarea>
+        <label class="lbl">次サイクルへ一言</label>
+        <textarea id="ca-next" placeholder="例：電話タスクを午前中に移動する" oninput="saveCheck()"></textarea>
+        <label class="lbl">満足度</label>
+        <div class="star-row" id="ca-stars">
+          <span class="star" onclick="setStar(1)">★</span>
+          <span class="star" onclick="setStar(2)">★</span>
+          <span class="star" onclick="setStar(3)">★</span>
+          <span class="star" onclick="setStar(4)">★</span>
+          <span class="star" onclick="setStar(5)">★</span>
+        </div>
+        <button class="save-btn" onclick="saveCheckRecord()">振り返りを保存</button>
+      </div>
+      <div class="s-card" id="ca-hist-card" style="display:none">
+        <div class="s-card-title" style="margin-bottom:8px">振り返り履歴</div>
+        <div id="ca-hist"></div>
+      </div>
+
+      <div class="ca-divider">
+        <div class="ca-div-line"></div>
+        <div class="ca-div-lbl">ADJUST — 調整</div>
+        <div class="ca-div-line"></div>
+      </div>
+      <div class="s-card">
+        <div class="s-card-title" style="margin-bottom:8px">課題の調整判断</div>
+        <div id="ca-adj"></div>
+      </div>
+      <div class="s-card">
+        <div class="s-card-title" style="margin-bottom:10px">次のサイクルへ</div>
+        <label class="lbl">新ゴール / 修正KGI</label>
+        <textarea id="ca-newgoal" placeholder="例：目標を30件に引き上げる" oninput="saveAdj()"></textarea>
+        <label class="lbl">引き継ぐ課題</label>
+        <textarea id="ca-carry" placeholder="例：電話タスクを午前中に移動" oninput="saveAdj()"></textarea>
+        <label class="lbl">新たに追加する課題</label>
+        <textarea id="ca-new" placeholder="例：SNS発信を週3回追加" oninput="saveAdj()"></textarea>
+        <label class="lbl">総合コメント</label>
+        <textarea id="ca-comment" placeholder="例：基礎習慣ができた。次は量を増やす" oninput="saveAdj()"></textarea>
+        <button class="next-cycle-btn" onclick="nextCycle()">サイクル完了 → 次へ進む ›</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /#app -->
+
+<!-- ════════ 新規作成モーダル ════════ -->
+<div class="modal-wrap" id="new-modal" onclick="e=>{if(e.target===this)cancelNew()}">
+  <div class="modal">
+    <div class="modal-title">新しいPDCAを作成</div>
+    <label class="lbl">タイトル <span style="color:var(--red)">*</span></label>
+    <input type="text" id="new-title" placeholder="例：営業成績向上、読書習慣">
+    <label class="lbl">KGI目標</label>
+    <input type="text" id="new-kgi" placeholder="例：月25件受注">
+    <label class="lbl">達成期日</label>
+    <input type="date" id="new-deadline">
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="cancelNew()">キャンセル</button>
+      <button class="modal-ok" onclick="createPDCA()">作成</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ 更新ボタン（FAB） ════════ -->
+<div id="refresh-fab" onclick="manualRefresh()" title="アプリを更新">
+  <svg id="refresh-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M17 10a7 7 0 1 1-7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    <path d="M10 3l3-3v6l-3-3z" fill="currentColor"/>
+  </svg>
+</div>
+
+<script>
+/* ══════════════════════════════════════════
+   自動更新システム
+══════════════════════════════════════════ */
+const CURRENT_VERSION = document.querySelector('meta[name="app-version"]').content;
+const VERSION_URL = location.origin + location.pathname.replace(/index\.html$/, '') + 'version.json';
+let updateAvailable = false;
+
+async function checkForUpdate() {
+  try {
+    const res = await fetch(VERSION_URL + '?t=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) return;
+    const { version } = await res.json();
+    if (version && version !== CURRENT_VERSION) {
+      updateAvailable = true;
+      document.getElementById('update-banner').classList.add('show');
+    }
+  } catch(e) {}
+}
+
+function doUpdate() {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(regs => {
+      regs.forEach(r => r.unregister());
+    });
+  }
+  location.reload(true);
+}
+
+async function manualRefresh() {
+  const fab = document.getElementById('refresh-fab');
+  fab.classList.add('spinning');
+  await checkForUpdate();
+  setTimeout(() => {
+    fab.classList.remove('spinning');
+    if (!updateAvailable) {
+      fab.style.background = '#E1F5EE';
+      setTimeout(() => { fab.style.background = ''; }, 1200);
+    }
+  }, 800);
+}
+
+// 起動時 & 5分ごとに自動チェック
+checkForUpdate();
+setInterval(checkForUpdate, 5 * 60 * 1000);
+
+// PWA: Service Worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+/* ══════════════════════════════════════════
+   データ管理
+══════════════════════════════════════════ */
+const STORE_KEY = 'onisoku_v2';
+let DB = { pdcas: [] };
+let CUR = null;
+
+function loadDB() {
+  try { const d = localStorage.getItem(STORE_KEY); if (d) DB = JSON.parse(d); } catch(e) {}
+}
+function saveDB() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(DB)); } catch(e) {}
+}
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function curP() { return DB.pdcas.find(p => p.id === CUR) || null; }
+function calcPct(p) {
+  const t = p.todos.length, d = p.todos.filter(x => x.status === '完了').length;
+  return t ? Math.round(d / t * 100) : 0;
+}
+
+/* ══════════════════════════════════════════
+   画面ナビゲーション
+══════════════════════════════════════════ */
+function goHome() {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('s-home').classList.add('active');
+  CUR = null;
+  renderHome();
+}
+
+function goScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if (id === 's-menu') renderMenu();
+  if (id === 's-plan') renderPlan();
+  if (id === 's-do') renderDo();
+  if (id === 's-ca') renderCA();
+}
+
+/* ══════════════════════════════════════════
+   ホーム
+══════════════════════════════════════════ */
+function renderHome() {
+  const active = DB.pdcas.filter(p => !p.paused);
+  const paused = DB.pdcas.filter(p => p.paused);
+  document.getElementById('empty-home').style.display = DB.pdcas.length ? 'none' : 'block';
+
+  const makeCard = (p, muted) => `
+    <div class="pdca-card${muted ? ' paused' : ''}" onclick="openPDCA('${p.id}')">
+      <div class="pdca-card-row1">
+        <div class="pdca-card-title">${esc(p.title)}</div>
+        <div class="status-pill ${muted ? 'pill-paused' : 'pill-active'}">${muted ? '停止中' : '進行中'}</div>
+      </div>
+      <div class="pdca-kgi">${esc(p.kgi || 'KGI未設定')}</div>
+      <div class="card-foot">
+        <div class="prog-wrap"><div class="prog-fill" style="width:${calcPct(p)}%"></div></div>
+        <div class="prog-pct">${calcPct(p)}%</div>
+        <div class="cycle-tag">第${p.cycle}サイクル</div>
+      </div>
+    </div>`;
+
+  document.getElementById('active-list').innerHTML =
+    active.length ? active.map(p => makeCard(p, false)).join('') :
+    '<div style="font-size:13px;color:var(--tx2);padding:8px 0">アクティブなPDCAがありません</div>';
+  document.getElementById('paused-list').innerHTML = paused.map(p => makeCard(p, true)).join('');
+  document.getElementById('paused-section').style.display = paused.length ? 'block' : 'none';
+}
+
+function showNewModal() {
+  document.getElementById('new-modal').classList.add('open');
+  ['new-title','new-kgi','new-deadline'].forEach(id => {
+    const el = document.getElementById(id);
+    el.value = '';
+  });
+}
+function cancelNew() { document.getElementById('new-modal').classList.remove('open'); }
+
+function createPDCA() {
+  const title = document.getElementById('new-title').value.trim();
+  if (!title) { alert('タイトルを入力してください'); return; }
+  const p = {
+    id: Date.now() + '',
+    title,
+    kgi: document.getElementById('new-kgi').value.trim(),
+    deadline: document.getElementById('new-deadline').value,
+    cycle: 1, paused: false,
+    plan: { goal:'', kgiVal:'', kgiUnit:'', deadline:'', curVal:'', curUnit:'' },
+    issues: [], kpis: [], solutions: [],
+    todos: [], routines: [],
+    checkDraft: { date:'', good:'', bad:'', insight:'', next:'', star:0 },
+    checkRecords: [],
+    adjJudge: {},
+    adj: { newgoal:'', carry:'', new:'', comment:'' }
+  };
+  DB.pdcas.push(p);
+  saveDB();
+  cancelNew();
+  CUR = p.id;
+  goScreen('s-menu');
+}
+
+function openPDCA(id) { CUR = id; goScreen('s-menu'); }
+
+/* ══════════════════════════════════════════
+   メニュー
+══════════════════════════════════════════ */
+function renderMenu() {
+  const p = curP(); if (!p) return;
+  document.getElementById('menu-hdr-title').textContent = p.title;
+  document.getElementById('menu-cycle-badge').textContent = '第' + p.cycle + 'サイクル';
+  document.getElementById('menu-pdca-name').textContent = p.plan.goal || p.title;
+  document.getElementById('menu-kgi-text').textContent = p.kgi || (p.plan.kgiVal ? p.plan.kgiVal + p.plan.kgiUnit : 'KGI未設定');
+  const pct = calcPct(p);
+  document.getElementById('menu-prog-fill').style.width = pct + '%';
+  document.getElementById('menu-prog-pct').textContent = pct + '%';
+  document.getElementById('ms-total').textContent = p.todos.length;
+  document.getElementById('ms-done').textContent = p.todos.filter(x => x.status === '完了').length;
+  document.getElementById('ms-doing').textContent = p.todos.filter(x => x.status === '実行中').length;
+  document.getElementById('pause-toggle-btn').textContent = p.paused ? '再開する' : '一時停止';
+}
+
+function togglePause() {
+  const p = curP(); if (!p) return;
+  p.paused = !p.paused; saveDB(); renderMenu();
+}
+
+function deletePDCA() {
+  if (!confirm('このPDCAを削除しますか？データは復元できません。')) return;
+  DB.pdcas = DB.pdcas.filter(x => x.id !== CUR);
+  saveDB(); goHome();
+}
+
+/* ══════════════════════════════════════════
+   PLAN
+══════════════════════════════════════════ */
+function savePlan() {
+  const p = curP(); if (!p) return;
+  p.plan.goal = document.getElementById('p-goal').value;
+  p.plan.kgiVal = document.getElementById('p-kgi-val').value;
+  p.plan.kgiUnit = document.getElementById('p-kgi-unit').value;
+  p.plan.deadline = document.getElementById('p-deadline').value;
+  p.plan.curVal = document.getElementById('p-cur').value;
+  p.plan.curUnit = document.getElementById('p-cur-unit').value;
+  calcGap(); saveDB();
+}
+
+function calcGap() {
+  const t = parseFloat(document.getElementById('p-kgi-val').value);
+  const c = parseFloat(document.getElementById('p-cur').value);
+  const el = document.getElementById('gap-val');
+  if (!isNaN(t) && !isNaN(c)) {
+    const d = t - c;
+    el.textContent = (d >= 0 ? '+' : '') + d;
+    el.style.color = d >= 0 ? 'var(--p)' : 'var(--red)';
+  } else { el.textContent = '—'; el.style.color = 'var(--p)'; }
+}
+
+function renderPlan() {
+  const p = curP(); if (!p) return;
+  const pl = p.plan;
+  ['goal','kgiVal','kgiUnit','deadline','curVal','curUnit'].forEach(k => {
+    const id = 'p-' + k.replace('kgiVal','kgi-val').replace('kgiUnit','kgi-unit').replace('curVal','cur').replace('curUnit','cur-unit');
+    const el = document.getElementById(id); if (el) el.value = pl[k] || '';
+  });
+  document.getElementById('p-goal').value = pl.goal || '';
+  document.getElementById('p-kgi-val').value = pl.kgiVal || '';
+  document.getElementById('p-kgi-unit').value = pl.kgiUnit || '';
+  document.getElementById('p-deadline').value = pl.deadline || '';
+  document.getElementById('p-cur').value = pl.curVal || '';
+  document.getElementById('p-cur-unit').value = pl.curUnit || '';
+  calcGap();
+  renderIssues(); renderKPIs(); renderSolutions();
+}
+
+const ABC_PTS = { A:3, B:2, C:1 };
+function s2(a,b) { return (ABC_PTS[a]||0) + (ABC_PTS[b]||0); }
+function s3(a,b,c) { return (ABC_PTS[a]||0) + (ABC_PTS[b]||0) + (ABC_PTS[c]||0); }
+
+function abcHtml(id, field, val, type) {
+  return ['A','B','C'].map(v =>
+    `<div class="abc-b ${val===v?'s'+v:''}" onclick="setABC('${id}','${field}','${v}','${type}')">${v}</div>`
+  ).join('');
+}
+
+function setABC(id, field, val, type) {
+  const p = curP(); if (!p) return;
+  const arr = p[type];
+  const idx = arr.findIndex(x => x.id === id); if (idx < 0) return;
+  arr[idx][field] = val;
+  if (type === 'issues') arr[idx].score = s2(arr[idx].impact, arr[idx].ease);
+  if (type === 'solutions') arr[idx].score = s3(arr[idx].impact, arr[idx].ease, arr[idx].feas);
+  saveDB();
+  if (type === 'issues') renderIssues();
+  if (type === 'solutions') renderSolutions();
+}
+
+function updField(type, id, field, val) {
+  const p = curP(); if (!p) return;
+  const idx = p[type].findIndex(x => x.id === id); if (idx < 0) return;
+  p[type][idx][field] = val; saveDB();
+}
+
+function addIssue() {
+  const p = curP(); if (!p) return;
+  p.issues.push({ id: Date.now()+'', text:'', impact:'', ease:'', score:0 });
+  saveDB(); renderIssues();
+}
+
+function renderIssues() {
+  const p = curP(); if (!p) return;
+  document.getElementById('p-issues').innerHTML = p.issues.map((iss, i) => `
+    <div style="padding:12px 0;border-bottom:0.5px solid var(--bd)">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <div class="step-badge" style="background:var(--surf2);color:var(--tx2);font-size:12px">${i+1}</div>
+        <input type="text" value="${esc(iss.text)}" placeholder="課題を入力" style="flex:1"
+          onchange="updField('issues','${iss.id}','text',this.value)">
+        <button class="del-btn" onclick="delItem('issues','${iss.id}')">削除</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div><div style="font-size:11px;color:var(--tx2);margin-bottom:4px">インパクト</div>
+          <div class="abc-row">${abcHtml(iss.id,'impact',iss.impact,'issues')}</div></div>
+        <div><div style="font-size:11px;color:var(--tx2);margin-bottom:4px">気軽さ</div>
+          <div class="abc-row">${abcHtml(iss.id,'ease',iss.ease,'issues')}</div></div>
+      </div>
+      <div class="score-row"><span class="score-pill">スコア ${iss.score}/6</span></div>
+    </div>`).join('');
+}
+
+function addKPI() {
+  const p = curP(); if (!p) return;
+  p.kpis.push({ id: Date.now()+'', issue:'', kpi:'', target:'', current:'', deadline:'' });
+  saveDB(); renderKPIs();
+}
+
+function renderKPIs() {
+  const p = curP(); if (!p) return;
+  const cols = ['var(--p)','#1D9E75','#BA7517'];
+  document.getElementById('p-kpis').innerHTML = p.kpis.map((k, i) => `
+    <div style="padding:11px 0;border-bottom:0.5px solid var(--bd)">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:9px">
+        <div class="step-badge" style="background:${cols[i]||'var(--p)'};font-size:12px">${i+1}</div>
+        <input type="text" value="${esc(k.issue)}" placeholder="課題名" style="flex:1"
+          onchange="updField('kpis','${k.id}','issue',this.value)">
+        <button class="del-btn" onclick="delItem('kpis','${k.id}')">削除</button>
+      </div>
+      <input type="text" value="${esc(k.kpi)}" placeholder="KPI指標名" style="margin-bottom:8px"
+        onchange="updField('kpis','${k.id}','kpi',this.value)">
+      <div class="row2">
+        <div><label class="lbl" style="margin-top:0">目標値</label>
+          <input type="number" value="${esc(k.target)}" onchange="updField('kpis','${k.id}','target',this.value)"></div>
+        <div><label class="lbl" style="margin-top:0">現在値</label>
+          <input type="number" value="${esc(k.current)}" onchange="updField('kpis','${k.id}','current',this.value)"></div>
+      </div>
+      <label class="lbl">達成期日</label>
+      <input type="date" value="${esc(k.deadline)}" onchange="updField('kpis','${k.id}','deadline',this.value)">
+    </div>`).join('');
+}
+
+function addSolution() {
+  const p = curP(); if (!p) return;
+  p.solutions.push({ id: Date.now()+'', text:'', impact:'', ease:'', feas:'', score:0 });
+  saveDB(); renderSolutions();
+}
+
+function renderSolutions() {
+  const p = curP(); if (!p) return;
+  document.getElementById('p-solutions').innerHTML = p.solutions.map((s, i) => `
+    <div style="padding:12px 0;border-bottom:0.5px solid var(--bd)">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <div class="step-badge" style="background:var(--surf2);color:var(--tx2);font-size:12px">${i+1}</div>
+        <input type="text" value="${esc(s.text)}" placeholder="解決案" style="flex:1"
+          onchange="updField('solutions','${s.id}','text',this.value)">
+        <button class="del-btn" onclick="delItem('solutions','${s.id}')">削除</button>
+      </div>
+      <div class="row3">
+        <div><div style="font-size:11px;color:var(--tx2);margin-bottom:4px">インパクト</div>
+          <div class="abc-row">${abcHtml(s.id,'impact',s.impact,'solutions')}</div></div>
+        <div><div style="font-size:11px;color:var(--tx2);margin-bottom:4px">気軽さ</div>
+          <div class="abc-row">${abcHtml(s.id,'ease',s.ease,'solutions')}</div></div>
+        <div><div style="font-size:11px;color:var(--tx2);margin-bottom:4px">実現性</div>
+          <div class="abc-row">${abcHtml(s.id,'feas',s.feas,'solutions')}</div></div>
+      </div>
+      <div class="score-row"><span class="score-pill">スコア ${s.score}/9</span></div>
+    </div>`).join('');
+}
+
+function delItem(type, id) {
+  const p = curP(); if (!p) return;
+  p[type] = p[type].filter(x => x.id !== id); saveDB();
+  if (type==='issues') renderIssues();
+  if (type==='kpis') renderKPIs();
+  if (type==='solutions') renderSolutions();
+}
+
+/* ══════════════════════════════════════════
+   DO
+══════════════════════════════════════════ */
+const ST_LIST = ['未着手','実行中','完了','保留','中止'];
+const ST_ICON = { '未着手':'','実行中':'▶','完了':'✓','保留':'‖','中止':'✕' };
+const ST_CLASS = { '未着手':'','実行中':'st-doing','完了':'st-done','保留':'st-hold','中止':'st-stop' };
+
+function openAddTodo() {
+  const f = document.getElementById('d-add-form');
+  f.classList.add('open');
+  ['d-action','d-name','d-person'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('d-date').value = '';
+  f.scrollIntoView({ behavior:'smooth', block:'nearest' });
+}
+function closeAddTodo() { document.getElementById('d-add-form').classList.remove('open'); }
+
+function addTodo() {
+  const p = curP(); if (!p) return;
+  const name = document.getElementById('d-name').value.trim();
+  if (!name) { alert('タスク詳細を入力してください'); return; }
+  p.todos.push({
+    id: Date.now()+'',
+    action: document.getElementById('d-action').value,
+    name, date: document.getElementById('d-date').value,
+    person: document.getElementById('d-person').value,
+    status: '未着手'
+  });
+  saveDB(); closeAddTodo(); renderDo();
+}
+
+function cycleTodo(id) {
+  const p = curP(); if (!p) return;
+  const idx = p.todos.findIndex(x => x.id === id); if (idx < 0) return;
+  p.todos[idx].status = ST_LIST[(ST_LIST.indexOf(p.todos[idx].status) + 1) % ST_LIST.length];
+  saveDB(); renderDo(); renderMenu();
+}
+
+function delTodo(id) {
+  const p = curP(); if (!p) return;
+  p.todos = p.todos.filter(x => x.id !== id); saveDB(); renderDo();
+}
+
+function renderDo() {
+  const p = curP(); if (!p) return;
+  document.getElementById('d-todos').innerHTML = p.todos.length
+    ? p.todos.map(t => `
+      <div class="todo-item">
+        <div class="st-dot ${ST_CLASS[t.status]||''}" onclick="cycleTodo('${t.id}')">${ST_ICON[t.status]||''}</div>
+        <div class="todo-body">
+          <div class="todo-name ${t.status==='完了'?'done-text':''}">${esc(t.name)}</div>
+          <div class="todo-meta">${t.action?'['+esc(t.action)+']　':''} ${t.date||''} ${t.person?'担当:'+esc(t.person):''}</div>
+        </div>
+        <button class="del-btn" onclick="delTodo('${t.id}')">削除</button>
+      </div>`).join('')
+    : '<div style="font-size:13px;color:var(--tx2);padding:8px 0">タスクを追加しましょう</div>';
+  renderRoutines();
+}
+
+function addRoutine() {
+  const p = curP(); if (!p) return;
+  const name = prompt('習慣名を入力してください');
+  if (!name) return;
+  p.routines.push({ id: Date.now()+'', name, days:[0,0,0,0,0,0,0] });
+  saveDB(); renderRoutines();
+}
+
+function toggleDay(id, d) {
+  const p = curP(); if (!p) return;
+  const idx = p.routines.findIndex(x => x.id === id); if (idx < 0) return;
+  p.routines[idx].days[d] = p.routines[idx].days[d] ? 0 : 1;
+  saveDB(); renderRoutines();
+}
+
+function delRoutine(id) {
+  const p = curP(); if (!p) return;
+  p.routines = p.routines.filter(x => x.id !== id); saveDB(); renderRoutines();
+}
+
+function renderRoutines() {
+  const p = curP(); if (!p) return;
+  const DAYS = ['月','火','水','木','金','土','日'];
+  document.getElementById('d-routines').innerHTML = p.routines.length
+    ? p.routines.map(r => {
+        const cnt = r.days.reduce((a,b)=>a+b,0);
+        const pct = Math.round(cnt/7*100);
+        return `
+          <div style="margin-bottom:12px">
+            <div class="hab-row">
+              <div class="hab-name">${esc(r.name)}</div>
+              ${r.days.map((d,i)=>`<div class="hab-day${d?' done':''}" onclick="toggleDay('${r.id}',${i})">${d?'✓':DAYS[i]}</div>`).join('')}
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="flex:1;height:4px;background:var(--surf2);border-radius:2px;overflow:hidden">
+                <div style="height:100%;background:var(--p);width:${pct}%;border-radius:2px"></div>
+              </div>
+              <div style="font-size:11px;color:var(--tx2)">${cnt}/7日</div>
+              <button class="del-btn" onclick="delRoutine('${r.id}')">削除</button>
+            </div>
+          </div>`;
+      }).join('')
+    : '<div style="font-size:13px;color:var(--tx2);padding:8px 0">習慣を追加しましょう</div>';
+}
+
+/* ══════════════════════════════════════════
+   CHECK / ADJUST
+══════════════════════════════════════════ */
+function renderCA() {
+  const p = curP(); if (!p) return;
+  const pl = p.plan;
+  const rows = [];
+  if (pl.goal || pl.kgiVal) {
+    const pct = pl.kgiVal && pl.curVal ? Math.round(parseFloat(pl.curVal)/parseFloat(pl.kgiVal)*100) : 0;
+    rows.push({ label:'KGI', name: pl.goal||'目標', target:(pl.kgiVal||'—')+(pl.kgiUnit||''), current:(pl.curVal||'—')+(pl.curUnit||''), pct });
+  }
+  p.kpis.forEach((k,i) => {
+    const pct = k.target && k.current ? Math.round(parseFloat(k.current)/parseFloat(k.target)*100) : 0;
+    rows.push({ label:'KPI '+(i+1), name: k.kpi||k.issue, target: k.target||'—', current: k.current||'—', pct });
+  });
+  document.getElementById('ca-kpis').innerHTML = rows.length
+    ? rows.map(r => `
+        <div class="kpi-dash-row">
+          <div>
+            <div style="font-size:11px;color:var(--tx2);margin-bottom:2px">${esc(r.label)}</div>
+            <div style="font-size:15px;font-weight:600;color:var(--tx)">${esc(r.name||'—')}</div>
+            <div style="font-size:12px;color:var(--tx2)">目標: ${esc(r.target)}</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:12px;color:var(--tx2)">現在値</div>
+            <div style="font-size:18px;font-weight:600;color:var(--tx)">${esc(r.current)}</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:12px;color:var(--tx2)">達成率</div>
+            <div style="font-size:18px;font-weight:600;color:${r.pct>=100?'#1D9E75':r.pct>=50?'var(--p)':'var(--red)'}">${r.pct}%</div>
+          </div>
+        </div>`).join('')
+    : '<div style="font-size:13px;color:var(--tx2)">PLANでKGI・KPIを設定してください</div>';
+
+  const d = p.checkDraft;
+  document.getElementById('ca-date').value = d.date||'';
+  document.getElementById('ca-good').value = d.good||'';
+  document.getElementById('ca-bad').value = d.bad||'';
+  document.getElementById('ca-insight').value = d.insight||'';
+  document.getElementById('ca-next').value = d.next||'';
+  renderStars(d.star||0);
+  renderCheckHist();
+
+  document.getElementById('ca-adj').innerHTML = p.issues.filter(x=>x.text).length
+    ? p.issues.filter(x=>x.text).map(iss => `
+        <div class="adj-row">
+          <div class="adj-lbl">${esc(iss.text)}</div>
+          <select onchange="setAdjJudge('${iss.id}',this.value)">
+            <option value="継続" ${(p.adjJudge[iss.id]||'継続')==='継続'?'selected':''}>⏸ 継続</option>
+            <option value="改善" ${p.adjJudge[iss.id]==='改善'?'selected':''}>🔧 改善</option>
+            <option value="伸長" ${p.adjJudge[iss.id]==='伸長'?'selected':''}>📈 伸長</option>
+            <option value="中止" ${p.adjJudge[iss.id]==='中止'?'selected':''}>❌ 中止</option>
+          </select>
+        </div>`).join('')
+    : '<div style="font-size:13px;color:var(--tx2)">PLANで課題を入力すると表示されます</div>';
+
+  const a = p.adj;
+  document.getElementById('ca-newgoal').value = a.newgoal||'';
+  document.getElementById('ca-carry').value = a.carry||'';
+  document.getElementById('ca-new').value = a.new||'';
+  document.getElementById('ca-comment').value = a.comment||'';
+}
+
+function saveCheck() {
+  const p = curP(); if (!p) return;
+  p.checkDraft.date = document.getElementById('ca-date').value;
+  p.checkDraft.good = document.getElementById('ca-good').value;
+  p.checkDraft.bad = document.getElementById('ca-bad').value;
+  p.checkDraft.insight = document.getElementById('ca-insight').value;
+  p.checkDraft.next = document.getElementById('ca-next').value;
+  saveDB();
+}
+
+function setStar(n) {
+  const p = curP(); if (!p) return;
+  p.checkDraft.star = n; saveDB(); renderStars(n);
+}
+
+function renderStars(n) {
+  document.querySelectorAll('.star').forEach((s,i) => s.classList.toggle('on', i < n));
+}
+
+function saveCheckRecord() {
+  const p = curP(); if (!p) return;
+  const d = { ...p.checkDraft, id: Date.now()+'' };
+  if (!d.good && !d.bad && !d.insight) { alert('少なくとも一つ入力してください'); return; }
+  p.checkRecords.unshift(d);
+  p.checkDraft = { date:'', good:'', bad:'', insight:'', next:'', star:0 };
+  ['ca-date','ca-good','ca-bad','ca-insight','ca-next'].forEach(id => document.getElementById(id).value = '');
+  renderStars(0);
+  saveDB(); renderCheckHist();
+  alert('振り返りを保存しました！');
+}
+
+function renderCheckHist() {
+  const p = curP(); if (!p) return;
+  if (!p.checkRecords.length) { document.getElementById('ca-hist-card').style.display='none'; return; }
+  document.getElementById('ca-hist-card').style.display = 'block';
+  document.getElementById('ca-hist').innerHTML = p.checkRecords.slice(0,5).map(r => `
+    <div class="hist-item">
+      <div style="font-size:12px;color:var(--tx2);margin-bottom:4px">${esc(r.date||'')}　${'★'.repeat(r.star||0)}</div>
+      ${r.good ? `<div style="font-size:13px;color:var(--tx)">✅ ${esc(r.good)}</div>` : ''}
+      ${r.insight ? `<div style="font-size:13px;color:var(--tx2);margin-top:3px">💡 ${esc(r.insight)}</div>` : ''}
+    </div>`).join('');
+}
+
+function setAdjJudge(id, val) {
+  const p = curP(); if (!p) return;
+  p.adjJudge[id] = val; saveDB();
+}
+
+function saveAdj() {
+  const p = curP(); if (!p) return;
+  p.adj.newgoal = document.getElementById('ca-newgoal').value;
+  p.adj.carry = document.getElementById('ca-carry').value;
+  p.adj.new = document.getElementById('ca-new').value;
+  p.adj.comment = document.getElementById('ca-comment').value;
+  saveDB();
+}
+
+function nextCycle() {
+  const p = curP(); if (!p) return;
+  if (!confirm(`第${p.cycle}サイクルを完了して次へ進みますか？`)) return;
+  p.cycle++;
+  p.todos = []; p.adjJudge = {};
+  p.adj = { newgoal:'', carry:'', new:'', comment:'' };
+  saveDB();
+  goScreen('s-menu');
+  alert(`第${p.cycle}サイクルを開始しました！\nPLANを更新してください。`);
+}
+
+/* ══════════════════════════════════════════
+   起動
+══════════════════════════════════════════ */
+loadDB();
+renderHome();
+</script>
+</body>
+</html>
