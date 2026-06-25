@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="2.4.0">
+<meta name="app-version" content="2.5.0">
 
 <style>
 /* ── リセット & ベース ── */
@@ -2377,29 +2377,35 @@ function addKDI() {
 
 function renderTodos() {
   const p = curP(); if (!p) return;
-  const doActions = (p.doActions||[]);
+  const kdis = (p.kdis||[]);
 
-  if (!doActions.length) {
+  if (!kdis.length) {
     document.getElementById('d-todos').innerHTML =
-      '<div style="font-size:13px;color:var(--tx2);padding:8px 0">DOアクションを入力するとTODOを追加できます</div>';
+      '<div style="font-size:13px;color:var(--tx2);padding:8px 0">KDIを入力するとTODOを追加できます</div>';
     return;
   }
 
-  // foldStateからDOグループの開閉状態を取得
   const foldState = DB.foldState || {};
+  const STATUS_OPTS = ['未着手','実行中','完了','保留','中止'];
 
-  document.getElementById('d-todos').innerHTML = doActions.map((a, i) => {
-    const doNum = i + 1;
-    const gid = 'dog-' + a.id;
-    const isExpanded = foldState[gid] !== false; // デフォルト展開
-    const myTodos = p.todos.filter(t => t.doRef === doNum);
+  document.getElementById('d-todos').innerHTML = kdis.map((k, i) => {
+    const kdiNum = i + 1;
+    const gid = 'kdig-' + k.id;
+    const isExpanded = foldState[gid] !== false;
+    // このKDIに紐づくTODO（kdiRefで管理）
+    const myTodos = p.todos.filter(t => t.kdiRef === k.id);
     const doneCount = myTodos.filter(t => t.status === '完了').length;
     const doingCount = myTodos.filter(t => t.status === '実行中').length;
     const countStr = myTodos.length
       ? [doingCount?`実行中${doingCount}`:'', doneCount?`完了${doneCount}`:'', `計${myTodos.length}`].filter(Boolean).join(' / ')
       : '';
 
-    const STATUS_OPTS = ['未着手','実行中','完了','保留','中止'];
+    // 量×時間の表示
+    const qxt = (k.quantity||k.time)
+      ? `${k.quantity||'?'} × ${k.time||'?'}`
+      : '';
+    const typeLbl = k.kdiType||'継続型';
+
     const todoItems = myTodos.map(t => {
       const efid = 'tef-'+t.id;
       const metaChips = [
@@ -2435,12 +2441,15 @@ function renderTodos() {
       </div>`;
     }).join('');
 
-    const formId = 'tif-' + a.id;
+    const formId = 'tif-' + k.id;
     return `<div class="do-group${isExpanded?' expanded':''}" id="${gid}">
       <div class="do-group-header" onclick="toggleDoGroup('${gid}')">
-        <div class="do-group-num">${doNum}</div>
-        <div class="do-group-label">DO ${doNum}</div>
-        <div class="do-group-title">${esc(a.text||'（未入力）')}</div>
+        <div class="do-group-num">${kdiNum}</div>
+        <div class="do-group-label">KDI ${kdiNum}</div>
+        <div style="flex:1;min-width:0">
+          <div class="do-group-title">${esc(k.text||'（未入力）')}</div>
+          ${qxt?`<div style="font-size:11px;font-weight:700;color:var(--p);margin-top:2px">${esc(qxt)}</div>`:''}
+        </div>
         <div class="do-group-count" style="font-size:11px">${countStr}</div>
         <div class="do-group-chev${isExpanded?' open':''}">▼</div>
       </div>
@@ -2455,7 +2464,7 @@ function renderTodos() {
           <input type="text" id="${formId}-person" placeholder="例：自分">
           <div class="form-actions" style="margin-top:10px">
             <button class="form-cancel" onclick="closeTodoForm('${formId}')">キャンセル</button>
-            <button class="form-ok" onclick="addTodoInline('${formId}',${doNum})">追加</button>
+            <button class="form-ok" onclick="addTodoInline('${formId}','${k.id}')">追加</button>
           </div>
         </div>
         <button class="add-row-btn" onclick="openTodoForm('${formId}')"
@@ -2496,14 +2505,14 @@ function closeTodoForm(formId) {
   if (f) f.classList.remove('open');
 }
 
-function addTodoInline(formId, doRef) {
+function addTodoInline(formId, kdiId) {
   const p = curP(); if (!p) return;
   const name = (document.getElementById(formId+'-name')||{}).value?.trim();
   if (!name) { alert('タスク詳細を入力してください'); return; }
   p.todos.push({
     id: Date.now()+'',
     name,
-    doRef,
+    kdiRef: kdiId,  // KDI IDで紐付け
     date: (document.getElementById(formId+'-date')||{}).value||'',
     person: (document.getElementById(formId+'-person')||{}).value||'',
     status: '未着手'
