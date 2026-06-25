@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="2.9.2">
+<meta name="app-version" content="2.9.3">
 
 <style>
 /* ── リセット & ベース ── */
@@ -3260,21 +3260,28 @@ function renderCheckHist() {
       ${r.kdiResults && Object.keys(r.kdiResults).length ? `
         <div style="margin-top:6px;padding-top:6px;border-top:0.5px dashed var(--bd)">
           <div style="font-size:10px;font-weight:700;color:var(--teal);letter-spacing:.5px;margin-bottom:4px">📊 KDI実績</div>
-          ${(p.kdis||[]).map(k => {
+          ${(p.kdis||[]).map((k,ki) => {
             const res = (r.kdiResults||{})[k.id];
             if (!res) return '';
             const isKeepOn = (k.kdiType||'継続型') === '継続型';
+            const freqOpt = FREQ_OPTIONS.find(o=>o.value===(k.freq||''))||null;
+            const qxtFreq = [k.quantity,k.time,freqOpt&&freqOpt.value?freqOpt.label:''].filter(Boolean).join('×');
             if (!isKeepOn) {
-              return `<div style="font-size:12px;color:var(--tx2);margin-bottom:2px">
-                KDI${(p.kdis.indexOf(k)+1)}: ${esc(k.text||'')}
+              return `<div style="font-size:12px;color:var(--tx2);margin-bottom:4px">
+                <span style="font-weight:600;color:var(--tx)">KDI${ki+1}: ${esc(k.text||'')}</span>
+                ${qxtFreq?`<span style="color:var(--tx3);margin-left:4px">(${esc(qxtFreq)})</span>`:''}
                 <span style="font-weight:700;color:${res.done?'#1D9E75':'var(--red)'}"> ${res.done?'✅完了':'❌未完了'}</span>
               </div>`;
             } else {
-              const rate = res.planned && res.actual && parseFloat(res.planned)>0
-                ? Math.round(parseFloat(res.actual)/parseFloat(res.planned)*100) : null;
-              return `<div style="font-size:12px;color:var(--tx2);margin-bottom:2px">
-                KDI${(p.kdis.indexOf(k)+1)}: ${esc(k.text||'')}
-                <span style="font-weight:700;color:var(--p)"> ${res.actual||0}回/${res.planned||'?'}回${rate!==null?' ('+rate+'%)':''}</span>
+              // 行動数/予定数（達成率）の正しい表記
+              const act = parseFloat(res.actual)||0;
+              const pln = parseFloat(res.planned)||0;
+              const rate = pln > 0 ? Math.round(act/pln*100) : null;
+              const rateColor = rate===null?'var(--p)':rate>=100?'#1D9E75':rate>=50?'var(--p)':'var(--red)';
+              return `<div style="font-size:12px;color:var(--tx2);margin-bottom:4px">
+                <span style="font-weight:600;color:var(--tx)">KDI${ki+1}: ${esc(k.text||'')}</span>
+                ${qxtFreq?`<span style="color:var(--tx3);margin-left:4px">(${esc(qxtFreq)})</span>`:''}
+                <span style="font-weight:700;color:${rateColor};margin-left:4px">${act}回/${pln||'?'}回${rate!==null?' ('+rate+'%)':''}</span>
               </div>`;
             }
           }).join('')}
