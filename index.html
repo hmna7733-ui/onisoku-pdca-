@@ -2055,14 +2055,14 @@ function cycleTodo(id) {
   const p = curP(); if (!p) return;
   const idx = p.todos.findIndex(x => x.id === id); if (idx < 0) return;
   p.todos[idx].status = ST_LIST[(ST_LIST.indexOf(p.todos[idx].status) + 1) % ST_LIST.length];
-  saveDB(); renderDo(); renderMenu();
+  saveDB(); renderDo(); renderMenu(); setTimeout(restoreFoldState,0);
 }
 
 function delTodo(id) {
   const p = curP(); if (!p) return;
   const t = p.todos.find(x => x.id === id);
   if (!confirm('タスク' + (t ? `「${(t.name||'').slice(0,20)}」` : '') + 'を削除しますか？')) return;
-  p.todos = p.todos.filter(x => x.id !== id); saveDB(); renderDo();
+  p.todos = p.todos.filter(x => x.id !== id); saveDB(); renderDo(); setTimeout(restoreFoldState,0);
 }
 
 function renderDo() {
@@ -2078,6 +2078,8 @@ function renderDo() {
   if (kdiSummary) kdiSummary.textContent = (p.kdis||[]).length ? (p.kdis||[]).map(k=>k.text).join('　') : '未入力';
   const todoSummary = document.getElementById('fs-do-todos');
   if (todoSummary) todoSummary.textContent = p.todos.length ? `${p.todos.filter(t=>t.status==='完了').length}/${p.todos.length}件完了` : '未入力';
+  // 折りたたみ状態を復元
+  setTimeout(restoreFoldState, 0);
 }
 
 function renderDoActions() {
@@ -2267,14 +2269,14 @@ function addRoutine() {
   const name = prompt('習慣名を入力してください');
   if (!name) return;
   p.routines.push({ id: Date.now()+'', name, days:[0,0,0,0,0,0,0] });
-  saveDB(); renderRoutines();
+  saveDB(); renderRoutines(); setTimeout(restoreFoldState,0);
 }
 
 function toggleDay(id, d) {
   const p = curP(); if (!p) return;
   const idx = p.routines.findIndex(x => x.id === id); if (idx < 0) return;
   p.routines[idx].days[d] = p.routines[idx].days[d] ? 0 : 1;
-  saveDB(); renderRoutines();
+  saveDB(); renderRoutines(); setTimeout(restoreFoldState,0);
 }
 
 function delRoutine(id) {
