@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="2.5.1">
+<meta name="app-version" content="2.6.0">
 
 <style>
 /* ── リセット & ベース ── */
@@ -440,6 +440,62 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
 .hab-day.done{background:var(--p3);color:var(--p);border-color:var(--p4);font-size:12px}
 
 /* ── CHECK/ADJUST ── */
+/* KGI特大カード */
+.kgi-hero-card{
+  background:linear-gradient(135deg,#26215C,#534AB7);
+  border-radius:16px;padding:20px;margin-bottom:12px;
+  color:#fff;position:relative;overflow:hidden;
+}
+.kgi-hero-card::before{
+  content:'';position:absolute;top:-30px;right:-30px;
+  width:120px;height:120px;border-radius:50%;
+  background:rgba(255,255,255,.08);
+}
+.kgi-hero-label{font-size:11px;font-weight:700;letter-spacing:1px;opacity:.7;margin-bottom:4px}
+.kgi-hero-name{font-size:18px;font-weight:800;margin-bottom:12px;line-height:1.3}
+.kgi-hero-row{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.kgi-hero-num{font-size:36px;font-weight:800;line-height:1}
+.kgi-hero-unit{font-size:14px;font-weight:600;opacity:.8;margin-bottom:4px}
+.kgi-hero-target{font-size:12px;opacity:.6;margin-top:4px}
+.kgi-hero-pct{
+  margin-left:auto;text-align:right;
+}
+.kgi-hero-pct-num{font-size:32px;font-weight:800;line-height:1}
+.kgi-hero-pct-lbl{font-size:11px;opacity:.7;margin-top:2px}
+.kgi-prog-bar{height:6px;background:rgba(255,255,255,.2);border-radius:3px;overflow:hidden;margin-top:14px}
+.kgi-prog-fill{height:100%;background:#fff;border-radius:3px;transition:width .4s}
+/* 現在値入力エリア（CHECK内） */
+.kgi-input-area{
+  background:#fff;border-radius:10px;padding:12px 14px;margin-top:12px;
+}
+.kgi-input-label{font-size:11px;font-weight:700;color:#534AB7;margin-bottom:6px}
+.kgi-prev-val{
+  font-size:11px;color:#888;margin-bottom:6px;
+  display:flex;align-items:center;gap:6px;
+}
+.kgi-input-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
+/* KPI1最重要カード */
+.kpi-top-card{
+  background:linear-gradient(135deg,#FFF8E1,#FFFBEE);
+  border:2px solid #FFB800;border-radius:14px;padding:16px;margin-bottom:10px;
+  position:relative;
+}
+.kpi-top-card-badge{
+  display:inline-flex;align-items:center;gap:4px;
+  background:linear-gradient(135deg,#FFD966,#FF9500);
+  color:#fff;font-size:11px;font-weight:800;
+  padding:3px 10px;border-radius:20px;margin-bottom:8px;
+}
+.kpi-normal-card{
+  background:var(--surf);border:0.5px solid var(--bd);
+  border-radius:12px;padding:14px;margin-bottom:8px;
+}
+/* 振り返りフォーム改善 */
+.check-section-lbl{
+  font-size:12px;font-weight:700;color:var(--p);
+  letter-spacing:.5px;text-transform:uppercase;
+  margin:14px 0 6px;
+}
 .ca-divider{
   display:flex;align-items:center;gap:10px;
   padding:18px 16px 12px;
@@ -1194,27 +1250,38 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
       <div class="hdr-title">CHECK / ADJUST</div>
     </div>
     <div class="sheet-scroll">
+
+      <!-- CHECK -->
       <div class="ca-divider">
         <div class="ca-div-line"></div>
         <div class="ca-div-lbl">CHECK — 検証</div>
         <div class="ca-div-line"></div>
       </div>
-      <div class="s-card">
-        <div class="s-card-title" style="margin-bottom:8px">KGI / KPI 達成状況</div>
+
+      <!-- KGI単独カード -->
+      <div id="ca-kgi-wrap"></div>
+
+      <!-- KPI3枠 -->
+      <div class="s-card" style="margin-bottom:12px">
+        <div class="s-card-title" style="margin-bottom:10px">KPI 達成状況</div>
         <div id="ca-kpis"></div>
       </div>
+
+      <!-- 振り返りフォーム -->
       <div class="s-card">
         <div class="s-card-title" style="margin-bottom:10px">振り返り（3日ごと）</div>
         <label class="lbl">検証日</label>
         <input type="date" id="ca-date" oninput="saveCheck()">
-        <label class="lbl">うまくいったこと</label>
+        <div class="check-section-lbl">✅ うまくいったこと</div>
         <textarea id="ca-good" placeholder="例：朝のルーティンを3日継続できた" oninput="saveCheck()"></textarea>
-        <label class="lbl">できなかったこと</label>
+        <div class="check-section-lbl">❌ できなかったこと</div>
         <textarea id="ca-bad" placeholder="例：夕方の電話タスクを2日サボった" oninput="saveCheck()"></textarea>
-        <label class="lbl">気づき</label>
+        <div class="check-section-lbl">💡 理解したこと・気づき</div>
         <textarea id="ca-insight" placeholder="例：夕方は集中力が落ちる傾向あり" oninput="saveCheck()"></textarea>
-        <label class="lbl">次サイクルへ一言</label>
+        <div class="check-section-lbl">🚀 次回行動や変化につなげること</div>
         <textarea id="ca-next" placeholder="例：電話タスクを午前中に移動する" oninput="saveCheck()"></textarea>
+        <div class="check-section-lbl">📚 今回得たインプット・アウトプット</div>
+        <textarea id="ca-io" placeholder="例：インプット：○○の本を読んだ / アウトプット：資料作成に活かした" oninput="saveCheck()"></textarea>
         <label class="lbl">満足度</label>
         <div class="star-row" id="ca-stars">
           <span class="star" onclick="setStar(1)">★</span>
@@ -1225,11 +1292,14 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
         </div>
         <button class="save-btn" onclick="saveCheckRecord()">振り返りを保存</button>
       </div>
+
+      <!-- 振り返り履歴 -->
       <div class="s-card" id="ca-hist-card" style="display:none">
         <div class="s-card-title" style="margin-bottom:8px">振り返り履歴</div>
         <div id="ca-hist"></div>
       </div>
 
+      <!-- ADJUST -->
       <div class="ca-divider">
         <div class="ca-div-line"></div>
         <div class="ca-div-lbl">ADJUST — 調整</div>
@@ -2573,36 +2643,108 @@ function renderRoutines() {
 /* ══════════════════════════════════════════
    CHECK / ADJUST
 ══════════════════════════════════════════ */
+// 達成率計算（マイナス目標対応）
+function calcAchievePct(target, current, baseVal) {
+  const t = parseFloat(target), c = parseFloat(current), b = parseFloat(baseVal||0);
+  if (isNaN(t) || isNaN(c)) return 0;
+  // マイナス目標（目標<基準値）：減少方向
+  if (!isNaN(b) && b > t) {
+    // 例: 基準100、目標60、現在80 → (100-80)/(100-60)=50%
+    const totalGap = b - t;
+    if (totalGap === 0) return 100;
+    return Math.round(Math.max(0, (b - c) / totalGap * 100));
+  }
+  // 通常（増加方向）: current/target * 100
+  if (t === 0) return 0;
+  return Math.round(Math.max(0, c / t * 100));
+}
+
 function renderCA() {
   const p = curP(); if (!p) return;
   const pl = p.plan;
-  const rows = [];
+
+  // ── KGI単独ヒーローカード ──
+  const kgiWrap = document.getElementById('ca-kgi-wrap');
   if (pl.goal || pl.kgiVal) {
-    const pct = pl.kgiVal && pl.curVal ? Math.round(parseFloat(pl.curVal)/parseFloat(pl.kgiVal)*100) : 0;
-    rows.push({ label:'KGI', name: pl.goal||'目標', target:(pl.kgiVal||'—')+(pl.kgiUnit||''), current:(pl.curVal||'—')+(pl.curUnit||''), pct });
-  }
-  p.kpis.forEach((k,i) => {
-    const pct = k.target && k.current ? Math.round(parseFloat(k.current)/parseFloat(k.target)*100) : 0;
-    rows.push({ label:'KPI '+(i+1), name: k.kpiName||k.kpi||k.issue, target: k.target||'—', current: k.current||'—', pct });
-  });
-  document.getElementById('ca-kpis').innerHTML = rows.length
-    ? rows.map(r => `
-        <div class="kpi-dash-row">
+    // 前回の現在値（最新振り返り記録から取得）
+    const prevRecord = (p.checkRecords||[])[0];
+    const prevKgiVal = prevRecord?.kgiCurrent || null;
+    const curKgiVal = p.checkDraft.kgiCurrent || pl.curVal || '';
+    const pct = calcAchievePct(pl.kgiVal, curKgiVal||pl.curVal, pl.curVal);
+    const pctCapped = Math.min(pct, 100);
+    const prevDiff = prevKgiVal && curKgiVal
+      ? (parseFloat(curKgiVal) - parseFloat(prevKgiVal)) : null;
+    const diffStr = prevDiff !== null
+      ? `${prevDiff>=0?'+':''}${prevDiff}${pl.kgiUnit||''}`
+      : '';
+    kgiWrap.innerHTML = `
+      <div class="kgi-hero-card">
+        <div class="kgi-hero-label">⭐ KGI — 最重要ゴール</div>
+        <div class="kgi-hero-name">${esc(pl.goal||'ゴール未設定')}</div>
+        <div class="kgi-hero-row">
           <div>
-            <div style="font-size:11px;color:var(--tx2);margin-bottom:2px">${esc(r.label)}</div>
-            <div style="font-size:15px;font-weight:600;color:var(--tx)">${esc(r.name||'—')}</div>
-            <div style="font-size:12px;color:var(--tx2)">目標: ${esc(r.target)}</div>
+            <div class="kgi-hero-num">${esc(curKgiVal||pl.curVal||'—')}<span class="kgi-hero-unit">${esc(pl.kgiUnit||pl.curUnit||'')}</span></div>
+            <div class="kgi-hero-target">目標: ${esc(pl.kgiVal||'—')}${esc(pl.kgiUnit||'')}</div>
           </div>
-          <div style="text-align:center">
-            <div style="font-size:12px;color:var(--tx2)">現在値</div>
-            <div style="font-size:18px;font-weight:600;color:var(--tx)">${esc(r.current)}</div>
+          <div class="kgi-hero-pct">
+            <div class="kgi-hero-pct-num">${pct}%</div>
+            <div class="kgi-hero-pct-lbl">達成率</div>
           </div>
-          <div style="text-align:center">
-            <div style="font-size:12px;color:var(--tx2)">達成率</div>
-            <div style="font-size:18px;font-weight:600;color:${r.pct>=100?'#1D9E75':r.pct>=50?'var(--p)':'var(--red)'}">${r.pct}%</div>
+        </div>
+        <div class="kgi-prog-bar"><div class="kgi-prog-fill" style="width:${pctCapped}%"></div></div>
+        <div class="kgi-input-area">
+          <div class="kgi-input-label">今回の現在値を入力</div>
+          ${prevKgiVal ? `<div class="kgi-prev-val">前回: ${esc(prevKgiVal)}${esc(pl.kgiUnit||'')} ${diffStr?`<span style="color:${prevDiff>=0?'#1D9E75':'#A32D2D'};font-weight:700">${diffStr}</span>`:''}</div>` : ''}
+          <div class="kgi-input-row">
+            <input type="number" id="ca-kgi-current" value="${esc(curKgiVal||'')}"
+              placeholder="${esc(pl.curVal||'現在値を入力')}"
+              oninput="saveCheck()" style="font-size:16px;font-weight:600">
+            <div style="font-size:14px;font-weight:600;color:#666">${esc(pl.kgiUnit||pl.curUnit||'')}</div>
           </div>
-        </div>`).join('')
-    : '<div style="font-size:13px;color:var(--tx2)">PLANでKGI・KPIを設定してください</div>';
+        </div>
+      </div>`;
+  } else {
+    kgiWrap.innerHTML = '<div class="s-card" style="margin-bottom:12px"><div style="font-size:13px;color:var(--tx2)">PLANでゴールを設定してください</div></div>';
+  }
+
+  // ── KPI3枠 ──
+  document.getElementById('ca-kpis').innerHTML = p.kpis.length
+    ? p.kpis.map((k, i) => {
+        const isFirst = i === 0;
+        const prevKpiVal = ((p.checkRecords||[])[0]?.kpiCurrents||{})[k.id] || null;
+        const curKpiVal = (p.checkDraft.kpiCurrents||{})[k.id] || k.current || '';
+        const pct = calcAchievePct(k.target, curKpiVal||k.current, k.current);
+        const pctCapped = Math.min(pct, 100);
+        const prevDiff = prevKpiVal && curKpiVal
+          ? (parseFloat(curKpiVal) - parseFloat(prevKpiVal)) : null;
+        const diffStr = prevDiff !== null ? `${prevDiff>=0?'+':''}${prevDiff}${k.unit||''}` : '';
+        const color = pct>=100?'#1D9E75':pct>=50?'var(--p)':'var(--red)';
+        const inner = `
+          ${isFirst?'<div class="kpi-top-card-badge">⭐ 最重要KPI = サブゴール</div>':''}
+          <div style="font-size:14px;font-weight:700;color:${isFirst?'#1a1a2e':'var(--tx)'};margin-bottom:8px">${esc(k.kpiName||k.kpi||k.issue||'KPI'+(i+1))}</div>
+          <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap">
+            <div>
+              <div style="font-size:11px;color:#888;margin-bottom:2px">今回の現在値</div>
+              <input type="number" value="${esc(curKpiVal||'')}"
+                placeholder="${esc(k.current||'入力')}"
+                oninput="saveKpiCurrent('${k.id}',this.value)"
+                style="font-size:18px;font-weight:700;width:100px;color:var(--tx)">
+              <span style="font-size:12px;color:#888">${esc(k.unit||'')}</span>
+              ${prevKpiVal?`<div style="font-size:11px;color:#888;margin-top:2px">前回: ${esc(prevKpiVal)}${esc(k.unit||'')} <span style="color:${prevDiff>=0?'#1D9E75':'#A32D2D'};font-weight:700">${diffStr}</span></div>`:''}
+            </div>
+            <div style="margin-left:auto;text-align:right">
+              <div style="font-size:24px;font-weight:800;color:${color}">${pct}%</div>
+              <div style="font-size:11px;color:#888">目標: ${esc(k.target||'—')}${esc(k.unit||'')}</div>
+              <div style="height:4px;background:#eee;border-radius:2px;overflow:hidden;margin-top:4px;width:80px">
+                <div style="height:100%;background:${color};width:${pctCapped}%;border-radius:2px"></div>
+              </div>
+            </div>
+          </div>`;
+        return isFirst
+          ? `<div class="kpi-top-card">${inner}</div>`
+          : `<div class="kpi-normal-card">${inner}</div>`;
+      }).join('')
+    : '<div style="font-size:13px;color:var(--tx2)">PLANでKPIを設定してください</div>';
 
   const d = p.checkDraft;
   document.getElementById('ca-date').value = d.date||'';
@@ -2610,6 +2752,7 @@ function renderCA() {
   document.getElementById('ca-bad').value = d.bad||'';
   document.getElementById('ca-insight').value = d.insight||'';
   document.getElementById('ca-next').value = d.next||'';
+  document.getElementById('ca-io').value = d.io||'';
   renderStars(d.star||0);
   renderCheckHist();
 
@@ -2640,6 +2783,30 @@ function saveCheck() {
   p.checkDraft.bad = document.getElementById('ca-bad').value;
   p.checkDraft.insight = document.getElementById('ca-insight').value;
   p.checkDraft.next = document.getElementById('ca-next').value;
+  p.checkDraft.io = document.getElementById('ca-io').value;
+  // KGI現在値
+  const kgiEl = document.getElementById('ca-kgi-current');
+  if (kgiEl) p.checkDraft.kgiCurrent = kgiEl.value;
+  saveDB();
+  // KGIヒーローカードをリアルタイム更新
+  const pl = p.plan;
+  if (pl.kgiVal) {
+    const cur = p.checkDraft.kgiCurrent||pl.curVal||'';
+    const pct = calcAchievePct(pl.kgiVal, cur, pl.curVal);
+    const pctCapped = Math.min(pct, 100);
+    const pctEl = document.querySelector('.kgi-hero-pct-num');
+    if (pctEl) pctEl.textContent = pct+'%';
+    const fillEl = document.querySelector('.kgi-prog-fill');
+    if (fillEl) fillEl.style.width = pctCapped+'%';
+    const numEl = document.querySelector('.kgi-hero-num');
+    if (numEl) numEl.firstChild && (numEl.firstChild.textContent = cur||'—');
+  }
+}
+
+function saveKpiCurrent(kpiId, val) {
+  const p = curP(); if (!p) return;
+  if (!p.checkDraft.kpiCurrents) p.checkDraft.kpiCurrents = {};
+  p.checkDraft.kpiCurrents[kpiId] = val;
   saveDB();
 }
 
@@ -2657,10 +2824,14 @@ function saveCheckRecord() {
   const d = { ...p.checkDraft, id: Date.now()+'' };
   if (!d.good && !d.bad && !d.insight) { alert('少なくとも一つ入力してください'); return; }
   p.checkRecords.unshift(d);
-  p.checkDraft = { date:'', good:'', bad:'', insight:'', next:'', star:0 };
-  ['ca-date','ca-good','ca-bad','ca-insight','ca-next'].forEach(id => document.getElementById(id).value = '');
+  p.checkDraft = { date:'', good:'', bad:'', insight:'', next:'', io:'', star:0, kgiCurrent:'', kpiCurrents:{} };
+  ['ca-date','ca-good','ca-bad','ca-insight','ca-next','ca-io'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  const kgiEl = document.getElementById('ca-kgi-current');
+  if (kgiEl) kgiEl.value = '';
   renderStars(0);
-  saveDB(); renderCheckHist();
+  saveDB(); renderCA();
   alert('振り返りを保存しました！');
 }
 
@@ -2668,12 +2839,23 @@ function renderCheckHist() {
   const p = curP(); if (!p) return;
   if (!p.checkRecords.length) { document.getElementById('ca-hist-card').style.display='none'; return; }
   document.getElementById('ca-hist-card').style.display = 'block';
-  document.getElementById('ca-hist').innerHTML = p.checkRecords.slice(0,5).map(r => `
-    <div class="hist-item">
-      <div style="font-size:12px;color:var(--tx2);margin-bottom:4px">${esc(r.date||'')}　${'★'.repeat(r.star||0)}</div>
-      ${r.good ? `<div style="font-size:13px;color:var(--tx)">✅ ${esc(r.good)}</div>` : ''}
-      ${r.insight ? `<div style="font-size:13px;color:var(--tx2);margin-top:3px">💡 ${esc(r.insight)}</div>` : ''}
-    </div>`).join('');
+  document.getElementById('ca-hist').innerHTML = p.checkRecords.slice(0,10).map((r,idx) => {
+    const pl = p.plan;
+    const prevR = p.checkRecords[idx+1];
+    const kgiDiff = r.kgiCurrent && prevR?.kgiCurrent
+      ? (parseFloat(r.kgiCurrent)-parseFloat(prevR.kgiCurrent)) : null;
+    const diffStr = kgiDiff !== null ? `${kgiDiff>=0?'+':''}${kgiDiff}${pl.kgiUnit||''}` : '';
+    return `<div class="hist-item">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <div style="font-size:12px;color:var(--tx2)">${esc(r.date||'日付なし')}　${'★'.repeat(r.star||0)}</div>
+        ${r.kgiCurrent?`<span style="font-size:12px;font-weight:700;color:var(--p);background:var(--p3);padding:2px 8px;border-radius:10px">${esc(r.kgiCurrent)}${esc(pl.kgiUnit||'')} ${diffStr?`<span style="color:${kgiDiff>=0?'#1D9E75':'#A32D2D'}">${diffStr}</span>`:''}</span>`:''}
+      </div>
+      ${r.good?`<div style="font-size:13px;color:var(--tx)">✅ ${esc(r.good)}</div>`:''}
+      ${r.insight?`<div style="font-size:12px;color:var(--tx2);margin-top:3px">💡 ${esc(r.insight)}</div>`:''}
+      ${r.next?`<div style="font-size:12px;color:var(--p);margin-top:3px">🚀 ${esc(r.next)}</div>`:''}
+      ${r.io?`<div style="font-size:12px;color:var(--tx2);margin-top:3px">📚 ${esc(r.io)}</div>`:''}
+    </div>`;
+  }).join('');
 }
 
 function setAdjJudge(id, val) {
