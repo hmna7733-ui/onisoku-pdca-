@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="2.8.0">
+<meta name="app-version" content="2.9.0">
 
 <style>
 /* ── リセット & ベース ── */
@@ -440,6 +440,25 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
 .hab-day.done{background:var(--p3);color:var(--p);border-color:var(--p4);font-size:12px}
 
 /* ── KDI実績カード ── */
+/* 総行動数バナー */
+.kdi-total-banner{
+  background:linear-gradient(135deg,#0f4a3a,#1D9E75);
+  border-radius:12px;padding:14px 16px;margin-bottom:14px;
+  display:flex;align-items:center;gap:16px;
+}
+.kdi-total-num{
+  font-size:42px;font-weight:800;color:#fff;line-height:1;
+}
+.kdi-total-info{flex:1}
+.kdi-total-lbl{font-size:11px;font-weight:700;color:rgba(255,255,255,.7);letter-spacing:.8px;margin-bottom:4px}
+.kdi-total-sub{font-size:12px;color:rgba(255,255,255,.6)}
+.kdi-freq-section{margin-bottom:8px}
+.kdi-freq-header{
+  font-size:11px;font-weight:700;color:var(--tx3);
+  letter-spacing:.8px;text-transform:uppercase;
+  margin:10px 0 6px;padding-bottom:4px;
+  border-bottom:1px dashed var(--bd);
+}
 .kdi-check-card{
   border:1px solid var(--bd2);border-radius:12px;
   padding:14px;margin-bottom:10px;
@@ -1313,13 +1332,31 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
         <div id="ca-kpis"></div>
       </div>
 
+      <!-- KDI実績カード（独立） -->
+      <div class="fold-card" id="fca-kdi">
+        <div class="fold-header" onclick="toggleFold('fca-kdi')">
+          <div class="fold-step">
+            <div class="step-badge" style="background:linear-gradient(135deg,var(--teal),#0a7a58);font-size:11px">KDI</div>
+          </div>
+          <div class="fold-title-area">
+            <div class="fold-label" style="color:var(--teal3)">行動実績</div>
+            <div class="fold-summary" id="fs-kdi-total">未入力</div>
+          </div>
+          <div class="fold-chevron open" id="fca-kdi-chev">▼</div>
+        </div>
+        <div class="fold-body">
+          <!-- 総行動数サマリー -->
+          <div id="ca-kdi-summary"></div>
+          <!-- KDI個別入力 -->
+          <div id="ca-kdi-checks"></div>
+        </div>
+      </div>
+
       <!-- 振り返りフォーム -->
       <div class="s-card">
         <div class="s-card-title" style="margin-bottom:10px">振り返り（3日ごと）</div>
         <label class="lbl">検証日</label>
         <input type="date" id="ca-date" oninput="saveCheck()">
-        <div class="check-section-lbl">📊 KDI実績入力</div>
-        <div id="ca-kdi-checks"></div>
         <div class="check-section-lbl">✅ うまくいったこと</div>
         <textarea id="ca-good" placeholder="例：朝のルーティンを3日継続できた" oninput="saveCheck()"></textarea>
         <div class="check-section-lbl">❌ できなかったこと</div>
@@ -2868,87 +2905,189 @@ function renderCA() {
   document.getElementById('ca-comment').value = a.comment||'';
 }
 
+// 頻度を判定する（時間文字列から）
+function detectFreq(k) {
+  const t = (k.time||k.quantity||'').toLowerCase();
+  if (/毎日|daily|毎朝|毎晩|毎夜/.test(t)) return 'daily';   // 毎日
+  if (/週[2-7二三四五六七]|[2-7]回.{0,4}週|day/.test(t)) return 'weekly_high'; // 週2〜7
+  if (/週1|週一|週に1|1回.{0,4}週/.test(t)) return 'weekly_low'; // 週1
+  if (/月/.test(t)) return 'monthly';  // 月次
+  return 'weekly_high'; // デフォルト
+}
+
+// 頻度から3日間の期待回数を計算
+function getExpected(freq) {
+  if (freq === 'daily') return 3;
+  if (freq === 'weekly_high') return 1; // 週2〜7 → 3日で1〜2回（1で表示）
+  if (freq === 'weekly_low') return 0;  // 週1 → 3日で0〜1回
+  if (freq === 'monthly') return 0;
+  return 1;
+}
+
 function renderKdiChecks() {
   const p = curP(); if (!p) return;
+  const sumEl = document.getElementById('ca-kdi-summary');
   const el = document.getElementById('ca-kdi-checks');
+  const hdrEl = document.getElementById('fs-kdi-total');
   if (!el) return;
   const kdis = (p.kdis||[]);
   if (!kdis.length) {
+    if (sumEl) sumEl.innerHTML = '';
     el.innerHTML = '<div style="font-size:13px;color:var(--tx3);padding:6px 0">DOシートでKDIを追加してください</div>';
+    if (hdrEl) hdrEl.textContent = '未設定';
     return;
   }
   const draft = p.checkDraft;
   if (!draft.kdiResults) draft.kdiResults = {};
 
-  el.innerHTML = kdis.map((k, i) => {
-    const isKeepOn = (k.kdiType||'継続型') === '継続型';
-    const typeLbl = isKeepOn ? '継続型' : '完結型';
-    const typeColor = isKeepOn ? 'var(--teal2)' : 'var(--amber2)';
-    const typeTextColor = isKeepOn ? 'var(--teal3)' : 'var(--amber3)';
-    const qxt = (k.quantity||k.time) ? `${k.quantity||'?'} × ${k.time||'?'}` : '';
+  // 総行動数を計算
+  let totalActions = 0;
+  let totalPlanned = 0;
+  kdis.forEach(k => {
     const res = draft.kdiResults[k.id] || {};
-
-    if (!isKeepOn) {
-      // 完結型: 完了 / 未完了 ボタン
-      const isDone = res.done === true;
-      const isUndone = res.done === false;
-      return `<div class="kdi-check-card">
-        <div class="kdi-check-header">
-          <div class="kdi-check-num">${i+1}</div>
-          <div class="kdi-check-type" style="background:${typeColor};color:${typeTextColor}">${typeLbl}</div>
-          <div class="kdi-check-name">${esc(k.text||'（未入力）')}</div>
-        </div>
-        ${qxt?`<div class="kdi-check-qxt">⏱ ${esc(qxt)}</div>`:''}
-        <div class="kdi-complete-row">
-          <button class="kdi-complete-btn ${isDone?'sel-done':''}"
-            onclick="setKdiResult('${k.id}','done',true)">✅ 完了</button>
-          <button class="kdi-complete-btn ${isUndone?'sel-undone':''}"
-            onclick="setKdiResult('${k.id}','done',false)">❌ 未完了</button>
-        </div>
-        ${res.done !== undefined ? `<div style="font-size:12px;color:var(--tx2);margin-top:8px">
-          <textarea placeholder="コメント（任意）" style="width:100%;font-size:12px;padding:6px;min-height:48px"
-            oninput="setKdiResult('${k.id}','comment',this.value)">${esc(res.comment||'')}</textarea>
-        </div>` : ''}
-      </div>`;
+    const isKeepOn = (k.kdiType||'継続型') === '継続型';
+    if (isKeepOn) {
+      totalActions += parseFloat(res.actual||0)||0;
+      totalPlanned += parseFloat(res.planned||getExpected(detectFreq(k)))||0;
     } else {
-      // 継続型: 予定回数・実績回数入力
-      const planned = res.planned !== undefined ? res.planned : '';
-      const actual = res.actual !== undefined ? res.actual : '';
-      const rate = planned && actual && parseFloat(planned) > 0
-        ? Math.round(parseFloat(actual)/parseFloat(planned)*100) : null;
-      const rateColor = rate === null ? '#ccc' : rate>=100?'#1D9E75':rate>=50?'var(--p)':'var(--red)';
-      return `<div class="kdi-check-card">
-        <div class="kdi-check-header">
-          <div class="kdi-check-num">${i+1}</div>
-          <div class="kdi-check-type" style="background:${typeColor};color:${typeTextColor}">${typeLbl}</div>
-          <div class="kdi-check-name">${esc(k.text||'（未入力）')}</div>
-        </div>
-        ${qxt?`<div class="kdi-check-qxt">⏱ ${esc(qxt)}</div>`:''}
-        <div class="kdi-count-row">
-          <div>
-            <div class="kdi-count-label">この期間の予定回数</div>
-            <input type="number" value="${esc(String(planned))}" placeholder="例：3"
-              oninput="setKdiResult('${k.id}','planned',this.value)"
-              style="width:100%;font-size:18px;font-weight:700">
-          </div>
-          <div style="font-size:20px;font-weight:800;color:var(--p);text-align:center;padding-top:18px">／</div>
-          <div>
-            <div class="kdi-count-label">実際に行動した回数</div>
-            <input type="number" value="${esc(String(actual))}" placeholder="例：2"
-              oninput="setKdiResult('${k.id}','actual',this.value)"
-              style="width:100%;font-size:18px;font-weight:700">
-          </div>
-        </div>
-        ${rate !== null ? `
-          <div class="kdi-rate-bar">
-            <div class="kdi-rate-fill" style="width:${Math.min(rate,100)}%;background:${rateColor}"></div>
-          </div>
-          <div class="kdi-rate-text" style="color:${rateColor}">${actual}回 / ${planned}回　${rate}%達成</div>
-        ` : ''}
-        <textarea placeholder="コメント（任意）" style="width:100%;font-size:12px;padding:6px;min-height:48px;margin-top:8px"
-          oninput="setKdiResult('${k.id}','comment',this.value)">${esc(res.comment||'')}</textarea>
-      </div>`;
+      if (res.done === true) totalActions += 1;
+      totalPlanned += 1;
     }
+  });
+  const totalRate = totalPlanned > 0 ? Math.round(totalActions/totalPlanned*100) : 0;
+
+  // 総行動数バナー
+  if (sumEl) {
+    sumEl.innerHTML = `
+      <div class="kdi-total-banner">
+        <div class="kdi-total-num">${totalActions}</div>
+        <div class="kdi-total-info">
+          <div class="kdi-total-lbl">総行動数</div>
+          <div class="kdi-total-sub">予定 ${totalPlanned} 回 中 ${totalActions} 回達成</div>
+          <div style="height:4px;background:rgba(255,255,255,.2);border-radius:2px;overflow:hidden;margin-top:6px">
+            <div style="height:100%;background:#fff;width:${Math.min(totalRate,100)}%;border-radius:2px"></div>
+          </div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:24px;font-weight:800;color:#fff">${totalRate}%</div>
+          <div style="font-size:10px;color:rgba(255,255,255,.6)">実行率</div>
+        </div>
+      </div>`;
+  }
+  if (hdrEl) hdrEl.textContent = `${totalActions}回行動 / 実行率${totalRate}%`;
+
+  // 頻度でグループ分け
+  const freqGroups = {
+    daily:       { label:'🔥 毎日系', items:[] },
+    weekly_high: { label:'📅 高頻度系（週2〜）', items:[] },
+    weekly_low:  { label:'📆 低頻度系（週1・月1）', items:[] },
+    monthly:     { label:'📆 低頻度系（週1・月1）', items:[] },
+  };
+  kdis.forEach((k,i) => {
+    const freq = detectFreq(k);
+    (freqGroups[freq]||freqGroups.weekly_high).items.push({k,i,freq});
+  });
+
+  // 頻度グループ順に表示
+  const orderedGroups = [
+    freqGroups.daily,
+    freqGroups.weekly_high,
+    freqGroups.weekly_low,  // monthly と weekly_low は同じラベル
+  ];
+  // monthly を weekly_low にマージ
+  freqGroups.monthly.items.forEach(item => freqGroups.weekly_low.items.push(item));
+
+  el.innerHTML = orderedGroups.map(grp => {
+    if (!grp.items.length) return '';
+    return `<div class="kdi-freq-section">
+      <div class="kdi-freq-header">${grp.label}</div>
+      ${grp.items.map(({k,i,freq}) => {
+        const isKeepOn = (k.kdiType||'継続型') === '継続型';
+        const res = draft.kdiResults[k.id] || {};
+        const qxt = (k.quantity||k.time) ? `${k.quantity||'?'} × ${k.time||'?'}` : '';
+        const typeLbl = isKeepOn ? '継続' : '完結';
+        const typeColor = isKeepOn ? '#E1F5EE' : '#FAEEDA';
+        const typeText = isKeepOn ? '#085041' : '#633806';
+
+        const headerHtml = `
+          <div class="kdi-check-header">
+            <div class="kdi-check-num">${i+1}</div>
+            <div class="kdi-check-type" style="background:${typeColor};color:${typeText}">${typeLbl}</div>
+            <div class="kdi-check-name">${esc(k.text||'（未入力）')}</div>
+          </div>
+          ${qxt?`<div class="kdi-check-qxt">⏱ ${esc(qxt)}</div>`:''}`;
+
+        if (!isKeepOn) {
+          const isDone = res.done === true, isUndone = res.done === false;
+          return `<div class="kdi-check-card">
+            ${headerHtml}
+            <div class="kdi-complete-row">
+              <button class="kdi-complete-btn ${isDone?'sel-done':''}"
+                onclick="setKdiResult('${k.id}','done',true)">✅ 完了</button>
+              <button class="kdi-complete-btn ${isUndone?'sel-undone':''}"
+                onclick="setKdiResult('${k.id}','done',false)">❌ 未完了</button>
+            </div>
+            ${res.done!==undefined?`<textarea placeholder="コメント（任意）" style="width:100%;font-size:12px;padding:6px;min-height:44px;margin-top:8px"
+              oninput="setKdiResult('${k.id}','comment',this.value)">${esc(res.comment||'')}</textarea>`:''}
+          </div>`;
+        }
+
+        // 継続型: 毎日系は数値入力、低頻度系は「行動した？」選択
+        const isLowFreq = freq === 'weekly_low' || freq === 'monthly';
+        const expectedNum = getExpected(freq);
+        const planned = res.planned !== undefined ? res.planned : (expectedNum||'');
+        const actual = res.actual !== undefined ? res.actual : '';
+        const rate = planned!=='' && actual!=='' && parseFloat(planned)>0
+          ? Math.round(parseFloat(actual)/parseFloat(planned)*100) : null;
+        const rateColor = rate===null?'#ccc':rate>=100?'#1D9E75':rate>=50?'var(--p)':'var(--red)';
+
+        if (isLowFreq) {
+          // 低頻度：「今回行動した？」選択
+          const didAct = res.actual === '1' || res.actual === 1;
+          const didNot = res.actual === '0' || res.actual === 0;
+          return `<div class="kdi-check-card">
+            ${headerHtml}
+            <div style="font-size:12px;color:var(--tx2);margin-bottom:8px">この3日間で行動しましたか？</div>
+            <div class="kdi-complete-row">
+              <button class="kdi-complete-btn ${didAct?'sel-done':''}"
+                onclick="setKdiResult('${k.id}','actual','1');setKdiResult('${k.id}','planned','1')">✅ 行動した</button>
+              <button class="kdi-complete-btn ${didNot?'sel-undone':''}"
+                onclick="setKdiResult('${k.id}','actual','0');setKdiResult('${k.id}','planned','1')">— 今回なし</button>
+            </div>
+            ${res.actual!==undefined?`<textarea placeholder="コメント（任意）" style="width:100%;font-size:12px;padding:6px;min-height:44px;margin-top:8px"
+              oninput="setKdiResult('${k.id}','comment',this.value)">${esc(res.comment||'')}</textarea>`:''}
+          </div>`;
+        }
+
+        // 高頻度継続型：回数入力
+        return `<div class="kdi-check-card">
+          ${headerHtml}
+          <div class="kdi-count-row">
+            <div>
+              <div class="kdi-count-label">予定回数</div>
+              <input type="number" value="${esc(String(planned))}" placeholder="${expectedNum||'例:3'}"
+                oninput="setKdiResult('${k.id}','planned',this.value)"
+                style="width:100%;font-size:20px;font-weight:700">
+            </div>
+            <div style="font-size:22px;font-weight:800;color:var(--p);text-align:center;padding-top:18px">／</div>
+            <div>
+              <div class="kdi-count-label" style="color:var(--teal3)">実際の回数 ✍</div>
+              <input type="number" value="${esc(String(actual))}" placeholder="入力"
+                oninput="setKdiResult('${k.id}','actual',this.value)"
+                style="width:100%;font-size:20px;font-weight:700;color:var(--teal3)">
+            </div>
+          </div>
+          ${rate!==null?`
+            <div class="kdi-rate-bar" style="margin-top:10px">
+              <div class="kdi-rate-fill" style="width:${Math.min(rate,100)}%;background:${rateColor}"></div>
+            </div>
+            <div class="kdi-rate-text" style="color:${rateColor}">${actual}回 / ${planned}回　${rate}%</div>
+          `:''}
+          <textarea placeholder="コメント（任意）" style="width:100%;font-size:12px;padding:6px;min-height:44px;margin-top:8px"
+            oninput="setKdiResult('${k.id}','comment',this.value)">${esc(res.comment||'')}</textarea>
+        </div>`;
+      }).join('')}
+    </div>`;
   }).join('');
 }
 
