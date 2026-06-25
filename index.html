@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="3.2.0">
+<meta name="app-version" content="3.2.1">
 
 <style>
 /* ── リセット & ベース ── */
@@ -1140,6 +1140,7 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
           </div>
           <div style="display:flex;gap:8px;align-items:center;position:relative;z-index:1">
             <button class="settings-btn" onclick="showTransferModal()" title="データ転送" style="font-size:20px">📦</button>
+            <button class="settings-btn" id="logout-btn" onclick="signOut()" title="ログアウト" style="display:none">🚪</button>
             <button class="settings-btn" onclick="goScreen('s-settings')" title="設定">⚙</button>
             <button class="new-btn" onclick="showNewModal()">＋ 新規</button>
           </div>
@@ -1699,9 +1700,30 @@ let CUR = null;
 
 function loadDB() {
   try { const d = localStorage.getItem(STORE_KEY); if (d) DB = JSON.parse(d); } catch(e) {}
+  ensureCategories();
+  // Firestoreからも読み込み（ログイン中の場合）
+  if (currentUser && db_fs) {
+    db_fs.collection('users').doc(currentUser.uid).get().then(doc => {
+      if (doc.exists) {
+        const data = doc.data();
+        if (data && data.pdcas) {
+          Object.assign(DB, data);
+          try { localStorage.setItem(STORE_KEY, JSON.stringify(DB)); } catch(e) {}
+          ensureCategories();
+          renderHome();
+        }
+      }
+    }).catch(e => console.error('Firestore load:', e));
+  }
 }
 function saveDB() {
   try { localStorage.setItem(STORE_KEY, JSON.stringify(DB)); } catch(e) {}
+  // Firestoreにも保存
+  if (currentUser && db_fs) {
+    db_fs.collection('users').doc(currentUser.uid)
+      .set(JSON.parse(JSON.stringify(DB)))
+      .catch(e => console.error('Firestore save:', e));
+  }
 }
 function esc(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -1747,6 +1769,9 @@ function goScreen(id) {
    ホーム
 ══════════════════════════════════════════ */
 function renderHome() {
+  // ログアウトボタン表示制御
+  const logoutBtn = document.getElementById('logout-btn');
+  if (logoutBtn) logoutBtn.style.display = currentUser ? '' : 'none';
   ensureCategories();
   const active = DB.pdcas.filter(p => !p.paused && !p.completed);
   const paused = DB.pdcas.filter(p => p.paused && !p.completed);
@@ -3821,6 +3846,63 @@ function deleteCategory(catId) {
 }
 
 /* ══════════════════════════════════════════
+   Firebase 設定・認証
+══════════════════════════════════════════ */
+const firebaseConfig = {
+  apiKey: "AIzaSyAv35i4MSksru9csqLBbtZvHEJbWfaVQ0A",
+  authDomain: "boat-d715f.firebaseapp.com",
+  projectId: "boat-d715f",
+  storageBucket: "boat-d715f.firebasestorage.app",
+  messagingSenderId: "143618120714",
+  appId: "1:143618120714:web:8fe8f3548ada361d5053f3",
+  measurementId: "G-JPB6Y4GNP0"
+};
+
+let firebaseApp, auth, db_fs, currentUser = null;
+
+function initFirebase() {
+  try {
+    firebaseApp = firebase.initializeApp(firebaseConfig);
+    auth = firebase.auth();
+    db_fs = firebase.firestore();
+
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        currentUser = user;
+        document.getElementById('login-screen').style.display = 'none';
+        loadDB();
+        renderHome();
+      } else {
+        currentUser = null;
+        document.getElementById('login-screen').style.display = 'flex';
+      }
+    });
+  } catch(e) {
+    console.error('Firebase init error:', e);
+    // Firebaseが使えない場合はlocalStorageで動作
+    document.getElementById('login-screen').style.display = 'none';
+    loadDB();
+    renderHome();
+  }
+}
+
+function signInWithGoogle() {
+  const btn = document.getElementById('google-login-btn');
+  if (btn) { btn.textContent = 'ログイン中...'; btn.disabled = true; }
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).catch(err => {
+    console.error('Login error:', err);
+    const errEl = document.getElementById('login-error');
+    if (errEl) { errEl.style.display = ''; errEl.textContent = 'ログインに失敗しました。再度お試しください。'; }
+    if (btn) { btn.textContent = 'Googleでログイン'; btn.disabled = false; }
+  });
+}
+
+function signOut() {
+  if (auth) auth.signOut();
+}
+
+/* ══════════════════════════════════════════
    データ転送
 ══════════════════════════════════════════ */
 function showTransferModal() {
@@ -3878,8 +3960,15 @@ function importData(event) {
   reader.readAsText(file);
 }
 
-loadDB();
-renderHome();
+// Firebase起動
+if (typeof firebase !== 'undefined') {
+  initFirebase();
+} else {
+  // Firebase SDKがない場合はlocalStorageで動作
+  document.getElementById('login-screen').style.display = 'none';
+  loadDB();
+  renderHome();
+}
 </script>
 </body>
 </html>
