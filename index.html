@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="1.3.0">
+<meta name="app-version" content="2.0.4">
 
 <style>
 /* ── リセット & ベース ── */
@@ -216,13 +216,12 @@ body{
 .pdca-card{
   background:#fff;
   border-radius:18px;
-  padding:18px;cursor:pointer;
+  padding:18px;
   transition:transform .12s;
   -webkit-user-select:none;
   box-shadow:0 2px 16px rgba(83,74,183,.07);
   border:1px solid rgba(83,74,183,.06);
 }
-.pdca-card:active{transform:scale(0.97)}
 .pdca-card.paused{opacity:.45;filter:grayscale(.3)}
 .pdca-card-row1{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px}
 .pdca-card-title{font-size:16px;font-weight:700;color:#1a1a2e;flex:1;padding-right:8px}
@@ -474,63 +473,205 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
 .hist-item{padding:10px 0;border-bottom:0.5px solid var(--bd)}
 .hist-item:last-child{border-bottom:none}
 
+/* ── 折りたたみカード ── */
+.fold-card{
+  background:var(--surf);border:0.5px solid var(--bd);
+  border-radius:var(--r);margin-bottom:12px;overflow:hidden;
+  transition:box-shadow .15s;
+}
+.fold-card.goal-card{
+  border:2px solid #FFB800;
+  background:linear-gradient(135deg,#FFFBEE,#FFF8E1);
+  box-shadow:0 3px 16px rgba(255,184,0,.18);
+}
+.fold-header{
+  display:flex;align-items:center;gap:10px;
+  padding:14px 16px;cursor:pointer;
+  -webkit-user-select:none;
+}
+.fold-header:active{opacity:.8}
+.fold-step{flex-shrink:0}
+.fold-title-area{flex:1;min-width:0}
+.fold-label{font-size:15px;font-weight:600;color:var(--tx)}
+.fold-label.goal-label{
+  font-size:16px;font-weight:800;
+  background:linear-gradient(135deg,#FF9500,#FFD966);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+/* 折りたたみ時の数値ハイライト */
+.fold-num{
+  font-size:22px;font-weight:800;color:var(--p);
+  line-height:1;margin-top:2px;
+}
+.fold-num-unit{font-size:13px;font-weight:600;color:var(--tx2);margin-left:2px}
+.fold-summary{
+  font-size:12px;color:var(--tx2);margin-top:2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.fold-chevron{
+  font-size:13px;color:var(--tx3);flex-shrink:0;
+  transition:transform .2s;
+}
+.fold-chevron.open{transform:rotate(180deg)}
+.fold-body{padding:0 16px 16px;border-top:0.5px solid var(--bd)}
+.fold-card.goal-card .fold-body{border-top:1px solid rgba(255,184,0,.3)}
+.fold-card.collapsed .fold-body{display:none}
+.fold-card.collapsed .fold-chevron{transform:rotate(0deg)}
+/* 項目折りたたみ（課題・KPI・解決案の各アイテム） */
+.item-fold{position:relative;border-bottom:0.5px solid var(--bd);padding-right:44px}
+.item-fold:last-child{border-bottom:none}
+.item-del-btn{
+  position:absolute;top:10px;right:0;
+  font-size:12px;color:var(--red);background:none;
+  border:none;cursor:pointer;padding:8px 6px;
+  z-index:5;
+  -webkit-tap-highlight-color:rgba(163,45,45,.1);
+}
+.item-fold-header{
+  padding:12px 0;cursor:pointer;-webkit-user-select:none;
+}
+.item-fold-header:active{opacity:.8}
+.item-fold-num{
+  width:26px;height:26px;border-radius:50%;
+  background:var(--surf2);color:var(--tx2);
+  font-size:12px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.item-fold-num.first{background:linear-gradient(135deg,#FFD966,#FF9500);color:#fff}
+.item-fold-num.kpi-num{background:#7F77DD;color:#fff}
+.item-fold-title{flex:1;font-size:14px;font-weight:500;color:var(--tx);min-width:0;word-break:break-all}
+.item-fold-title.empty{color:var(--tx3);font-weight:400}
+.item-fold-meta{font-size:11px;color:var(--tx3);flex-shrink:0;white-space:nowrap}
+.item-fold-chev{font-size:11px;color:var(--tx3);flex-shrink:0;transition:transform .18s}
+.item-fold-chev.open{transform:rotate(180deg)}
+.item-fold-body{padding:0 0 12px}
+.item-fold.collapsed .item-fold-body{display:none}
+.item-fold.collapsed .item-fold-chev{transform:rotate(0deg)}
+/* ── KPI最重要バッジ ── */
+.kpi-top-badge{
+  display:inline-flex;align-items:center;gap:4px;
+  font-size:10px;font-weight:800;letter-spacing:.5px;
+  background:linear-gradient(135deg,#FFD966,#FF9500);
+  color:#fff;padding:3px 9px;border-radius:20px;
+  margin-left:6px;vertical-align:middle;
+  box-shadow:0 2px 6px rgba(255,149,0,.35);
+  flex-shrink:0;
+}
+.kpi-first-wrap{
+  border:2px solid #FFB800;border-radius:14px;
+  padding:14px;margin-bottom:12px;
+  background:linear-gradient(135deg,#FFFBEE,#FFF8E1);
+  position:relative;
+}
+.kpi-first-label{
+  position:absolute;top:-10px;left:14px;
+  font-size:10px;font-weight:800;letter-spacing:.8px;
+  background:linear-gradient(135deg,#FFD966,#FF9500);
+  color:#fff;padding:2px 10px;border-radius:20px;
+}
+.kpi-rest-wrap{
+  border:0.5px solid var(--bd);border-radius:12px;
+  padding:14px;margin-bottom:8px;
+}
+/* 関連課題チェック */
+.issue-check-grid{
+  display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;
+}
+.issue-check-btn{
+  padding:5px 12px;border-radius:20px;
+  border:1.5px solid #D0CDEA;
+  background:#fff;color:#6B6880;
+  font-size:12px;font-weight:600;cursor:pointer;
+  transition:all .12s;
+}
+.issue-check-btn.checked{
+  background:#534AB7;color:#fff;
+  border-color:#534AB7;
+  box-shadow:0 2px 8px rgba(83,74,183,.3);
+}
+
 /* ── コツモーダル ── */
 .tips-modal-wrap{
   position:fixed;inset:0;
-  background:rgba(15,12,30,.55);
+  background:rgba(10,8,25,.6);
   z-index:100;
   display:none;align-items:flex-end;justify-content:center;
+  backdrop-filter:blur(4px);
 }
 .tips-modal-wrap.open{display:flex}
 .tips-modal{
-  background:#fff;border-radius:24px 24px 0 0;
-  padding:0 0 40px;width:100%;max-width:430px;
-  max-height:85vh;overflow-y:auto;
+  background:#fff;border-radius:28px 28px 0 0;
+  padding:0 0 44px;width:100%;max-width:430px;
+  max-height:88vh;overflow-y:auto;
 }
 .tips-modal-handle{
-  width:36px;height:4px;border-radius:2px;
-  background:#e0ddf0;margin:12px auto 0;
+  width:40px;height:5px;border-radius:3px;
+  background:#e0ddf0;margin:14px auto 0;
 }
 .tips-modal-head{
-  padding:16px 20px 12px;
-  border-bottom:0.5px solid rgba(83,74,183,.1);
+  padding:18px 20px 14px;
   display:flex;align-items:center;justify-content:space-between;
+  position:relative;
+}
+.tips-modal-head::after{
+  content:'';position:absolute;bottom:0;left:20px;right:20px;
+  height:1px;background:linear-gradient(90deg,#EEEDFE,#CECBF6,#EEEDFE);
+}
+.tips-modal-emoji{
+  font-size:28px;margin-right:10px;flex-shrink:0;
+}
+.tips-modal-title-wrap{flex:1}
+.tips-modal-label{
+  font-size:10px;font-weight:700;letter-spacing:1.5px;
+  color:#7F77DD;text-transform:uppercase;margin-bottom:3px;
 }
 .tips-modal-title{
-  font-size:16px;font-weight:700;color:#1a1a2e;
+  font-size:16px;font-weight:800;color:#1a1a2e;line-height:1.2;
 }
 .tips-modal-close{
-  width:30px;height:30px;border-radius:50%;
+  width:32px;height:32px;border-radius:50%;
   background:#f0eef8;border:none;cursor:pointer;
-  font-size:16px;color:#534AB7;
+  font-size:14px;color:#7F77DD;font-weight:700;
   display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
 }
-.tips-modal-body{padding:16px 20px}
+.tips-modal-body{padding:14px 20px 4px}
 .tips-item{
-  display:flex;gap:12px;
-  padding:12px 0;
-  border-bottom:0.5px solid rgba(83,74,183,.08);
+  display:flex;gap:14px;
+  padding:14px 0;
+  border-bottom:1px dashed rgba(83,74,183,.1);
 }
 .tips-item:last-child{border-bottom:none}
 .tips-bullet{
-  width:26px;height:26px;border-radius:50%;
-  background:#EEEDFE;color:#534AB7;
-  font-size:12px;font-weight:700;
+  width:32px;height:32px;border-radius:12px;
+  background:linear-gradient(135deg,#EEEDFE,#CECBF6);
+  color:#534AB7;
+  font-size:14px;font-weight:800;
   display:flex;align-items:center;justify-content:center;flex-shrink:0;
-  margin-top:1px;
 }
-.tips-text{font-size:14px;color:#1a1a2e;line-height:1.6;flex:1}
-.tips-text strong{color:#534AB7;font-weight:700}
+.tips-text{font-size:14px;color:#2a2a3e;line-height:1.65;flex:1}
+.tips-text strong{
+  color:#534AB7;font-weight:800;
+  background:linear-gradient(135deg,#EEEDFE,#E0DFFB);
+  padding:1px 5px;border-radius:5px;
+  display:inline;
+}
 
 /* コツボタン */
 .tips-btn{
-  display:flex;align-items:center;gap:4px;
-  background:none;border:none;cursor:pointer;
-  font-size:12px;font-weight:600;color:#7F77DD;
-  padding:0;margin-left:auto;flex-shrink:0;
-  white-space:nowrap;
+  display:flex;align-items:center;gap:5px;
+  background:linear-gradient(135deg,#7F77DD,#D4537E);
+  border:none;cursor:pointer;
+  font-size:11px;font-weight:800;color:#fff;
+  padding:5px 11px;margin-left:auto;flex-shrink:0;
+  white-space:nowrap;border-radius:20px;
+  letter-spacing:.3px;
+  box-shadow:0 2px 8px rgba(127,119,221,.4);
+  transition:transform .12s, box-shadow .12s;
 }
-.tips-btn:active{opacity:.7}
+.tips-btn::before{content:'💡';font-size:12px}
+.tips-btn:active{transform:scale(0.93);box-shadow:0 1px 4px rgba(127,119,221,.3)}
 
 /* ── 更新ボタン（フローティング） ── */
 #refresh-fab{
@@ -554,7 +695,11 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
   <div class="tips-modal">
     <div class="tips-modal-handle"></div>
     <div class="tips-modal-head">
-      <div class="tips-modal-title" id="tips-title"></div>
+      <div class="tips-modal-emoji" id="tips-emoji">💡</div>
+      <div class="tips-modal-title-wrap">
+        <div class="tips-modal-label">プロのコツ</div>
+        <div class="tips-modal-title" id="tips-title"></div>
+      </div>
       <button class="tips-modal-close" onclick="closeTipsBtn()">✕</button>
     </div>
     <div class="tips-modal-body" id="tips-body"></div>
@@ -631,7 +776,10 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
     </div>
     <div class="menu-scroll">
       <div class="menu-hero">
-        <div class="menu-pdca-name" id="menu-pdca-name"></div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          <div class="menu-pdca-name" id="menu-pdca-name" style="margin-bottom:0"></div>
+          <button onclick="editPDCATitle()" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:6px;color:#fff;font-size:11px;padding:3px 8px;cursor:pointer;flex-shrink:0">編集</button>
+        </div>
         <div class="menu-kgi-text" id="menu-kgi-text"></div>
         <div class="menu-prog-row">
           <div class="menu-prog-bar"><div class="menu-prog-fill" id="menu-prog-fill" style="width:0%"></div></div>
@@ -683,42 +831,111 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
       <div class="hdr-title">PLAN — 計画</div>
     </div>
     <div class="sheet-scroll">
-      <div class="s-card">
-        <div class="s-card-title"><div class="step-badge">1</div>ゴール設定<button class="tips-btn" onclick="showTips('goal')">→ コツ</button></div>
-        <label class="lbl">ゴール（定性）</label>
-        <input type="text" id="p-goal" placeholder="例：営業成績1位" oninput="savePlan()">
-        <div class="row2">
-          <div><label class="lbl">KGI数値</label><input type="number" id="p-kgi-val" placeholder="25" oninput="savePlan()"></div>
-          <div><label class="lbl">単位</label><input type="text" id="p-kgi-unit" placeholder="件/月" oninput="savePlan()"></div>
+      <!-- STEP1: ゴール設定 -->
+      <div class="fold-card goal-card" id="fc-goal">
+        <div class="fold-header" onclick="toggleFold('fc-goal')">
+          <div class="fold-step"><div class="step-badge" style="background:linear-gradient(135deg,#FFD966,#FF9500)">1</div></div>
+          <div class="fold-title-area">
+            <div class="fold-label goal-label">⭐ ゴール設定</div>
+            <div id="fs-goal-rich" style="display:none;margin-top:6px">
+              <div id="fs-goal-text" style="font-size:17px;font-weight:800;color:#1a1a2e;margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+              <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap">
+                <span id="fs-goal-val" style="font-size:26px;font-weight:800;color:#FF9500;line-height:1"></span>
+                <span id="fs-goal-unit" style="font-size:14px;font-weight:600;color:var(--tx2)"></span>
+                <span id="fs-goal-deadline" style="font-size:12px;font-weight:600;color:var(--tx2);margin-left:4px"></span>
+              </div>
+            </div>
+            <div class="fold-summary" id="fs-goal">未入力</div>
+          </div>
+          <div class="fold-chevron open" id="fc-goal-chev">▼</div>
         </div>
-        <label class="lbl">達成期日</label>
-        <input type="date" id="p-deadline" oninput="savePlan()">
-      </div>
-      <div class="s-card">
-        <div class="s-card-title"><div class="step-badge">2</div>現状とのギャップ<button class="tips-btn" onclick="showTips('gap')">→ コツ</button></div>
-        <div class="row2">
-          <div><label class="lbl">現在値</label><input type="number" id="p-cur" placeholder="12" oninput="calcGap()"></div>
-          <div><label class="lbl">単位</label><input type="text" id="p-cur-unit" placeholder="件/月" oninput="savePlan()"></div>
+        <div class="fold-body">
+          <label class="lbl">ゴール（定性）</label>
+          <input type="text" id="p-goal" placeholder="例：営業成績1位" oninput="savePlan()">
+          <div class="row2">
+            <div><label class="lbl">KGI数値</label><input type="number" id="p-kgi-val" placeholder="25" oninput="savePlan()"></div>
+            <div><label class="lbl">単位</label><input type="text" id="p-kgi-unit" placeholder="件/月" oninput="syncUnit()"></div>
+          </div>
+          <label class="lbl">達成期日</label>
+          <input type="date" id="p-deadline" oninput="savePlan()">
         </div>
-        <div class="gap-val" id="gap-val">—</div>
-        <div class="gap-lbl">差分（自動計算）</div>
       </div>
-      <div class="s-card">
-        <div class="s-card-title"><div class="step-badge">3</div>課題の洗い出し<button class="tips-btn" onclick="showTips('issues')">→ コツ</button></div>
-        <div class="hint-box">インパクト・気軽さ　A=3点 B=2点 C=1点（最高6点）。スコア上位3つをKPIへ。</div>
-        <div id="p-issues"></div>
-        <button class="add-row-btn" onclick="addIssue()">＋ 課題を追加</button>
+
+      <!-- STEP2: ギャップ -->
+      <div class="fold-card" id="fc-gap">
+        <div class="fold-header" onclick="toggleFold('fc-gap')">
+          <div class="fold-step"><div class="step-badge">2</div></div>
+          <div class="fold-title-area">
+            <div class="fold-label">現状とのギャップ</div>
+            <div id="fs-gap-num" style="display:none"><span class="fold-num" id="fs-gap-n"></span><span class="fold-num-unit" id="fs-gap-u"></span></div>
+            <div class="fold-summary" id="fs-gap">未入力</div>
+          </div>
+          <div class="fold-chevron open" id="fc-gap-chev">▼</div>
+        </div>
+        <div class="fold-body">
+          <div class="row2">
+            <div><label class="lbl">現在値</label><input type="number" id="p-cur" placeholder="12" oninput="calcGap()"></div>
+            <div><label class="lbl">単位（ゴールから自動）</label><input type="text" id="p-cur-unit" placeholder="件/月" oninput="savePlan()"></div>
+          </div>
+          <div style="display:flex;align-items:baseline;gap:6px;margin-top:10px">
+            <div class="gap-val" id="gap-val" style="margin-top:0">—</div>
+            <div class="gap-unit" id="gap-unit" style="font-size:15px;font-weight:600;color:var(--tx2)"></div>
+          </div>
+          <div class="gap-lbl">差分（自動計算）</div>
+        </div>
       </div>
-      <div class="s-card">
-        <div class="s-card-title"><div class="step-badge">5</div>KPI設定（上位3つ）<button class="tips-btn" onclick="showTips('kpi')">→ コツ</button></div>
-        <div id="p-kpis"></div>
-        <button class="add-row-btn" onclick="addKPI()">＋ KPIを追加</button>
+
+      <!-- STEP3: 課題 -->
+      <div class="fold-card" id="fc-issues">
+        <div class="fold-header" onclick="toggleFold('fc-issues')">
+          <div class="fold-step"><div class="step-badge">3</div></div>
+          <div class="fold-title-area">
+            <div class="fold-label">課題の洗い出し</div>
+            <div class="fold-summary" id="fs-issues">未入力</div>
+          </div>
+
+          <div class="fold-chevron open" id="fc-issues-chev">▼</div>
+        </div>
+        <div class="fold-body">
+          <div class="hint-box">インパクト・気軽さ　A=3点 B=2点 C=1点（最高6点）。スコア上位3つをKPIへ。</div>
+          <div id="p-issues"></div>
+          <button class="add-row-btn" onclick="addIssue()">＋ 課題を追加</button>
+        </div>
       </div>
-      <div class="s-card">
-        <div class="s-card-title"><div class="step-badge">6-7</div>解決案と優先度<button class="tips-btn" onclick="showTips('solutions')">→ コツ</button></div>
-        <div class="hint-box">インパクト・気軽さ・実現可能性　A=3点（最高9点）</div>
-        <div id="p-solutions"></div>
-        <button class="add-row-btn" onclick="addSolution()">＋ 解決案を追加</button>
+
+      <!-- STEP5: KPI -->
+      <div class="fold-card" id="fc-kpis">
+        <div class="fold-header" onclick="toggleFold('fc-kpis')">
+          <div class="fold-step"><div class="step-badge">5</div></div>
+          <div class="fold-title-area">
+            <div class="fold-label">KPI設定（上位3つ）</div>
+            <div class="fold-summary" id="fs-kpis">未入力</div>
+          </div>
+
+          <div class="fold-chevron open" id="fc-kpis-chev">▼</div>
+        </div>
+        <div class="fold-body">
+          <div id="p-kpis"></div>
+          <button class="add-row-btn" onclick="addKPI()">＋ KPIを追加</button>
+        </div>
+      </div>
+
+      <!-- STEP6-7: 解決案 -->
+      <div class="fold-card" id="fc-solutions">
+        <div class="fold-header" onclick="toggleFold('fc-solutions')">
+          <div class="fold-step"><div class="step-badge">6-7</div></div>
+          <div class="fold-title-area">
+            <div class="fold-label">解決案と優先度</div>
+            <div class="fold-summary" id="fs-solutions">未入力</div>
+          </div>
+
+          <div class="fold-chevron open" id="fc-solutions-chev">▼</div>
+        </div>
+        <div class="fold-body">
+          <div class="hint-box">インパクト・気軽さ・実現可能性　A=3点（最高9点）</div>
+          <div id="p-solutions"></div>
+          <button class="add-row-btn" onclick="addSolution()">＋ 解決案を追加</button>
+        </div>
       </div>
     </div>
   </div>
@@ -944,6 +1161,7 @@ if ('serviceWorker' in navigator) {
 const STORE_KEY = 'onisoku_v2';
 let DB = {
   pdcas: [],
+  foldState: {},  // 折りたたみ状態を保存
   categories: [
     { id:'cat-work', name:'仕事', color:'#534AB7' },
     { id:'cat-private', name:'プライベート', color:'#1D9E75' },
@@ -1004,13 +1222,15 @@ function renderHome() {
   const makeCard = (p) => {
     const cat = DB.categories.find(c => c.id === p.catId);
     const pct = calcPct(p);
-    return `<div class="pdca-card${p.paused?' paused':''}" onclick="openPDCA('${p.id}')">
+    return `<div class="pdca-card${p.paused?' paused':''}">
       <div class="pdca-card-row1">
-        <div class="pdca-card-title">${esc(p.title)}</div>
-        <div class="status-pill ${p.paused?'pill-paused':'pill-active'}">${p.paused?'停止中':'進行中'}</div>
+        <div class="pdca-card-title" onclick="openPDCA('${p.id}')" style="cursor:pointer;flex:1">${esc(p.title)}</div>
+        <button onclick="quickEditTitle('${p.id}')"
+          style="background:none;border:none;font-size:15px;cursor:pointer;padding:4px 8px;color:var(--tx2);flex-shrink:0">✏</button>
+        <div class="status-pill ${p.paused?'pill-paused':'pill-active'}" onclick="openPDCA('${p.id}')" style="cursor:pointer">${p.paused?'停止中':'進行中'}</div>
       </div>
-      <div class="pdca-kgi">${esc(p.kgi||'KGI未設定')}</div>
-      <div class="card-foot">
+      <div class="pdca-kgi" onclick="openPDCA('${p.id}')" style="cursor:pointer">${esc(p.kgi||'KGI未設定')}</div>
+      <div class="card-foot" onclick="openPDCA('${p.id}')" style="cursor:pointer">
         <div class="prog-wrap"><div class="prog-fill" style="width:${pct}%"></div></div>
         <div class="prog-pct">${pct}%</div>
         <div class="cycle-tag">第${p.cycle}サイクル</div>
@@ -1120,6 +1340,26 @@ function renderMenu() {
   document.getElementById('pause-toggle-btn').textContent = p.paused ? '再開する' : '一時停止';
 }
 
+function quickEditTitle(id) {
+  const p = DB.pdcas.find(x => x.id === id);
+  if (!p) return;
+  const newTitle = prompt('PDCAのタイトルを編集', p.title);
+  if (newTitle && newTitle.trim()) {
+    p.title = newTitle.trim();
+    saveDB(); renderHome();
+    if (CUR === id) renderMenu();
+  }
+}
+
+function editPDCATitle() {
+  const p = curP(); if (!p) return;
+  const newTitle = prompt('PDCAのタイトルを編集', p.title);
+  if (newTitle && newTitle.trim()) {
+    p.title = newTitle.trim();
+    saveDB(); renderMenu(); renderHome();
+  }
+}
+
 function togglePause() {
   const p = curP(); if (!p) return;
   p.paused = !p.paused; saveDB(); renderMenu();
@@ -1132,45 +1372,220 @@ function deletePDCA() {
 }
 
 /* ══════════════════════════════════════════
+   折りたたみ
+══════════════════════════════════════════ */
+function toggleItemFold(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.toggle('collapsed');
+  const chev = el.querySelector('.item-fold-chev');
+  if (chev) chev.classList.toggle('open', !el.classList.contains('collapsed'));
+  if (!DB.foldState) DB.foldState = {};
+  DB.foldState[id] = el.classList.contains('collapsed');
+  saveDB();
+}
+
+// 折りたたみ状態を復元
+function restoreFoldState() {
+  if (!DB.foldState) return;
+  Object.entries(DB.foldState).forEach(([id, collapsed]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (collapsed) {
+      el.classList.add('collapsed');
+      // セクションカードのchevron
+      const chev = document.getElementById(id + '-chev');
+      if (chev) chev.classList.remove('open');
+      // アイテムのchevron
+      const itemChev = el.querySelector('.item-fold-chev');
+      if (itemChev) itemChev.classList.remove('open');
+    } else {
+      el.classList.remove('collapsed');
+      const chev = document.getElementById(id + '-chev');
+      if (chev) chev.classList.add('open');
+      const itemChev = el.querySelector('.item-fold-chev');
+      if (itemChev) itemChev.classList.add('open');
+    }
+  });
+}
+
+function toggleFold(id) {
+  const card = document.getElementById(id);
+  const chev = document.getElementById(id + '-chev');
+  card.classList.toggle('collapsed');
+  if (chev) chev.classList.toggle('open', !card.classList.contains('collapsed'));
+  if (!DB.foldState) DB.foldState = {};
+  DB.foldState[id] = card.classList.contains('collapsed');
+  saveDB();
+}
+
+function updateFoldSummaries() {
+  const p = curP(); if (!p) return;
+  const pl = p.plan;
+  // ゴール — 豊かな表示
+  const gs = document.getElementById('fs-goal');
+  const gsRich = document.getElementById('fs-goal-rich');
+  const gsText = document.getElementById('fs-goal-text');
+  const gsVal = document.getElementById('fs-goal-val');
+  const gsUnit = document.getElementById('fs-goal-unit');
+  const gsDeadline = document.getElementById('fs-goal-deadline');
+  const hasGoal = pl.goal || pl.kgiVal;
+  if (gsRich) gsRich.style.display = hasGoal ? '' : 'none';
+  if (gs) gs.style.display = hasGoal ? 'none' : '';
+  if (!hasGoal && gs) { gs.textContent = '未入力'; }
+  if (hasGoal) {
+    if (gsText) gsText.textContent = pl.goal || '';
+    if (gsVal) gsVal.textContent = pl.kgiVal ? pl.kgiVal : '';
+    if (gsUnit) gsUnit.textContent = pl.kgiUnit || '';
+    if (gsDeadline) gsDeadline.textContent = pl.deadline ? '📅 ' + pl.deadline : '';
+  }
+  // ギャップ — fs-gap-numとfs-gapを状況に応じて切り替え
+  const gg = document.getElementById('fs-gap');
+  const gnEl2 = document.getElementById('fs-gap-n');
+  const guEl2 = document.getElementById('fs-gap-u');
+  const gnWrap2 = document.getElementById('fs-gap-num');
+  if (pl.curVal && pl.kgiVal) {
+    const diff2 = parseFloat(pl.kgiVal) - parseFloat(pl.curVal);
+    if (gnEl2) { gnEl2.textContent = (diff2>=0?'+':'')+diff2; gnEl2.style.color = diff2>=0?'var(--p)':'var(--red)'; }
+    if (guEl2) guEl2.textContent = pl.kgiUnit||pl.curUnit||'';
+    if (gnWrap2) gnWrap2.style.display = '';
+    if (gg) { gg.textContent = `現在: ${pl.curVal}${pl.curUnit||''}`; gg.style.display=''; }
+  } else if (pl.curVal) {
+    if (gnWrap2) gnWrap2.style.display = 'none';
+    if (gg) { gg.textContent = `現在: ${pl.curVal}${pl.curUnit||''}`; gg.style.display=''; }
+  } else {
+    if (gnWrap2) gnWrap2.style.display = 'none';
+    if (gg) { gg.textContent = '未入力'; gg.style.display=''; }
+  }
+  // 課題
+  const gi = document.getElementById('fs-issues');
+  const issued = p.issues.filter(x=>x.text);
+  if (gi) gi.textContent = issued.length ? issued.map((x,i)=>`課題${i+1}: ${x.text}`).join('　／　') : '未入力';
+  // KPI
+  const gk = document.getElementById('fs-kpis');
+  const kpid = p.kpis.filter(x=>x.issue||x.kpi||x.target);
+  if (gk) gk.textContent = kpid.length ? kpid.map((x,i)=>{
+    const nm = x.kpiName||x.kpi||x.issue||'';
+    const parts = [nm, x.target?(x.target+(x.unit||'')):''].filter(Boolean);
+    return `KPI${i+1}: ${parts.join(' / ')}`;
+  }).join('　') : '未入力';
+  // 解決案
+  const gsl = document.getElementById('fs-solutions');
+  const sold = p.solutions.filter(x=>x.text);
+  if (gsl) gsl.textContent = sold.length ? sold.map((x,i)=>`解決案${i+1}: ${x.text}`).join('　／　') : '未入力';
+
+
+}
+
+/* ══════════════════════════════════════════
    PLAN
 ══════════════════════════════════════════ */
+// 全角数字→半角数字変換
+function toHalfNum(str) {
+  return String(str).replace(/[０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0))
+                    .replace(/[Ａ-Ｚａ-ｚ]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0));
+}
+
+function syncUnit() {
+  // KGI単位が変わったら現在値の単位も自動更新（手動変更していない場合のみ）
+  const kgiUnit = document.getElementById('p-kgi-unit').value;
+  const curUnitEl = document.getElementById('p-cur-unit');
+  if (!curUnitEl.dataset.manual) {
+    curUnitEl.value = kgiUnit;
+  }
+  savePlan();
+}
+
 function savePlan() {
   const p = curP(); if (!p) return;
   p.plan.goal = document.getElementById('p-goal').value;
-  p.plan.kgiVal = document.getElementById('p-kgi-val').value;
+
+  // KGI数値: 全角→半角変換して反映
+  const kgiRaw = document.getElementById('p-kgi-val').value;
+  const kgiHalf = toHalfNum(kgiRaw);
+  if (kgiHalf !== kgiRaw) document.getElementById('p-kgi-val').value = kgiHalf;
+  p.plan.kgiVal = kgiHalf;
+
   p.plan.kgiUnit = document.getElementById('p-kgi-unit').value;
   p.plan.deadline = document.getElementById('p-deadline').value;
-  p.plan.curVal = document.getElementById('p-cur').value;
-  p.plan.curUnit = document.getElementById('p-cur-unit').value;
-  calcGap(); saveDB();
+
+  // 現在値: 全角→半角変換
+  const curRaw = document.getElementById('p-cur').value;
+  const curHalf = toHalfNum(curRaw);
+  if (curHalf !== curRaw) document.getElementById('p-cur').value = curHalf;
+  p.plan.curVal = curHalf;
+
+  // 単位: ゴール設定の単位を自動コピー（空欄のとき or まだ手動変更していない場合）
+  const kgiUnit = p.plan.kgiUnit;
+  const curUnitEl = document.getElementById('p-cur-unit');
+  if (kgiUnit && !curUnitEl.dataset.manual) {
+    curUnitEl.value = kgiUnit;
+    p.plan.curUnit = kgiUnit;
+  } else {
+    p.plan.curUnit = curUnitEl.value;
+  }
+
+  calcGap(); updateFoldSummaries(); saveDB();
 }
 
 function calcGap() {
-  const t = parseFloat(document.getElementById('p-kgi-val').value);
-  const c = parseFloat(document.getElementById('p-cur').value);
+  const tRaw = toHalfNum(document.getElementById('p-kgi-val').value);
+  const cRaw = toHalfNum(document.getElementById('p-cur').value);
+  const t = parseFloat(tRaw);
+  const c = parseFloat(cRaw);
+  // planにも即時反映（updateFoldSummariesが読む前に保存）
+  const p = curP();
+  if (p) {
+    p.plan.kgiVal = tRaw;
+    p.plan.curVal = cRaw;
+    p.plan.kgiUnit = document.getElementById('p-kgi-unit').value;
+    p.plan.curUnit = document.getElementById('p-cur-unit').value || p.plan.kgiUnit;
+  }
   const el = document.getElementById('gap-val');
+  const unitEl = document.getElementById('gap-unit');
+  const unit = document.getElementById('p-kgi-unit').value || document.getElementById('p-cur-unit').value || '';
   if (!isNaN(t) && !isNaN(c)) {
     const d = t - c;
     el.textContent = (d >= 0 ? '+' : '') + d;
     el.style.color = d >= 0 ? 'var(--p)' : 'var(--red)';
-  } else { el.textContent = '—'; el.style.color = 'var(--p)'; }
+    if (unitEl) unitEl.textContent = unit;
+  } else {
+    el.textContent = '—';
+    el.style.color = 'var(--p)';
+    if (unitEl) unitEl.textContent = '';
+  }
+  updateFoldSummaries();
+  saveDB();
 }
 
 function renderPlan() {
   const p = curP(); if (!p) return;
   const pl = p.plan;
-  ['goal','kgiVal','kgiUnit','deadline','curVal','curUnit'].forEach(k => {
-    const id = 'p-' + k.replace('kgiVal','kgi-val').replace('kgiUnit','kgi-unit').replace('curVal','cur').replace('curUnit','cur-unit');
-    const el = document.getElementById(id); if (el) el.value = pl[k] || '';
-  });
   document.getElementById('p-goal').value = pl.goal || '';
   document.getElementById('p-kgi-val').value = pl.kgiVal || '';
   document.getElementById('p-kgi-unit').value = pl.kgiUnit || '';
   document.getElementById('p-deadline').value = pl.deadline || '';
   document.getElementById('p-cur').value = pl.curVal || '';
-  document.getElementById('p-cur-unit').value = pl.curUnit || '';
+  // 単位: 保存済みあればそれを、なければKGI単位を自動入力
+  const curUnitEl = document.getElementById('p-cur-unit');
+  curUnitEl.value = pl.curUnit || pl.kgiUnit || '';
+  // 手動変更フラグ: KGI単位と異なっていれば手動とみなす
+  if (pl.curUnit && pl.curUnit !== pl.kgiUnit) {
+    curUnitEl.dataset.manual = '1';
+  } else {
+    delete curUnitEl.dataset.manual;
+  }
+  // 単位欄の手動変更を検出
+  curUnitEl.oninput = function() {
+    const kgiUnit = document.getElementById('p-kgi-unit').value;
+    if (this.value !== kgiUnit) this.dataset.manual = '1';
+    else delete this.dataset.manual;
+    savePlan();
+  };
   calcGap();
   renderIssues(); renderKPIs(); renderSolutions();
+  updateFoldSummaries();
+  setTimeout(restoreFoldState, 0);
 }
 
 const ABC_PTS = { A:3, B:2, C:1 };
@@ -1191,8 +1606,8 @@ function setABC(id, field, val, type) {
   if (type === 'issues') arr[idx].score = s2(arr[idx].impact, arr[idx].ease);
   if (type === 'solutions') arr[idx].score = s3(arr[idx].impact, arr[idx].ease, arr[idx].feas);
   saveDB();
-  if (type === 'issues') renderIssues();
-  if (type === 'solutions') renderSolutions();
+  if (type === 'issues') { renderIssues(); setTimeout(restoreFoldState,0); }
+  if (type === 'solutions') { renderSolutions(); setTimeout(restoreFoldState,0); }
 }
 
 function updField(type, id, field, val) {
@@ -1201,96 +1616,270 @@ function updField(type, id, field, val) {
   p[type][idx][field] = val; saveDB();
 }
 
+function updKpiName(id, val) {
+  const p = curP(); if (!p) return;
+  const idx = p.kpis.findIndex(x => x.id === id); if (idx < 0) return;
+  p.kpis[idx].kpiName = val;
+  p.kpis[idx].issue = val;  // 後方互換
+  p.kpis[idx].kpi = val;    // 後方互換
+  saveDB();
+  // ヘッダーのラベルをリアルタイム更新（再renderなし）
+  const fid = 'kf-' + id;
+  const el = document.getElementById(fid);
+  if (el) {
+    const titleEl = el.querySelector('.item-fold-title');
+    if (titleEl) {
+      titleEl.textContent = val || (p.kpis[idx] === p.kpis[0] ? '（サブゴール未入力）' : '（KPI未入力）');
+      titleEl.classList.toggle('empty', !val);
+    }
+  }
+  updateFoldSummaries();
+}
+
 function addIssue() {
   const p = curP(); if (!p) return;
-  p.issues.push({ id: Date.now()+'', text:'', impact:'', ease:'', score:0 });
-  saveDB(); renderIssues();
+  p.issues.push({ id: Date.now()+'', text:'', impact:'', ease:'', score:0, time:'' });
+  saveDB(); renderIssues(); updateFoldSummaries(); setTimeout(restoreFoldState, 0);
 }
 
 function renderIssues() {
   const p = curP(); if (!p) return;
-  document.getElementById('p-issues').innerHTML = p.issues.map((iss, i) => `
-    <div style="padding:12px 0;border-bottom:0.5px solid var(--bd)">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-        <div class="step-badge" style="background:var(--surf2);color:var(--tx2);font-size:12px">${i+1}</div>
-        <input type="text" value="${esc(iss.text)}" placeholder="課題を入力" style="flex:1"
-          onchange="updField('issues','${iss.id}','text',this.value)">
-        <button class="del-btn" onclick="delItem('issues','${iss.id}')">削除</button>
+  document.getElementById('p-issues').innerHTML = p.issues.map((iss, i) => {
+    const fid = 'if-' + iss.id;
+    const label = iss.text || '（未入力）';
+    const impLbl = iss.impact ? `インパクト${iss.impact}` : '';
+    const easeLbl = iss.ease ? `気軽さ${iss.ease}` : '';
+    const timeLbl = iss.time ? `時間:${iss.time}` : '';
+    const scoreLbl = iss.score ? `スコア${iss.score}/6` : '';
+    const meta = [impLbl, easeLbl, timeLbl, scoreLbl].filter(Boolean).join('　');
+    return `
+    <div class="item-fold" id="${fid}">
+      <div class="item-fold-header" onclick="toggleItemFold('${fid}')">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="item-fold-num">${i+1}</div>
+            <div style="font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:.5px;flex-shrink:0">課題 ${i+1}</div>
+            <div class="item-fold-title ${iss.text?'':'empty'}" style="white-space:normal">${esc(label)}</div>
+            <div class="item-fold-chev open">▼</div>
+          </div>
+          <div style="padding-left:34px">
+            <div style="font-size:12px;color:var(--tx2);line-height:1.6;word-break:break-all">${esc(meta)}</div>
+          </div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <div><div style="font-size:11px;color:var(--tx2);margin-bottom:4px">インパクト</div>
-          <div class="abc-row">${abcHtml(iss.id,'impact',iss.impact,'issues')}</div></div>
-        <div><div style="font-size:11px;color:var(--tx2);margin-bottom:4px">気軽さ</div>
-          <div class="abc-row">${abcHtml(iss.id,'ease',iss.ease,'issues')}</div></div>
+      <button class="item-del-btn" onclick="delItem('issues','${iss.id}')">削除</button>
+      <div class="item-fold-body">
+        <input type="text" value="${esc(iss.text)}" placeholder="課題を入力" style="width:100%;margin-bottom:10px"
+          onchange="updField('issues','${iss.id}','text',this.value);renderIssues();setTimeout(restoreFoldState,0)">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div><div style="font-size:11px;color:var(--tx2);margin-bottom:4px">インパクト</div>
+            <div class="abc-row">${abcHtml(iss.id,'impact',iss.impact,'issues')}</div></div>
+          <div><div style="font-size:11px;color:var(--tx2);margin-bottom:4px">気軽さ</div>
+            <div class="abc-row">${abcHtml(iss.id,'ease',iss.ease,'issues')}</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <div style="font-size:11px;color:var(--tx2);white-space:nowrap;flex-shrink:0">⏱ 所要時間</div>
+          <input type="text" value="${esc(iss.time||'')}" placeholder="？（わからなければ？と記入）"
+            style="flex:1;font-size:13px;padding:7px 10px"
+            onchange="updField('issues','${iss.id}','time',this.value);renderIssues();setTimeout(restoreFoldState,0)">
+        </div>
+        <div class="score-row"><span class="score-pill">スコア ${iss.score}/6</span></div>
       </div>
-      <div class="score-row"><span class="score-pill">スコア ${iss.score}/6</span></div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 function addKPI() {
   const p = curP(); if (!p) return;
-  p.kpis.push({ id: Date.now()+'', issue:'', kpi:'', target:'', current:'', deadline:'' });
-  saveDB(); renderKPIs();
+  p.kpis.push({ id: Date.now()+'', issue:'', kpi:'', kpiName:'', target:'', unit:'', current:'', deadline:'', issueNums:[] });
+  saveDB(); renderKPIs(); updateFoldSummaries(); setTimeout(restoreFoldState, 0);
 }
 
 function renderKPIs() {
   const p = curP(); if (!p) return;
-  const cols = ['var(--p)','#1D9E75','#BA7517'];
-  document.getElementById('p-kpis').innerHTML = p.kpis.map((k, i) => `
-    <div style="padding:11px 0;border-bottom:0.5px solid var(--bd)">
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:9px">
-        <div class="step-badge" style="background:${cols[i]||'var(--p)'};font-size:12px">${i+1}</div>
-        <input type="text" value="${esc(k.issue)}" placeholder="課題名" style="flex:1"
-          onchange="updField('kpis','${k.id}','issue',this.value)">
-        <button class="del-btn" onclick="delItem('kpis','${k.id}')">削除</button>
-      </div>
-      <input type="text" value="${esc(k.kpi)}" placeholder="KPI指標名" style="margin-bottom:8px"
-        onchange="updField('kpis','${k.id}','kpi',this.value)">
-      <div class="row2">
+  const issueNums = p.issues.map((iss,i) => ({ num: i+1, text: iss.text, id: iss.id })).filter(x=>x.text);
+
+  function kpiCard(k, i, isFirst) {
+    const checkedNums = k.issueNums || [];
+    const issueCheckHtml = issueNums.length ? `
+      <div style="margin-top:8px">
+        <div style="font-size:11px;color:var(--tx2);margin-bottom:6px">関連する課題（複数選択可）</div>
+        <div class="issue-check-grid">
+          ${issueNums.map(iss => `
+            <button class="issue-check-btn ${checkedNums.includes(iss.num)?'checked':''}"
+              onclick="toggleIssueNum('kpis','${k.id}',${iss.num})">
+              ${iss.num}. ${esc(iss.text.length>10?iss.text.slice(0,10)+'…':iss.text)}
+            </button>`).join('')}
+        </div>
+      </div>` : '';
+
+    const kpiNameVal = k.kpiName || k.kpi || k.issue || '';
+    const inner = `
+      ${isFirst ? '<div style="font-size:11px;font-weight:700;color:#FF9500;margin-bottom:8px">⭐ 最重要KPI = サブゴール</div>' : ''}
+      <label class="lbl" style="margin-top:0">KPIの設定</label>
+      <input type="text" value="${esc(kpiNameVal)}" placeholder="${isFirst?'例：アイアン精度80%以上':'例：パター成功率'}" style="margin-bottom:8px;width:100%"
+        oninput="updKpiName('${k.id}',this.value)">
+      <div style="display:grid;grid-template-columns:1fr 80px 1fr;gap:6px;align-items:end">
         <div><label class="lbl" style="margin-top:0">目標値</label>
           <input type="number" value="${esc(k.target)}" onchange="updField('kpis','${k.id}','target',this.value)"></div>
+        <div><label class="lbl" style="margin-top:0">単位</label>
+          <input type="text" value="${esc(k.unit||'')}" placeholder="件" style="font-size:13px"
+            onchange="updField('kpis','${k.id}','unit',this.value)"></div>
         <div><label class="lbl" style="margin-top:0">現在値</label>
           <input type="number" value="${esc(k.current)}" onchange="updField('kpis','${k.id}','current',this.value)"></div>
       </div>
       <label class="lbl">達成期日</label>
       <input type="date" value="${esc(k.deadline)}" onchange="updField('kpis','${k.id}','deadline',this.value)">
-    </div>`).join('');
+      ${issueCheckHtml}`;
+
+    if (isFirst) {
+      return `<div class="kpi-first-wrap">
+        <div class="kpi-first-label">⭐ KPI1 最重要</div>
+        ${inner}
+      </div>`;
+    } else {
+      return `<div class="kpi-rest-wrap">${inner}</div>`;
+    }
+  }
+
+  document.getElementById('p-kpis').innerHTML = p.kpis.map((k,i) => {
+    const isFirst = i===0;
+    const fid = 'kf-' + k.id;
+    const kpiNameDisp = k.kpiName || k.kpi || k.issue || '';
+    const label = kpiNameDisp || (isFirst?'（サブゴール未入力）':'（KPI未入力）');
+    const kpiParts = [
+      (k.target||k.unit) ? `目標:${k.target||'—'}${k.unit||''}` : '',
+      k.current ? `現在:${k.current}${k.unit||''}` : '',
+      k.deadline ? `期日:${k.deadline}` : ''
+    ].filter(Boolean);
+    // 関連課題（チェック済みのもの）
+    const p2 = curP();
+    const relIssues = (k.issueNums||[]).map(n => {
+      const iss = p2 && p2.issues[n-1];
+      return iss ? `課題${n}:${iss.text}` : `課題${n}`;
+    });
+    const metaMain = kpiParts.join('　');
+    const metaSub = relIssues.length ? '関連: ' + relIssues.join(' / ') : '';
+    const meta = [metaMain, metaSub].filter(Boolean).join(' ');
+    const numCls = isFirst ? 'first' : 'kpi-num';
+    const numStyle = isFirst ? 'background:linear-gradient(135deg,#FFD966,#FF9500)' : 'background:#7F77DD';
+    return `<div class="item-fold" id="${fid}">
+      <div class="item-fold-header" onclick="toggleItemFold('${fid}')">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="item-fold-num ${numCls}" style="${numStyle};color:#fff">${isFirst?'⭐':i+1}</div>
+            <div style="font-size:10px;font-weight:700;color:${isFirst?'#FF9500':'#7F77DD'};letter-spacing:.5px;flex-shrink:0">${isFirst?'KPI 1　最重要':'KPI '+(i+1)}</div>
+            <div class="item-fold-title ${(k.kpi||k.issue)?'':'empty'}" style="white-space:normal">${esc(label)}</div>
+            <div class="item-fold-chev open">▼</div>
+          </div>
+          <div style="padding-left:34px;display:flex;flex-direction:column;gap:2px">
+            <div style="font-size:12px;color:var(--tx2);line-height:1.6;word-break:break-all">${esc(metaMain)}</div>
+            ${metaSub ? '<div style=\"font-size:11px;color:var(--p);font-weight:500;line-height:1.5\">' + esc(metaSub) + '</div>' : ''}
+          </div>
+      </div>
+      <button class="item-del-btn" onclick="delItem('kpis','${k.id}')">削除</button>
+      <div class="item-fold-body">${kpiCard(k, i, isFirst)}</div>
+    </div>`;
+  }).join('');
+}
+
+function toggleIssueNum(type, id, num) {
+  const p = curP(); if (!p) return;
+  const idx = p[type].findIndex(x => x.id === id); if (idx < 0) return;
+  const arr = p[type][idx].issueNums || [];
+  if (arr.includes(num)) p[type][idx].issueNums = arr.filter(n => n !== num);
+  else p[type][idx].issueNums = [...arr, num].sort((a,b)=>a-b);
+  saveDB();
+  if (type==='kpis') { renderKPIs(); setTimeout(restoreFoldState,0); }
+  if (type==='solutions') { renderSolutions(); setTimeout(restoreFoldState,0); }
 }
 
 function addSolution() {
   const p = curP(); if (!p) return;
-  p.solutions.push({ id: Date.now()+'', text:'', impact:'', ease:'', feas:'', score:0 });
-  saveDB(); renderSolutions();
+  p.solutions.push({ id: Date.now()+'', text:'', impact:'', ease:'', feas:'', score:0, time:'', issueNums:[] });
+  saveDB(); renderSolutions(); updateFoldSummaries(); setTimeout(restoreFoldState, 0);
 }
 
 function renderSolutions() {
   const p = curP(); if (!p) return;
-  document.getElementById('p-solutions').innerHTML = p.solutions.map((s, i) => `
-    <div style="padding:12px 0;border-bottom:0.5px solid var(--bd)">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-        <div class="step-badge" style="background:var(--surf2);color:var(--tx2);font-size:12px">${i+1}</div>
-        <input type="text" value="${esc(s.text)}" placeholder="解決案" style="flex:1"
-          onchange="updField('solutions','${s.id}','text',this.value)">
-        <button class="del-btn" onclick="delItem('solutions','${s.id}')">削除</button>
+  const kpiNums = p.kpis.map((k,i) => ({ num: i+1, text: k.kpi||k.issue })).filter(x=>x.text);
+
+  document.getElementById('p-solutions').innerHTML = p.solutions.map((s, i) => {
+    const checkedNums = s.issueNums || [];
+    const kpiCheckHtml = kpiNums.length ? `
+      <div style="margin-top:8px">
+        <div style="font-size:11px;color:var(--tx2);margin-bottom:6px">関連するKPI（複数選択可）</div>
+        <div class="issue-check-grid">
+          ${kpiNums.map(k => `
+            <button class="issue-check-btn ${checkedNums.includes(k.num)?'checked':''}"
+              onclick="toggleIssueNum('solutions','${s.id}',${k.num})">
+              KPI${k.num}${k.num===1?' ⭐':''} ${esc(k.text.length>10?k.text.slice(0,10)+'…':k.text)}
+            </button>`).join('')}
+        </div>
+      </div>` : '';
+    const fid = 'sf-' + s.id;
+    const label = s.text || '（未入力）';
+    // 折りたたみ時のmeta
+    const solParts = [
+      s.impact ? `インパクト${s.impact}` : '',
+      s.ease   ? `気軽さ${s.ease}` : '',
+      s.feas   ? `実現性${s.feas}` : '',
+      s.time   ? `時間:${s.time}` : '',
+      s.score  ? `スコア${s.score}/9` : ''
+    ].filter(Boolean);
+    const solMetaMain = solParts.join('　');
+    // 関連KPI（チェック済み）
+    const relKpis = (s.issueNums||[]).map(n => {
+      const k = p.kpis[n-1];
+      return k ? `KPI${n}:${k.kpi||k.issue||''}` : `KPI${n}`;
+    }).filter(Boolean);
+    const solMetaSub = relKpis.length ? '関連: ' + relKpis.join(' / ') : '';
+    return `<div class="item-fold" id="${fid}">
+      <div class="item-fold-header" onclick="toggleItemFold('${fid}')">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="item-fold-num">${i+1}</div>
+            <div style="font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:.5px;flex-shrink:0">解決案 ${i+1}</div>
+            <div class="item-fold-title ${s.text?'':'empty'}" style="white-space:normal">${esc(label)}</div>
+            <div class="item-fold-chev open">▼</div>
+          </div>
+          <div style="padding-left:34px;display:flex;flex-direction:column;gap:2px">
+            <div style="font-size:12px;color:var(--tx2);line-height:1.6;word-break:break-all">${esc(solMetaMain)}</div>
+            ${solMetaSub ? '<div style=\"font-size:11px;color:var(--p);font-weight:500;line-height:1.5\">' + esc(solMetaSub) + '</div>' : ''}
+          </div>
       </div>
-      <div class="row3">
-        <div><div style="font-size:11px;color:var(--tx2);margin-bottom:4px">インパクト</div>
-          <div class="abc-row">${abcHtml(s.id,'impact',s.impact,'solutions')}</div></div>
-        <div><div style="font-size:11px;color:var(--tx2);margin-bottom:4px">気軽さ</div>
-          <div class="abc-row">${abcHtml(s.id,'ease',s.ease,'solutions')}</div></div>
-        <div><div style="font-size:11px;color:var(--tx2);margin-bottom:4px">実現性</div>
-          <div class="abc-row">${abcHtml(s.id,'feas',s.feas,'solutions')}</div></div>
+      <button class="item-del-btn" onclick="delItem('solutions','${s.id}')">削除</button>
+      <div class="item-fold-body">
+        <input type="text" value="${esc(s.text)}" placeholder="解決案" style="width:100%;margin-bottom:10px"
+          onchange="updField('solutions','${s.id}','text',this.value);renderSolutions();setTimeout(restoreFoldState,0)">
+        <div class="row3" style="margin-bottom:8px">
+          <div><div style="font-size:11px;color:var(--tx2);margin-bottom:4px">インパクト</div>
+            <div class="abc-row">${abcHtml(s.id,'impact',s.impact,'solutions')}</div></div>
+          <div><div style="font-size:11px;color:var(--tx2);margin-bottom:4px">気軽さ</div>
+            <div class="abc-row">${abcHtml(s.id,'ease',s.ease,'solutions')}</div></div>
+          <div><div style="font-size:11px;color:var(--tx2);margin-bottom:4px">実現性</div>
+            <div class="abc-row">${abcHtml(s.id,'feas',s.feas,'solutions')}</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <div style="font-size:11px;color:var(--tx2);white-space:nowrap;flex-shrink:0">⏱ 所要時間</div>
+          <input type="text" value="${esc(s.time||'')}" placeholder="？（わからなければ？と記入）"
+            style="flex:1;font-size:13px;padding:7px 10px"
+            onchange="updField('solutions','${s.id}','time',this.value)">
+        </div>
+        ${kpiCheckHtml}
+        <div class="score-row"><span class="score-pill">スコア ${s.score}/9</span></div>
       </div>
-      <div class="score-row"><span class="score-pill">スコア ${s.score}/9</span></div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 function delItem(type, id) {
   const p = curP(); if (!p) return;
+  const typeLabel = {issues:'課題', kpis:'KPI', solutions:'解決案', todos:'タスク', routines:'習慣'}[type] || '';
+  const item = p[type] && p[type].find(x => x.id === id);
+  const itemName = item ? (item.text || item.name || item.kpiName || item.kpi || item.issue || '') : '';
+  const msg = typeLabel + (itemName ? `「${itemName.slice(0,20)}」` : '') + 'を削除しますか？';
+  if (!confirm(msg)) return;
   p[type] = p[type].filter(x => x.id !== id); saveDB();
-  if (type==='issues') renderIssues();
-  if (type==='kpis') renderKPIs();
-  if (type==='solutions') renderSolutions();
+  if (type==='issues') { renderIssues(); updateFoldSummaries(); setTimeout(restoreFoldState,0); }
+  if (type==='kpis') { renderKPIs(); updateFoldSummaries(); setTimeout(restoreFoldState,0); }
+  if (type==='solutions') { renderSolutions(); updateFoldSummaries(); setTimeout(restoreFoldState,0); }
 }
 
 /* ══════════════════════════════════════════
@@ -1332,6 +1921,8 @@ function cycleTodo(id) {
 
 function delTodo(id) {
   const p = curP(); if (!p) return;
+  const t = p.todos.find(x => x.id === id);
+  if (!confirm('タスク' + (t ? `「${(t.name||'').slice(0,20)}」` : '') + 'を削除しますか？')) return;
   p.todos = p.todos.filter(x => x.id !== id); saveDB(); renderDo();
 }
 
@@ -1368,6 +1959,8 @@ function toggleDay(id, d) {
 
 function delRoutine(id) {
   const p = curP(); if (!p) return;
+  const r = p.routines.find(x => x.id === id);
+  if (!confirm('習慣' + (r ? `「${r.name}」` : '') + 'を削除しますか？')) return;
   p.routines = p.routines.filter(x => x.id !== id); saveDB(); renderRoutines();
 }
 
@@ -1409,7 +2002,7 @@ function renderCA() {
   }
   p.kpis.forEach((k,i) => {
     const pct = k.target && k.current ? Math.round(parseFloat(k.current)/parseFloat(k.target)*100) : 0;
-    rows.push({ label:'KPI '+(i+1), name: k.kpi||k.issue, target: k.target||'—', current: k.current||'—', pct });
+    rows.push({ label:'KPI '+(i+1), name: k.kpiName||k.kpi||k.issue, target: k.target||'—', current: k.current||'—', pct });
   });
   document.getElementById('ca-kpis').innerHTML = rows.length
     ? rows.map(r => `
@@ -1541,7 +2134,7 @@ const TIPS = {
       { num:'②', text:'注意すべきポイントは３つ。<strong>①期日を決める　②定量化する　③適度に具体化する</strong>' },
       { num:'③', text:'期日の理想は<strong>１〜３ヶ月</strong>。近すぎる期日には打つ手がなく、遠すぎる期日は手段が多すぎて迷うか後回しになる。' },
       { num:'④', text:'定性的なままでは進捗の把握が困難なため、<strong>絶対に定量化（数値化）する</strong>。' },
-      { num:'⑤', text:'期日は自分に危機感を持たせて動かすためのテクニック。期日によって<strong>戦略も手段も変わる</strong>。' },
+      { num:'⑤', text:'期日は自分に危機感を持たせて動かすためのテクニック。期日によって<strong>戦略も手段も変わる</strong>。' }
     ]
   },
   gap: {
@@ -1549,20 +2142,17 @@ const TIPS = {
     items: [
       { num:'①', text:'ギャップが大きければ大きいほど、<strong>必然的に課題は増える</strong>。それは当然のこと。' },
       { num:'②', text:'定性的ギャップは「なぜこうなりたいか」など<strong>モチベーションの根源</strong>になる可能性がある。' },
-      { num:'③', text:'ギャップを因数分解して課題をリストアップすることが次のSTEPへの橋渡し。<strong>できるだけ多く書き出す</strong>。' },
+      { num:'③', text:'ギャップを因数分解して課題をリストアップすることが次のSTEPへの橋渡し。<strong>できるだけ多く書き出す</strong>。' }
     ]
   },
   issues: {
     title: 'STEP 3 課題の洗い出しのコツ',
     items: [
       { num:'①', text:'課題といっても、<strong>自分に足りないものばかり考える必要はない</strong>。得意分野の強化も立派な課題。' },
-      { num:'②', text:'コツは<strong>自分に質問を投げかける</strong>こと。
-・ゴールから逆算すると、自分は何をすべきか？
-・この道を進むとしたら何が不足しているか？
-・周りでうまくいってる人はどんな工夫をしているか？' },
+      { num:'②', text:'コツは<strong>自分に質問を投げかける</strong>こと。<br>・ゴールから逆算すると、自分は何をすべきか？<br>・この道を進むとしたら何が不足しているか？<br>・周りでうまくいってる人はどんな工夫をしているか？' },
       { num:'③', text:'人はタスクを同時に抱えすぎると成果が出にくい。<strong>「やらないこと」を決めることこそ重要</strong>。' },
       { num:'④', text:'どうしても優先順位がわからない時は<strong>AIに聞けばいい</strong>。正解かどうかより早くDOして検証すればいい。' },
-      { num:'⑤', text:'スコアの見方：<strong>インパクトA=3点・B=2点・C=1点、気軽さも同様</strong>。最高6点。上位3つをKPIへ。' },
+      { num:'⑤', text:'スコアの見方：<strong>インパクトA=3点・B=2点・C=1点、気軽さも同様</strong>。最高6点。上位3つをKPIへ。' }
     ]
   },
   kpi: {
@@ -1572,7 +2162,7 @@ const TIPS = {
       { num:'②', text:'<strong>インパクトが劣っていても短い時間でできそうなもの</strong>を一つ選ぶ。早い検証が成長を加速させる。' },
       { num:'③', text:'同列の課題が並んでいたら<strong>気軽さを基準</strong>に絞る。気持ちが乗るものは継続する。' },
       { num:'④', text:'KPIはあくまでも<strong>「目指すべき結果」</strong>であって行動の目標ではない。「どうなりたいか？」の基準となるのがKPI。' },
-      { num:'⑤', text:'KPI化しようとすると大抵複数の選択肢が出る。<strong>各課題のKPIは一つに絞る</strong>といい。' },
+      { num:'⑤', text:'KPI化しようとすると大抵複数の選択肢が出る。<strong>各課題のKPIは一つに絞る</strong>といい。' }
     ]
   },
   solutions: {
@@ -1580,23 +2170,21 @@ const TIPS = {
     items: [
       { num:'①', text:'まずは<strong>質より量！実現性を考えず思いつく限り書き出す</strong>。その後に優先度をつけてDOシートへ。' },
       { num:'②', text:'解決案とは「大まかな方向性」のこと。この後の実行フェーズで<strong>アクション（DO）とタスク（TODO）でさらに割る</strong>。' },
-      { num:'③', text:'優先度をつけたら<strong>４つの課題の解決にあたるくらいが理想</strong>。
-・最重要KPIについては最低１つ、できれば２つ以上残す
-・それ以外のKPIもインパクト重視で一つは残す
-・短時間で終わるものはインパクトが弱くても残す' },
-      { num:'④', text:'スコアの見方：<strong>インパクト＋気軽さ＋実現可能性</strong>で最高9点。時間はスコア対象外（メモ欄のみ）。' },
+      { num:'③', text:'優先度をつけたら<strong>４つの課題の解決にあたるくらいが理想</strong>。<br>・最重要KPIについては最低１つ、できれば２つ以上残す<br>・それ以外のKPIもインパクト重視で一つは残す<br>・短時間で終わるものはインパクトが弱くても残す' },
+      { num:'④', text:'スコアの見方：<strong>インパクト＋気軽さ＋実現可能性</strong>で最高9点。時間はスコア対象外（メモ欄のみ）。' }
     ]
   }
 };
-
+const TIPS_EMOJI = { goal:'🎯', gap:'📊', issues:'🔍', kpi:'📈', solutions:'💡' };
 function showTips(key) {
   const data = TIPS[key];
   if (!data) return;
+  document.getElementById('tips-emoji').textContent = TIPS_EMOJI[key] || '💡';
   document.getElementById('tips-title').textContent = data.title;
   document.getElementById('tips-body').innerHTML = data.items.map(item => `
     <div class="tips-item">
       <div class="tips-bullet">${item.num}</div>
-      <div class="tips-text">${item.text.replace(/\n/g,'<br>')}</div>
+      <div class="tips-text">${item.text}</div>
     </div>`).join('');
   document.getElementById('tips-modal').classList.add('open');
 }
