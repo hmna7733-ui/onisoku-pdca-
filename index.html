@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="2.5.0">
+<meta name="app-version" content="2.5.1">
 
 <style>
 /* ── リセット & ベース ── */
@@ -2496,7 +2496,7 @@ function openTodoForm(formId) {
     const dateInput = document.getElementById(formId+'-date');
     if (dateInput) dateInput.value='';
     const personInput = document.getElementById(formId+'-person');
-    if (personInput) personInput.value='';
+    if (personInput) personInput.value='自分';
   }
 }
 
@@ -2514,7 +2514,7 @@ function addTodoInline(formId, kdiId) {
     name,
     kdiRef: kdiId,  // KDI IDで紐付け
     date: (document.getElementById(formId+'-date')||{}).value||'',
-    person: (document.getElementById(formId+'-person')||{}).value||'',
+    person: (document.getElementById(formId+'-person')||{}).value||'自分',
     status: '未着手'
   });
   saveDB();
