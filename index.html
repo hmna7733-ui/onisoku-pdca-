@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="2.9.4">
+<meta name="app-version" content="3.0.0">
 
 <style>
 /* ── リセット & ベース ── */
@@ -438,6 +438,55 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
   font-size:11px;font-weight:500;color:var(--tx2);
 }
 .hab-day.done{background:var(--p3);color:var(--p);border-color:var(--p4);font-size:12px}
+
+/* ── ADJUST新デザイン ── */
+.adj-main-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.adj-main-btn{
+  padding:16px 8px;border-radius:14px;border:2px solid var(--bd2);
+  background:var(--surf2);cursor:pointer;text-align:center;
+  transition:all .15s;-webkit-user-select:none;
+}
+.adj-main-btn .adj-btn-icon{font-size:24px;display:block;margin-bottom:4px}
+.adj-main-btn .adj-btn-lbl{font-size:13px;font-weight:700;color:var(--tx2)}
+.adj-main-btn.sel-継続{background:#E1F5EE;border-color:#9FE1CB}
+.adj-main-btn.sel-継続 .adj-btn-lbl{color:#085041}
+.adj-main-btn.sel-改善{background:var(--amber2);border-color:#FAC775}
+.adj-main-btn.sel-改善 .adj-btn-lbl{color:var(--amber3)}
+.adj-main-btn.sel-伸長{background:var(--p3);border-color:var(--p4)}
+.adj-main-btn.sel-伸長 .adj-btn-lbl{color:var(--p8)}
+.adj-main-btn.sel-中止{background:var(--red2);border-color:#F7C1C1}
+.adj-main-btn.sel-中止 .adj-btn-lbl{color:var(--red)}
+.adj-detail-card{
+  background:var(--surf);border:0.5px solid var(--bd);
+  border-radius:12px;padding:16px;margin-bottom:12px;
+}
+.adj-target-btns{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.adj-target-btn{
+  padding:5px 12px;border-radius:20px;
+  border:1.5px solid var(--bd2);background:var(--surf2);
+  font-size:12px;font-weight:600;color:var(--tx2);cursor:pointer;
+}
+.adj-target-btn.checked{background:var(--p);color:#fff;border-color:var(--p)}
+/* 達成ボタン */
+.pdca-complete-btn{
+  width:100%;padding:15px;
+  background:linear-gradient(135deg,#1D9E75,#0a7a58);
+  color:#fff;border:none;border-radius:12px;
+  font-size:16px;font-weight:800;cursor:pointer;margin-top:8px;
+  box-shadow:0 3px 12px rgba(29,158,117,.3);
+}
+.pdca-complete-btn:active{opacity:.85}
+/* 完了PDCA */
+.pdca-card.completed-pdca{
+  background:linear-gradient(135deg,#f8f8f0,#f0f8f4);
+  border:1px solid #c8e6c9;opacity:.7;
+}
+.pdca-completed-badge{
+  display:inline-flex;align-items:center;gap:4px;
+  background:linear-gradient(135deg,#1D9E75,#0a7a58);
+  color:#fff;font-size:10px;font-weight:700;
+  padding:2px 8px;border-radius:20px;
+}
 
 /* ── KDI実績カード ── */
 /* 総行動数バナー */
@@ -1023,6 +1072,13 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
               <div class="pdca-cards" id="paused-list"></div>
             </div>
           </div>
+
+          <!-- 完了PDCA -->
+          <div id="completed-section" style="display:none;margin-top:16px">
+            <div class="section-label" style="color:var(--teal3)">🏆 達成・完了PDCA</div>
+            <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">あなたの力になったPDCA。閲覧・編集も可能です。</div>
+            <div class="pdca-cards" id="completed-list"></div>
+          </div>
           <div id="empty-home" class="empty-home" style="display:none">
             <div class="empty-home-icon">📋</div>
             <div class="empty-home-title">PDCAを始めよう</div>
@@ -1390,21 +1446,52 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
         <div class="ca-div-lbl">ADJUST — 調整</div>
         <div class="ca-div-line"></div>
       </div>
+
+      <!-- ADJUST判断メイン -->
       <div class="s-card">
-        <div class="s-card-title" style="margin-bottom:8px">課題の調整判断</div>
-        <div id="ca-adj"></div>
+        <div class="s-card-title" style="margin-bottom:4px">このPDCAをどうする？</div>
+        <div style="font-size:12px;color:var(--tx2);margin-bottom:14px">4つから選んでください</div>
+        <div class="adj-main-btns">
+          <button class="adj-main-btn" id="adj-btn-継続" onclick="selectAdjMain('継続')">
+            <span class="adj-btn-icon">⏸</span>
+            <span class="adj-btn-lbl">継続</span>
+            <div style="font-size:10px;color:var(--tx3);margin-top:3px">そのまま次へ</div>
+          </button>
+          <button class="adj-main-btn" id="adj-btn-改善" onclick="selectAdjMain('改善')">
+            <span class="adj-btn-icon">🔧</span>
+            <span class="adj-btn-lbl">改善</span>
+            <div style="font-size:10px;color:var(--tx3);margin-top:3px">修正して次へ</div>
+          </button>
+          <button class="adj-main-btn" id="adj-btn-伸長" onclick="selectAdjMain('伸長')">
+            <span class="adj-btn-icon">📈</span>
+            <span class="adj-btn-lbl">伸長</span>
+            <div style="font-size:10px;color:var(--tx3);margin-top:3px">さらに高く</div>
+          </button>
+          <button class="adj-main-btn" id="adj-btn-中止" onclick="selectAdjMain('中止')">
+            <span class="adj-btn-icon">⏹</span>
+            <span class="adj-btn-lbl">中止</span>
+            <div style="font-size:10px;color:var(--tx3);margin-top:3px">このPDCAを止める</div>
+          </button>
+        </div>
       </div>
+
+      <!-- ADJUST詳細エリア（選択に応じて動的表示） -->
+      <div id="ca-adj-detail"></div>
+
+      <!-- 総合コメント -->
       <div class="s-card">
-        <div class="s-card-title" style="margin-bottom:10px">次のサイクルへ</div>
-        <label class="lbl">新ゴール / 修正KGI</label>
-        <textarea id="ca-newgoal" placeholder="例：目標を30件に引き上げる" oninput="saveAdj()"></textarea>
-        <label class="lbl">引き継ぐ課題</label>
-        <textarea id="ca-carry" placeholder="例：電話タスクを午前中に移動" oninput="saveAdj()"></textarea>
-        <label class="lbl">新たに追加する課題</label>
-        <textarea id="ca-new" placeholder="例：SNS発信を週3回追加" oninput="saveAdj()"></textarea>
-        <label class="lbl">総合コメント</label>
-        <textarea id="ca-comment" placeholder="例：基礎習慣ができた。次は量を増やす" oninput="saveAdj()"></textarea>
-        <button class="next-cycle-btn" onclick="nextCycle()">サイクル完了 → 次へ進む ›</button>
+        <div class="s-card-title" style="margin-bottom:8px">総合コメント</div>
+        <textarea id="ca-comment" placeholder="例：基礎習慣ができた。次は量を増やす" oninput="saveAdj()" style="min-height:80px"></textarea>
+      </div>
+
+      <!-- アクションボタン -->
+      <div style="padding:0 0 32px">
+        <button class="next-cycle-btn" onclick="nextCycle()" style="margin-bottom:10px">
+          サイクル完了 → 第${p ? p.cycle+1 : '次'}サイクルへ ›
+        </button>
+        <button class="pdca-complete-btn" onclick="completePDCA()">
+          🏆 このPDCAを達成・完了する
+        </button>
       </div>
     </div>
   </div>
@@ -1538,6 +1625,17 @@ function esc(s) {
 }
 function curP() { return DB.pdcas.find(p => p.id === CUR) || null; }
 function calcPct(p) {
+  // KGI達成率を優先。なければTODO完了率
+  const pl = p.plan;
+  if (pl && pl.kgiVal) {
+    // 最新CHECKレコードのkgiCurrentを使用
+    const latestCheck = (p.checkRecords||[])[0];
+    const curVal = latestCheck?.kgiCurrent || pl.curVal || '';
+    if (curVal !== '') {
+      const pct = calcAchievePct(pl.kgiVal, curVal, pl.curVal);
+      return Math.max(0, Math.min(pct, 100));
+    }
+  }
   const t = p.todos.length, d = p.todos.filter(x => x.status === '完了').length;
   return t ? Math.round(d / t * 100) : 0;
 }
@@ -1567,8 +1665,8 @@ function goScreen(id) {
 ══════════════════════════════════════════ */
 function renderHome() {
   ensureCategories();
-  const active = DB.pdcas.filter(p => !p.paused);
-  const paused = DB.pdcas.filter(p => p.paused);
+  const active = DB.pdcas.filter(p => !p.paused && !p.completed);
+  const paused = DB.pdcas.filter(p => p.paused && !p.completed);
   const total = DB.pdcas.length;
   document.getElementById('empty-home').style.display = total ? 'none' : 'block';
   document.getElementById('h-total').textContent = total;
@@ -1579,9 +1677,10 @@ function renderHome() {
   const makeCard = (p) => {
     const cat = DB.categories.find(c => c.id === p.catId);
     const pct = calcPct(p);
-    return `<div class="pdca-card${p.paused?' paused':''}">
+    return `<div class="pdca-card${p.paused?' paused':''} ${isCompleted?'completed-pdca':''}">
       <div class="pdca-card-row1">
         <div class="pdca-card-title" onclick="openPDCA('${p.id}')" style="cursor:pointer;flex:1">${esc(p.title)}</div>
+        ${isCompleted?'<span class="pdca-completed-badge">🏆 達成</span>':''}
         <button onclick="quickEditTitle('${p.id}')"
           style="background:none;border:none;font-size:15px;cursor:pointer;padding:4px 8px;color:var(--tx2);flex-shrink:0">✏</button>
         <div class="status-pill ${p.paused?'pill-paused':'pill-active'}" onclick="openPDCA('${p.id}')" style="cursor:pointer">${p.paused?'停止中':'進行中'}</div>
@@ -1625,11 +1724,20 @@ function renderHome() {
 
   // 一時停止中
   const pausedWrap = document.getElementById('paused-section-wrap');
-  if (paused.length) {
+  const pausedShow = paused.filter(p=>!p.completed);
+  if (pausedShow.length) {
     pausedWrap.style.display = 'block';
-    document.getElementById('paused-list').innerHTML = paused.map(p=>makeCard(p)).join('');
+    document.getElementById('paused-list').innerHTML = pausedShow.map(p=>makeCard(p,true)).join('');
   } else {
     pausedWrap.style.display = 'none';
+  }
+  // 完了PDCA
+  const completedPdcas = DB.pdcas.filter(p=>p.completed);
+  const completedSection = document.getElementById('completed-section');
+  if (completedSection) {
+    completedSection.style.display = completedPdcas.length ? '' : 'none';
+    const cl = document.getElementById('completed-list');
+    if (cl) cl.innerHTML = completedPdcas.map(p=>makeCard(p,false)).join('');
   }
 }
 
@@ -2904,24 +3012,9 @@ function renderCA() {
   const saveBtn = document.getElementById('ca-save-btn');
   if (saveBtn) saveBtn.textContent = d._editingId ? '振り返りを更新' : '振り返りを保存';
 
-  document.getElementById('ca-adj').innerHTML = p.issues.filter(x=>x.text).length
-    ? p.issues.filter(x=>x.text).map(iss => `
-        <div class="adj-row">
-          <div class="adj-lbl">${esc(iss.text)}</div>
-          <select onchange="setAdjJudge('${iss.id}',this.value)">
-            <option value="継続" ${(p.adjJudge[iss.id]||'継続')==='継続'?'selected':''}>⏸ 継続</option>
-            <option value="改善" ${p.adjJudge[iss.id]==='改善'?'selected':''}>🔧 改善</option>
-            <option value="伸長" ${p.adjJudge[iss.id]==='伸長'?'selected':''}>📈 伸長</option>
-            <option value="中止" ${p.adjJudge[iss.id]==='中止'?'selected':''}>❌ 中止</option>
-          </select>
-        </div>`).join('')
-    : '<div style="font-size:13px;color:var(--tx2)">PLANで課題を入力すると表示されます</div>';
-
-  const a = p.adj;
-  document.getElementById('ca-newgoal').value = a.newgoal||'';
-  document.getElementById('ca-carry').value = a.carry||'';
-  document.getElementById('ca-new').value = a.new||'';
-  document.getElementById('ca-comment').value = a.comment||'';
+  const commentEl = document.getElementById('ca-comment');
+  if (commentEl) commentEl.value = (p.adj||{}).comment||'';
+  renderAdjDetail();
 }
 
 // 頻度定義（KDI設定で使用）
@@ -3276,10 +3369,11 @@ function renderCheckHist() {
             const freqOpt = FREQ_OPTIONS.find(o=>o.value===(k.freq||''))||null;
             const qxtFreq = [k.quantity,k.time,freqOpt&&freqOpt.value?freqOpt.label:''].filter(Boolean).join('×');
             if (!isKeepOn) {
+              if (!res.done) return ''; // 未完了は表示しない
               return `<div style="font-size:12px;color:var(--tx2);margin-bottom:4px">
                 <span style="font-weight:600;color:var(--tx)">KDI${ki+1}: ${esc(k.text||'')}</span>
                 ${qxtFreq?`<span style="color:var(--tx3);margin-left:4px">(${esc(qxtFreq)})</span>`:''}
-                <span style="font-weight:700;color:${res.done?'#1D9E75':'var(--red)'}"> ${res.done?'✅完了':'❌未完了'}</span>
+                <span style="font-weight:700;color:#1D9E75"> ✅完了</span>
               </div>`;
             } else {
               // 行動数/予定数（達成率）の正しい表記
@@ -3292,6 +3386,7 @@ function renderCheckHist() {
                 : (autoPlanned !== null ? autoPlanned : null);
               const rate = pln !== null && pln > 0 ? Math.round(act/pln*100) : null;
               const rateColor = rate===null?'var(--p)':rate>=100?'#1D9E75':rate>=50?'var(--p)':'var(--red)';
+              if (act === 0 && (res.actual === '0' || res.actual === 0)) return ''; // 行動なしは非表示
               const plnStr = pln !== null ? `${pln}回` : '?回';
               return `<div style="font-size:12px;color:var(--tx2);margin-bottom:4px">
                 <span style="font-weight:600;color:var(--tx)">KDI${ki+1}: ${esc(k.text||'')}</span>
@@ -3312,11 +3407,134 @@ function setAdjJudge(id, val) {
 
 function saveAdj() {
   const p = curP(); if (!p) return;
-  p.adj.newgoal = document.getElementById('ca-newgoal').value;
-  p.adj.carry = document.getElementById('ca-carry').value;
-  p.adj.new = document.getElementById('ca-new').value;
-  p.adj.comment = document.getElementById('ca-comment').value;
+  if (!p.adj) p.adj = {};
+  p.adj.comment = (document.getElementById('ca-comment')||{}).value||'';
   saveDB();
+}
+
+function selectAdjMain(val) {
+  const p = curP(); if (!p) return;
+  if (!p.adj) p.adj = {};
+  p.adj.mainJudge = val;
+  saveDB();
+  renderAdjDetail();
+}
+
+const ADJ_TARGETS = ['TODO','KDI','解決案','KPI','課題','KGI'];
+
+function renderAdjDetail() {
+  const p = curP(); if (!p) return;
+  if (!p.adj) p.adj = {};
+  const judge = p.adj.mainJudge || '';
+
+  // ボタン選択状態を更新
+  ['継続','改善','伸長','中止'].forEach(v => {
+    const btn = document.getElementById('adj-btn-'+v);
+    if (btn) {
+      btn.className = 'adj-main-btn' + (judge===v?' sel-'+v:'');
+    }
+  });
+
+  const detailEl = document.getElementById('ca-adj-detail');
+  if (!detailEl) return;
+
+  if (!judge || judge === '継続') {
+    detailEl.innerHTML = judge === '継続' ? `
+      <div class="adj-detail-card" style="background:#E1F5EE;border-color:#9FE1CB">
+        <div style="font-size:15px;font-weight:700;color:#085041">⏸ 継続</div>
+        <div style="font-size:13px;color:#1D9E75;margin-top:6px">現在のPDCAをそのまま次のサイクルへ引き継ぎます。</div>
+      </div>` : '';
+    return;
+  }
+
+  if (judge === '改善' || judge === '伸長') {
+    const icon = judge === '改善' ? '🔧' : '📈';
+    const color = judge === '改善' ? 'var(--amber3)' : 'var(--p8)';
+    const bg = judge === '改善' ? 'var(--amber2)' : 'var(--p3)';
+    const bc = judge === '改善' ? '#FAC775' : 'var(--p4)';
+    const adjItems = p.adj.adjItems || [];
+
+    detailEl.innerHTML = `
+      <div class="adj-detail-card" style="background:${bg};border-color:${bc}">
+        <div style="font-size:15px;font-weight:700;color:${color};margin-bottom:10px">${icon} ${judge} — どこを${judge}しますか？</div>
+        <div class="adj-target-btns">
+          ${ADJ_TARGETS.map(t => `
+            <button class="adj-target-btn ${adjItems.some(x=>x.target===t)?'checked':''}"
+              onclick="toggleAdjTarget('${t}')">${t}</button>
+          `).join('')}
+        </div>
+        <div id="adj-items-detail">
+          ${adjItems.map((item, idx) => `
+            <div style="border-top:0.5px solid rgba(0,0,0,.08);padding-top:10px;margin-top:8px">
+              <div style="font-size:12px;font-weight:700;color:${color};margin-bottom:6px">${item.target}の${judge}</div>
+              <label class="lbl" style="margin-top:0;color:var(--tx2)">具体的な${judge}案</label>
+              <textarea placeholder="例：KDIの回数を週3→週5に増やす" style="width:100%;font-size:13px;padding:8px;min-height:60px"
+                oninput="saveAdjItem(${idx},'plan',this.value)">${esc(item.plan||'')}</textarea>
+              <label class="lbl" style="color:var(--tx2)">理由</label>
+              <textarea placeholder="例：現状の達成率が高く余裕があるため" style="width:100%;font-size:13px;padding:8px;min-height:52px"
+                oninput="saveAdjItem(${idx},'reason',this.value)">${esc(item.reason||'')}</textarea>
+            </div>
+          `).join('')}
+        </div>
+      </div>`;
+    return;
+  }
+
+  if (judge === '中止') {
+    detailEl.innerHTML = `
+      <div class="adj-detail-card" style="background:var(--red2);border-color:#F7C1C1">
+        <div style="font-size:15px;font-weight:700;color:var(--red);margin-bottom:10px">⏹ 中止</div>
+        <label class="lbl" style="margin-top:0;color:var(--tx2)">中止理由</label>
+        <textarea id="adj-stop-reason" placeholder="例：優先度が下がったため。別の課題に集中する。"
+          style="width:100%;font-size:13px;padding:8px;min-height:72px"
+          oninput="saveAdjStopReason(this.value)">${esc((p.adj||{}).stopReason||'')}</textarea>
+        <div style="font-size:12px;color:var(--red);margin-top:10px;font-weight:600">
+          💡 中止後も次のPDCAはホームから新規作成できます
+        </div>
+      </div>`;
+  }
+}
+
+function toggleAdjTarget(target) {
+  const p = curP(); if (!p) return;
+  if (!p.adj) p.adj = {};
+  if (!p.adj.adjItems) p.adj.adjItems = [];
+  const idx = p.adj.adjItems.findIndex(x => x.target === target);
+  if (idx >= 0) {
+    p.adj.adjItems.splice(idx, 1);
+  } else {
+    // ADJ_TARGETSの順番で挿入
+    const order = ADJ_TARGETS.indexOf(target);
+    const insertAt = p.adj.adjItems.findIndex(x => ADJ_TARGETS.indexOf(x.target) > order);
+    if (insertAt === -1) p.adj.adjItems.push({ target, plan:'', reason:'' });
+    else p.adj.adjItems.splice(insertAt, 0, { target, plan:'', reason:'' });
+  }
+  saveDB(); renderAdjDetail();
+}
+
+function saveAdjItem(idx, field, val) {
+  const p = curP(); if (!p) return;
+  if (!p.adj?.adjItems?.[idx]) return;
+  p.adj.adjItems[idx][field] = val;
+  saveDB();
+}
+
+function saveAdjStopReason(val) {
+  const p = curP(); if (!p) return;
+  if (!p.adj) p.adj = {};
+  p.adj.stopReason = val;
+  saveDB();
+}
+
+function completePDCA() {
+  const p = curP(); if (!p) return;
+  if (!confirm(`「${p.title}」を達成・完了としてマークしますか？\n\n完了後も閲覧・編集は引き続き可能です。`)) return;
+  p.completed = true;
+  p.completedAt = new Date().toLocaleDateString('ja');
+  p.paused = false;
+  saveDB();
+  alert(`🏆 「${p.title}」を達成・完了しました！\nあなたの力になったPDCAとして刻まれました。`);
+  goHome();
 }
 
 function nextCycle() {
