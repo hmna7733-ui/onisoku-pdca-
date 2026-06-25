@@ -2203,31 +2203,67 @@ function renderKDIs() {
   const doNums = (p.doActions||[]).map((a,i)=>({ num:i+1, text:a.text })).filter(x=>x.text);
   document.getElementById('d-kdis').innerHTML = p.kdis.map((k,i) => {
     const fid = 'kdi-'+k.id;
-    const doRef = (k.doNums||[]).map(n=>`DO${n}`).join('/');
+    const doRef = (k.doNums||[]).map(n=>`DO${n}`).join(' / ');
+    const typeLbl = k.kdiType||'継続型';
+    // 折りたたみ時のmeta
+    const metaParts = [
+      typeLbl,
+      k.text||'',
+      (k.quantity&&k.time) ? `${k.quantity}×${k.time}` : (k.quantity||k.time||'')
+    ].filter(Boolean);
+    const metaMain = metaParts.join('　');
+
+    // 型ボタンHTML
+    const typeHtml = ['完結型','継続型'].map(t =>
+      `<button onclick="updDoField('kdis','${k.id}','kdiType','${t}');renderKDIs();setTimeout(restoreFoldState,0)"
+        style="padding:6px 14px;border-radius:20px;border:1.5px solid ${typeLbl===t?'var(--teal)':'var(--bd)'};
+        background:${typeLbl===t?'var(--teal2)':'var(--surf)'};color:${typeLbl===t?'var(--teal3)':'var(--tx2)'};
+        font-size:12px;font-weight:700;cursor:pointer">${t}</button>`
+    ).join('');
+
     return `<div class="item-fold${k.achieved?' achieved':''}" id="${fid}">
       <div class="item-fold-header" onclick="toggleItemFold('${fid}')">
         <div style="display:flex;align-items:center;gap:8px">
           <div class="item-fold-num">${i+1}</div>
           <div style="font-size:10px;font-weight:700;color:var(--teal);flex-shrink:0">KDI ${i+1}</div>
+          <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;
+            background:${typeLbl==='完結型'?'var(--amber2)':'var(--teal2)'};
+            color:${typeLbl==='完結型'?'var(--amber3)':'var(--teal3)'};flex-shrink:0">${typeLbl}</span>
           <div class="item-fold-title ${k.text?'':'empty'}" style="white-space:normal">${esc(k.text||'（未入力）')}</div>
           <div class="item-fold-chev open">▼</div>
         </div>
-        ${doRef?`<div style="padding-left:34px;font-size:11px;color:var(--p);font-weight:500">${esc(doRef)}</div>`:''}
+        <div style="padding-left:34px;display:flex;flex-direction:column;gap:2px">
+          ${(k.quantity||k.time)?`<div style="font-size:12px;color:var(--tx2)">${esc(k.quantity||'?')} × ${esc(k.time||'?')}</div>`:''}
+          ${doRef?`<div style="font-size:11px;color:var(--p);font-weight:500">関連: ${esc(doRef)}</div>`:''}
+        </div>
       </div>
       <button class="item-del-btn" onclick="delDoItem('kdis','${k.id}')">削除</button>
       <button class="item-achieve-btn" onclick="achieveDoItem('kdis','${k.id}')">${k.achieved?'↩ 未達成':'✓ 達成'}</button>
       <div class="item-fold-body">
-        <label class="lbl" style="margin-top:0">KDI内容（定量化）</label>
-        <input type="text" value="${esc(k.text||'')}" placeholder="例：毎朝8時に30分　週3回1回10件"
+        <label class="lbl" style="margin-top:0">① タイプ</label>
+        <div style="display:flex;gap:8px;margin-bottom:10px">${typeHtml}</div>
+
+        <label class="lbl" style="margin-top:0">② KDI内容</label>
+        <input type="text" value="${esc(k.text||'')}" placeholder="${typeLbl==='完結型'?'例：営業資料を完成させる':'例：毎朝8時に30分の練習'}"
           style="width:100%;margin-bottom:10px"
-          onchange="updDoField('kdis','${k.id}','text',this.value)">
-        ${doNums.length?`<div style="font-size:11px;color:var(--tx2);margin-bottom:6px">関連するDOアクション</div>
+          oninput="updDoField('kdis','${k.id}','text',this.value)">
+
+        <label class="lbl" style="margin-top:0">③ 量 × 時間　<span style="font-size:11px;color:var(--tx3)">（量×時間＝成果）</span></label>
+        <div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;margin-bottom:10px">
+          <input type="text" value="${esc(k.quantity||'')}" placeholder="${typeLbl==='完結型'?'例：1件':'例：週3回'}"
+            oninput="updDoField('kdis','${k.id}','quantity',this.value)">
+          <div style="font-size:18px;font-weight:800;color:var(--p);text-align:center;padding:0 4px">×</div>
+          <input type="text" value="${esc(k.time||'')}" placeholder="${typeLbl==='完結型'?'例：2時間':'例：30分/回'}"
+            oninput="updDoField('kdis','${k.id}','time',this.value)">
+        </div>
+
+        ${doNums.length?`<label class="lbl" style="margin-top:0">④ 関連するDOアクション</label>
         <div class="issue-check-grid">
           ${doNums.map(d=>`<button class="issue-check-btn ${(k.doNums||[]).includes(d.num)?'checked':''}"
             onclick="toggleKdiDo('${k.id}',${d.num})">
             DO${d.num}. ${esc(d.text.length>10?d.text.slice(0,10)+'…':d.text)}
           </button>`).join('')}
-        </div>`:''}
+        </div>`:'<div style="font-size:12px;color:var(--tx3);margin-top:4px">DOアクションを追加すると関連付けできます</div>'}
       </div>
     </div>`;
   }).join('');
@@ -2244,7 +2280,7 @@ function toggleKdiDo(id, num) {
 function addKDI() {
   const p = curP(); if (!p) return;
   if (!p.kdis) p.kdis = [];
-  p.kdis.push({ id:Date.now()+'', text:'', doNums:[], achieved:false });
+  p.kdis.push({ id:Date.now()+'', kdiType:'継続型', text:'', quantity:'', time:'', doNums:[], achieved:false });
   saveDB(); renderDo(); setTimeout(restoreFoldState,0);
 }
 
