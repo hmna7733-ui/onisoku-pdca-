@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="2.2.0">
+<meta name="app-version" content="2.4.0">
 
 <style>
 /* ── リセット & ベース ── */
@@ -591,6 +591,114 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
   box-shadow:0 2px 8px rgba(83,74,183,.3);
 }
 
+/* ── TODOカード ── */
+.todo-card{
+  background:var(--surf);border:1px solid var(--bd);
+  border-radius:10px;margin-bottom:8px;overflow:hidden;
+}
+.todo-card-main{
+  display:flex;align-items:flex-start;gap:0;padding:10px 12px;
+}
+.todo-card-info{flex:1;min-width:0}
+.todo-card-name{
+  font-size:14px;font-weight:500;color:var(--tx);
+  margin-bottom:4px;word-break:break-all;
+}
+.todo-card-name.done-text{text-decoration:line-through;color:var(--tx2)}
+.todo-card-meta{
+  display:flex;flex-wrap:wrap;gap:6px;align-items:center;
+}
+.todo-meta-chip{
+  font-size:11px;color:var(--tx2);
+  background:var(--surf2);padding:2px 8px;border-radius:10px;
+  display:inline-flex;align-items:center;gap:3px;
+}
+/* ステータスバッジ */
+.todo-status-row{
+  display:flex;gap:5px;flex-wrap:wrap;padding:0 12px 10px;
+}
+.st-badge{
+  flex:1;min-width:0;
+  padding:5px 4px;border-radius:8px;
+  border:1.5px solid var(--bd);
+  background:var(--surf2);
+  font-size:11px;font-weight:700;
+  color:var(--tx2);cursor:pointer;
+  text-align:center;transition:all .12s;
+  white-space:nowrap;
+}
+.st-badge.sel-実行中{background:var(--teal2);color:var(--teal3);border-color:#9FE1CB}
+.st-badge.sel-完了{background:var(--p3);color:var(--p);border-color:var(--p4)}
+.st-badge.sel-保留{background:var(--amber2);color:var(--amber3);border-color:#FAC775}
+.st-badge.sel-中止{background:var(--red2);color:var(--red);border-color:#F7C1C1}
+.st-badge.sel-未着手{background:#eee;color:#666;border-color:#ccc}
+/* 編集フォーム（折りたたみ） */
+.todo-edit-form{
+  border-top:0.5px solid var(--bd);
+  padding:10px 12px 12px;
+  background:var(--surf2);
+  display:none;
+}
+.todo-edit-form.open{display:block}
+.todo-edit-btn{
+  background:none;border:none;cursor:pointer;
+  font-size:13px;color:var(--tx3);padding:4px 6px;
+  flex-shrink:0;
+}
+.todo-del-btn{
+  background:none;border:none;cursor:pointer;
+  font-size:12px;color:var(--red);padding:4px 6px;
+  flex-shrink:0;
+}
+
+/* ── DOグループ TODO ── */
+.do-group{
+  border:1px solid var(--bd2);border-radius:12px;
+  margin-bottom:10px;overflow:hidden;
+}
+.do-group-header{
+  display:flex;align-items:center;gap:10px;
+  padding:12px 14px;cursor:pointer;
+  background:var(--surf);
+  -webkit-user-select:none;
+  transition:background .12s;
+}
+.do-group-header:active{background:var(--surf2)}
+.do-group-num{
+  width:26px;height:26px;border-radius:50%;
+  background:linear-gradient(135deg,var(--p),var(--p2));
+  color:#fff;font-size:11px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.do-group-label{font-size:10px;font-weight:700;color:var(--p);flex-shrink:0;letter-spacing:.3px}
+.do-group-title{flex:1;font-size:14px;font-weight:600;color:var(--tx);min-width:0;word-break:break-all}
+.do-group-count{font-size:12px;color:var(--tx2);flex-shrink:0}
+.do-group-chev{font-size:12px;color:var(--tx3);flex-shrink:0;transition:transform .18s}
+.do-group-chev.open{transform:rotate(180deg)}
+.do-group-body{
+  border-top:0.5px solid var(--bd);
+  padding:10px 14px 12px;
+  background:var(--surf2);
+  display:none;
+}
+.do-group.expanded .do-group-body{display:block}
+.do-group.expanded .do-group-chev{transform:rotate(180deg)}
+/* TODO子アイテム */
+.todo-child{
+  display:flex;align-items:flex-start;gap:10px;
+  padding:9px 0;border-bottom:0.5px solid var(--bd);
+}
+.todo-child:last-of-type{border-bottom:none}
+.todo-child-info{flex:1;min-width:0}
+.todo-child-name{font-size:14px;color:var(--tx);margin-bottom:2px;word-break:break-all}
+.todo-child-meta{font-size:12px;color:var(--tx2)}
+/* インラインTODO追加フォーム */
+.todo-inline-form{
+  background:var(--surf);border:0.5px solid var(--bd2);
+  border-radius:10px;padding:12px;margin-top:10px;
+  display:none;
+}
+.todo-inline-form.open{display:block}
 /* ── コツモーダル ── */
 .tips-modal-wrap{
   position:fixed;inset:0;
@@ -1056,23 +1164,6 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
           </div>
           <div class="hint-box">DOアクションを「迷わないレベル」まで分解。期日・担当まで決めて初めてTODOタスク。</div>
           <div id="d-todos"></div>
-          <button class="add-row-btn" onclick="openAddTodo()" style="position:relative;z-index:10">＋ タスクを追加</button>
-        </div>
-      </div>
-
-      <div class="todo-add-form" id="d-add-form">
-        <div style="font-size:15px;font-weight:600;color:var(--tx);margin-bottom:12px">新しいタスク</div>
-        <label class="lbl">関連DOアクション</label>
-        <select id="d-action-sel"></select>
-        <label class="lbl">TODOタスク詳細</label>
-        <input type="text" id="d-name" placeholder="例：ヒアリングシートを作成する">
-        <label class="lbl">期日</label>
-        <input type="date" id="d-date">
-        <label class="lbl">担当者</label>
-        <input type="text" id="d-person" placeholder="例：自分">
-        <div class="form-actions">
-          <button class="form-cancel" onclick="closeAddTodo()">キャンセル</button>
-          <button class="form-ok" onclick="addTodo()">追加</button>
         </div>
       </div>
 
@@ -2020,42 +2111,42 @@ const ST_LIST = ['未着手','実行中','完了','保留','中止'];
 const ST_ICON = { '未着手':'','実行中':'▶','完了':'✓','保留':'‖','中止':'✕' };
 const ST_CLASS = { '未着手':'','実行中':'st-doing','完了':'st-done','保留':'st-hold','中止':'st-stop' };
 
-function openAddTodo() {
-  const f = document.getElementById('d-add-form');
-  f.classList.add('open');
-  ['d-name','d-person'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('d-date').value = '';
-  // DOアクションセレクトを更新
-  const p = curP();
-  const sel = document.getElementById('d-action-sel');
-  if (sel && p) {
-    sel.innerHTML = '<option value="">（なし）</option>' +
-      (p.doActions||[]).map((a,i)=>`<option value="${i+1}">DO${i+1}: ${esc(a.text||'未入力')}</option>`).join('');
-  }
-  f.scrollIntoView({ behavior:'smooth', block:'nearest' });
-}
-function closeAddTodo() { document.getElementById('d-add-form').classList.remove('open'); }
+// openAddTodo/closeAddTodo/addTodo は addTodoInline/openTodoForm に移行
 
-function addTodo() {
-  const p = curP(); if (!p) return;
-  const name = document.getElementById('d-name').value.trim();
-  if (!name) { alert('タスク詳細を入力してください'); return; }
-  const doRefEl = document.getElementById('d-action-sel');
-  p.todos.push({
-    id: Date.now()+'',
-    doRef: doRefEl ? doRefEl.value : '',
-    name, date: document.getElementById('d-date').value,
-    person: document.getElementById('d-person').value,
-    status: '未着手'
-  });
-  saveDB(); closeAddTodo(); renderDo();
-}
 
 function cycleTodo(id) {
   const p = curP(); if (!p) return;
   const idx = p.todos.findIndex(x => x.id === id); if (idx < 0) return;
   p.todos[idx].status = ST_LIST[(ST_LIST.indexOf(p.todos[idx].status) + 1) % ST_LIST.length];
   saveDB(); renderDo(); renderMenu(); setTimeout(restoreFoldState,0);
+}
+
+function setTodoStatus(id, status) {
+  const p = curP(); if (!p) return;
+  const idx = p.todos.findIndex(x => x.id === id); if (idx < 0) return;
+  p.todos[idx].status = status;
+  saveDB(); renderTodos(); renderMenu(); setTimeout(restoreFoldState,0);
+}
+
+function toggleTodoEdit(efid) {
+  const el = document.getElementById(efid);
+  if (!el) return;
+  // 他の編集フォームを閉じる
+  document.querySelectorAll('.todo-edit-form.open').forEach(f => {
+    if (f.id !== efid) f.classList.remove('open');
+  });
+  el.classList.toggle('open');
+}
+
+function saveTodoEdit(id, efid) {
+  const p = curP(); if (!p) return;
+  const idx = p.todos.findIndex(x => x.id === id); if (idx < 0) return;
+  const name = (document.getElementById(efid+'-name')||{}).value?.trim();
+  if (!name) { alert('タスク詳細を入力してください'); return; }
+  p.todos[idx].name = name;
+  p.todos[idx].date = (document.getElementById(efid+'-date')||{}).value||'';
+  p.todos[idx].person = (document.getElementById(efid+'-person')||{}).value||'';
+  saveDB(); renderTodos(); setTimeout(restoreFoldState,0);
 }
 
 function delTodo(id) {
@@ -2286,17 +2377,140 @@ function addKDI() {
 
 function renderTodos() {
   const p = curP(); if (!p) return;
-  document.getElementById('d-todos').innerHTML = p.todos.length
-    ? p.todos.map(t => `
-      <div class="todo-item">
-        <div class="st-dot ${ST_CLASS[t.status]||''}" onclick="cycleTodo('${t.id}')">${ST_ICON[t.status]||''}</div>
-        <div class="todo-body">
-          <div class="todo-name ${t.status==='完了'?'done-text':''}">${esc(t.name)}</div>
-          <div class="todo-meta">${t.doRef?`[DO${t.doRef}]　`:''} ${t.date||''} ${t.person?'担当:'+esc(t.person):''}</div>
+  const doActions = (p.doActions||[]);
+
+  if (!doActions.length) {
+    document.getElementById('d-todos').innerHTML =
+      '<div style="font-size:13px;color:var(--tx2);padding:8px 0">DOアクションを入力するとTODOを追加できます</div>';
+    return;
+  }
+
+  // foldStateからDOグループの開閉状態を取得
+  const foldState = DB.foldState || {};
+
+  document.getElementById('d-todos').innerHTML = doActions.map((a, i) => {
+    const doNum = i + 1;
+    const gid = 'dog-' + a.id;
+    const isExpanded = foldState[gid] !== false; // デフォルト展開
+    const myTodos = p.todos.filter(t => t.doRef === doNum);
+    const doneCount = myTodos.filter(t => t.status === '完了').length;
+    const doingCount = myTodos.filter(t => t.status === '実行中').length;
+    const countStr = myTodos.length
+      ? [doingCount?`実行中${doingCount}`:'', doneCount?`完了${doneCount}`:'', `計${myTodos.length}`].filter(Boolean).join(' / ')
+      : '';
+
+    const STATUS_OPTS = ['未着手','実行中','完了','保留','中止'];
+    const todoItems = myTodos.map(t => {
+      const efid = 'tef-'+t.id;
+      const metaChips = [
+        t.date ? `📅 ${t.date}` : '',
+        t.person ? `👤 ${esc(t.person)}` : ''
+      ].filter(Boolean).map(c=>`<span class="todo-meta-chip">${c}</span>`).join('');
+      const stBadges = STATUS_OPTS.map(s=>
+        `<div class="st-badge ${t.status===s?'sel-'+s:''}"
+          onclick="setTodoStatus('${t.id}','${s}')">${s}</div>`
+      ).join('');
+      return `<div class="todo-card" id="tc-${t.id}">
+        <div class="todo-card-main">
+          <div class="todo-card-info">
+            <div class="todo-card-name ${t.status==='完了'?'done-text':''}">${esc(t.name)}</div>
+            <div class="todo-card-meta">${metaChips||'<span class="todo-meta-chip" style="color:var(--tx3)">期日・担当者なし</span>'}</div>
+          </div>
+          <button class="todo-edit-btn" onclick="toggleTodoEdit('${efid}')" title="編集">✏</button>
+          <button class="todo-del-btn" onclick="delTodo('${t.id}')">削除</button>
         </div>
-        <button class="del-btn" onclick="delTodo('${t.id}')">削除</button>
-      </div>`).join('')
-    : '<div style="font-size:13px;color:var(--tx2);padding:8px 0">タスクを追加しましょう</div>';
+        <div class="todo-status-row">${stBadges}</div>
+        <div class="todo-edit-form" id="${efid}">
+          <label class="lbl" style="margin-top:0">タスク詳細</label>
+          <input type="text" value="${esc(t.name)}" id="${efid}-name">
+          <label class="lbl">期日</label>
+          <input type="date" value="${esc(t.date||'')}" id="${efid}-date">
+          <label class="lbl">担当者</label>
+          <input type="text" value="${esc(t.person||'')}" placeholder="例：自分" id="${efid}-person">
+          <div class="form-actions" style="margin-top:10px">
+            <button class="form-cancel" onclick="toggleTodoEdit('${efid}')">閉じる</button>
+            <button class="form-ok" onclick="saveTodoEdit('${t.id}','${efid}')">保存</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+
+    const formId = 'tif-' + a.id;
+    return `<div class="do-group${isExpanded?' expanded':''}" id="${gid}">
+      <div class="do-group-header" onclick="toggleDoGroup('${gid}')">
+        <div class="do-group-num">${doNum}</div>
+        <div class="do-group-label">DO ${doNum}</div>
+        <div class="do-group-title">${esc(a.text||'（未入力）')}</div>
+        <div class="do-group-count" style="font-size:11px">${countStr}</div>
+        <div class="do-group-chev${isExpanded?' open':''}">▼</div>
+      </div>
+      <div class="do-group-body">
+        ${todoItems || '<div style="font-size:13px;color:var(--tx2);margin-bottom:8px">タスクがありません</div>'}
+        <div class="todo-inline-form" id="${formId}">
+          <label class="lbl" style="margin-top:0">TODOタスク詳細</label>
+          <input type="text" id="${formId}-name" placeholder="例：ヒアリングシートを作成する">
+          <label class="lbl">期日</label>
+          <input type="date" id="${formId}-date">
+          <label class="lbl">担当者</label>
+          <input type="text" id="${formId}-person" placeholder="例：自分">
+          <div class="form-actions" style="margin-top:10px">
+            <button class="form-cancel" onclick="closeTodoForm('${formId}')">キャンセル</button>
+            <button class="form-ok" onclick="addTodoInline('${formId}',${doNum})">追加</button>
+          </div>
+        </div>
+        <button class="add-row-btn" onclick="openTodoForm('${formId}')"
+          style="margin-top:8px;position:relative;z-index:10">＋ タスクを追加</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleDoGroup(gid) {
+  if (!DB.foldState) DB.foldState = {};
+  const el = document.getElementById(gid);
+  if (!el) return;
+  const isExpanded = el.classList.contains('expanded');
+  el.classList.toggle('expanded', !isExpanded);
+  const chev = el.querySelector('.do-group-chev');
+  if (chev) chev.classList.toggle('open', !isExpanded);
+  DB.foldState[gid] = !isExpanded;
+  saveDB();
+}
+
+function openTodoForm(formId) {
+  document.querySelectorAll('.todo-inline-form.open').forEach(f => f.classList.remove('open'));
+  const f = document.getElementById(formId);
+  if (f) {
+    f.classList.add('open');
+    const nameInput = document.getElementById(formId+'-name');
+    if (nameInput) { nameInput.value=''; nameInput.focus(); }
+    const dateInput = document.getElementById(formId+'-date');
+    if (dateInput) dateInput.value='';
+    const personInput = document.getElementById(formId+'-person');
+    if (personInput) personInput.value='';
+  }
+}
+
+function closeTodoForm(formId) {
+  const f = document.getElementById(formId);
+  if (f) f.classList.remove('open');
+}
+
+function addTodoInline(formId, doRef) {
+  const p = curP(); if (!p) return;
+  const name = (document.getElementById(formId+'-name')||{}).value?.trim();
+  if (!name) { alert('タスク詳細を入力してください'); return; }
+  p.todos.push({
+    id: Date.now()+'',
+    name,
+    doRef,
+    date: (document.getElementById(formId+'-date')||{}).value||'',
+    person: (document.getElementById(formId+'-person')||{}).value||'',
+    status: '未着手'
+  });
+  saveDB();
+  renderTodos();
+  setTimeout(restoreFoldState, 0);
 }
 
 
