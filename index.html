@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="2.1.1">
+<meta name="app-version" content="2.2.0">
 
 <style>
 /* ── リセット & ベース ── */
@@ -999,15 +999,71 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
       <div class="hdr-title">DO — 実行</div>
     </div>
     <div class="sheet-scroll">
-      <div class="s-card">
-        <div class="s-card-title" style="margin-bottom:8px">TODOリスト</div>
-        <div id="d-todos"></div>
-        <button class="add-row-btn" onclick="openAddTodo()">＋ タスクを追加</button>
+
+      <!-- STEP①② DOアクション -->
+      <div class="fold-card" id="fd-actions">
+        <div class="fold-header" onclick="toggleFold('fd-actions')">
+          <div class="fold-step"><div class="step-badge" style="font-size:11px">①②</div></div>
+          <div class="fold-title-area">
+            <div class="fold-label">DOアクション</div>
+            <div class="fold-summary" id="fs-do-actions">未入力</div>
+          </div>
+          <div class="fold-chevron open" id="fd-actions-chev">▼</div>
+        </div>
+        <div class="fold-body">
+          <div style="display:flex;justify-content:flex-end;margin-bottom:6px">
+            <button class="tips-btn" onclick="showTips('do_action')">コツを見る</button>
+          </div>
+          <div class="hint-box">PLANの解決案をDOに落とし込む。インパクト・気軽さでさらに優先度をつけてスリムに。</div>
+          <div id="d-actions"></div>
+          <button class="add-row-btn" onclick="addDoAction()" style="position:relative;z-index:10">＋ DOアクションを追加</button>
+        </div>
       </div>
+
+      <!-- STEP③ KDI -->
+      <div class="fold-card" id="fd-kdi">
+        <div class="fold-header" onclick="toggleFold('fd-kdi')">
+          <div class="fold-step"><div class="step-badge" style="font-size:11px">③</div></div>
+          <div class="fold-title-area">
+            <div class="fold-label">KDI（行動目標）</div>
+            <div class="fold-summary" id="fs-do-kdi">未入力</div>
+          </div>
+          <div class="fold-chevron open" id="fd-kdi-chev">▼</div>
+        </div>
+        <div class="fold-body">
+          <div style="display:flex;justify-content:flex-end;margin-bottom:6px">
+            <button class="tips-btn" onclick="showTips('do_kdi')">コツを見る</button>
+          </div>
+          <div class="hint-box">KDI＝「どれだけ計画を実行できたか」を表す指標。DOアクションを定量化する。<br>例：毎朝8時に30分　週3回・1回10件</div>
+          <div id="d-kdis"></div>
+          <button class="add-row-btn" onclick="addKDI()" style="position:relative;z-index:10">＋ KDIを追加</button>
+        </div>
+      </div>
+
+      <!-- STEP④ TODOタスク -->
+      <div class="fold-card" id="fd-todos">
+        <div class="fold-header" onclick="toggleFold('fd-todos')">
+          <div class="fold-step"><div class="step-badge" style="font-size:11px">④</div></div>
+          <div class="fold-title-area">
+            <div class="fold-label">TODOタスクへの分解</div>
+            <div class="fold-summary" id="fs-do-todos">未入力</div>
+          </div>
+          <div class="fold-chevron open" id="fd-todos-chev">▼</div>
+        </div>
+        <div class="fold-body">
+          <div style="display:flex;justify-content:flex-end;margin-bottom:6px">
+            <button class="tips-btn" onclick="showTips('do_todo')">コツを見る</button>
+          </div>
+          <div class="hint-box">DOアクションを「迷わないレベル」まで分解。期日・担当まで決めて初めてTODOタスク。</div>
+          <div id="d-todos"></div>
+          <button class="add-row-btn" onclick="openAddTodo()" style="position:relative;z-index:10">＋ タスクを追加</button>
+        </div>
+      </div>
+
       <div class="todo-add-form" id="d-add-form">
         <div style="font-size:15px;font-weight:600;color:var(--tx);margin-bottom:12px">新しいタスク</div>
-        <label class="lbl">DOアクション（解決案から転記）</label>
-        <input type="text" id="d-action" placeholder="例：ヒアリング細分化">
+        <label class="lbl">関連DOアクション</label>
+        <select id="d-action-sel"></select>
         <label class="lbl">TODOタスク詳細</label>
         <input type="text" id="d-name" placeholder="例：ヒアリングシートを作成する">
         <label class="lbl">期日</label>
@@ -1019,6 +1075,8 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
           <button class="form-ok" onclick="addTodo()">追加</button>
         </div>
       </div>
+
+      <!-- ルーティン -->
       <div class="s-card">
         <div class="s-card-title" style="margin-bottom:10px">ルーティン習慣</div>
         <div style="display:grid;grid-template-columns:1fr repeat(7,30px);gap:4px;margin-bottom:10px">
@@ -1034,6 +1092,7 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
         <div id="d-routines"></div>
         <button class="add-row-btn" onclick="addRoutine()">＋ 習慣を追加</button>
       </div>
+
     </div>
   </div>
 
@@ -1359,6 +1418,7 @@ function createPDCA() {
     cycle: 1, paused: false,
     plan: { goal:'', kgiVal:'', kgiUnit:'', deadline:'', curVal:'', curUnit:'' },
     issues: [], kpis: [], solutions: [],
+    doActions: [], kdis: [],
     todos: [], routines: [],
     checkDraft: { date:'', good:'', bad:'', insight:'', next:'', star:0 },
     checkRecords: [],
@@ -1652,6 +1712,7 @@ function abcHtml(id, field, val, type) {
 
 function setABC(id, field, val, type) {
   const p = curP(); if (!p) return;
+  if (type === 'doActions') { setDoABC(id, field, val); return; }
   const arr = p[type];
   const idx = arr.findIndex(x => x.id === id); if (idx < 0) return;
   arr[idx][field] = val;
@@ -1962,8 +2023,15 @@ const ST_CLASS = { '未着手':'','実行中':'st-doing','完了':'st-done','保
 function openAddTodo() {
   const f = document.getElementById('d-add-form');
   f.classList.add('open');
-  ['d-action','d-name','d-person'].forEach(id => document.getElementById(id).value = '');
+  ['d-name','d-person'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('d-date').value = '';
+  // DOアクションセレクトを更新
+  const p = curP();
+  const sel = document.getElementById('d-action-sel');
+  if (sel && p) {
+    sel.innerHTML = '<option value="">（なし）</option>' +
+      (p.doActions||[]).map((a,i)=>`<option value="${i+1}">DO${i+1}: ${esc(a.text||'未入力')}</option>`).join('');
+  }
   f.scrollIntoView({ behavior:'smooth', block:'nearest' });
 }
 function closeAddTodo() { document.getElementById('d-add-form').classList.remove('open'); }
@@ -1972,9 +2040,10 @@ function addTodo() {
   const p = curP(); if (!p) return;
   const name = document.getElementById('d-name').value.trim();
   if (!name) { alert('タスク詳細を入力してください'); return; }
+  const doRefEl = document.getElementById('d-action-sel');
   p.todos.push({
     id: Date.now()+'',
-    action: document.getElementById('d-action').value,
+    doRef: doRefEl ? doRefEl.value : '',
     name, date: document.getElementById('d-date').value,
     person: document.getElementById('d-person').value,
     status: '未着手'
@@ -1998,19 +2067,200 @@ function delTodo(id) {
 
 function renderDo() {
   const p = curP(); if (!p) return;
+  renderDoActions();
+  renderKDIs();
+  renderTodos();
+  renderRoutines();
+  // サマリー更新
+  const actSummary = document.getElementById('fs-do-actions');
+  if (actSummary) actSummary.textContent = (p.doActions||[]).length ? (p.doActions||[]).map((a,i)=>`DO${i+1}: ${a.text}`).join('　') : '未入力';
+  const kdiSummary = document.getElementById('fs-do-kdi');
+  if (kdiSummary) kdiSummary.textContent = (p.kdis||[]).length ? (p.kdis||[]).map(k=>k.text).join('　') : '未入力';
+  const todoSummary = document.getElementById('fs-do-todos');
+  if (todoSummary) todoSummary.textContent = p.todos.length ? `${p.todos.filter(t=>t.status==='完了').length}/${p.todos.length}件完了` : '未入力';
+}
+
+function renderDoActions() {
+  const p = curP(); if (!p) return;
+  if (!p.doActions) p.doActions = [];
+  const solNums = (p.solutions||[]).map((s,i)=>({ num:i+1, text:s.text })).filter(x=>x.text);
+  document.getElementById('d-actions').innerHTML = p.doActions.map((a,i) => {
+    const fid = 'da-' + a.id;
+    const impLbl = a.impact ? `インパクト${a.impact}` : '';
+    const easeLbl = a.ease ? `気軽さ${a.ease}` : '';
+    const timeLbl = a.time ? `時間:${a.time}` : '';
+    const scoreLbl = a.score ? `スコア${a.score}/6` : '';
+    const meta = [impLbl,easeLbl,timeLbl,scoreLbl].filter(Boolean).join('　');
+    const relSols = (a.solNums||[]).map(n=>`解決案${n}`).join(' / ');
+    const solCheckHtml = solNums.length ? `
+      <div style="margin-top:8px">
+        <div style="font-size:11px;color:var(--tx2);margin-bottom:6px">関連する解決案（複数選択可）</div>
+        <div class="issue-check-grid">
+          ${solNums.map(s=>`<button class="issue-check-btn ${(a.solNums||[]).includes(s.num)?'checked':''}"
+            onclick="toggleDoSol('${a.id}',${s.num})">
+            ${s.num}. ${esc(s.text.length>10?s.text.slice(0,10)+'…':s.text)}
+          </button>`).join('')}
+        </div>
+      </div>` : '';
+    return `<div class="item-fold${a.achieved?' achieved':''}" id="${fid}">
+      <div class="item-fold-header" onclick="toggleItemFold('${fid}')">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="item-fold-num">${i+1}</div>
+          <div style="font-size:10px;font-weight:700;color:var(--tx3);flex-shrink:0">DO ${i+1}</div>
+          <div class="item-fold-title ${a.text?'':'empty'}" style="white-space:normal">${esc(a.text||'（未入力）')}</div>
+          <div class="item-fold-chev open">▼</div>
+        </div>
+        <div style="padding-left:34px">
+          <div style="font-size:12px;color:var(--tx2);line-height:1.6">${esc(meta)}</div>
+          ${relSols?`<div style="font-size:11px;color:var(--p);font-weight:500">${esc(relSols)}</div>`:''}
+        </div>
+      </div>
+      <button class="item-del-btn" onclick="delDoItem('doActions','${a.id}')">削除</button>
+      <button class="item-achieve-btn" onclick="achieveDoItem('doActions','${a.id}')">${a.achieved?'↩ 未達成':'✓ 達成'}</button>
+      <div class="item-fold-body">
+        <input type="text" value="${esc(a.text||'')}" placeholder="例：ヒアリング細分化・毎朝ロールプレイ"
+          style="width:100%;margin-bottom:10px"
+          onchange="updDoField('doActions','${a.id}','text',this.value)">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div><div style="font-size:11px;color:var(--tx2);margin-bottom:4px">インパクト</div>
+            <div class="abc-row">${abcHtml(a.id,'impact',a.impact,'doActions')}</div></div>
+          <div><div style="font-size:11px;color:var(--tx2);margin-bottom:4px">気軽さ</div>
+            <div class="abc-row">${abcHtml(a.id,'ease',a.ease,'doActions')}</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <div style="font-size:11px;color:var(--tx2);white-space:nowrap;flex-shrink:0">⏱ 所要時間</div>
+          <input type="text" value="${esc(a.time||'')}" placeholder="？（わからなければ？と記入）"
+            style="flex:1;font-size:13px;padding:7px 10px"
+            onchange="updDoField('doActions','${a.id}','time',this.value)">
+        </div>
+        ${solCheckHtml}
+        <div class="score-row"><span class="score-pill">スコア ${a.score||0}/6</span></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleDoSol(id, num) {
+  const p = curP(); if (!p) return;
+  const idx = (p.doActions||[]).findIndex(x=>x.id===id); if(idx<0) return;
+  const arr = p.doActions[idx].solNums||[];
+  p.doActions[idx].solNums = arr.includes(num) ? arr.filter(n=>n!==num) : [...arr,num].sort((a,b)=>a-b);
+  saveDB(); renderDoActions(); setTimeout(restoreFoldState,0);
+}
+
+function addDoAction() {
+  const p = curP(); if (!p) return;
+  if (!p.doActions) p.doActions = [];
+  p.doActions.push({ id:Date.now()+'', text:'', impact:'', ease:'', time:'', score:0, solNums:[], achieved:false });
+  saveDB(); renderDo(); setTimeout(restoreFoldState,0);
+}
+
+function delDoItem(type, id) {
+  const p = curP(); if (!p) return;
+  const item = (p[type]||[]).find(x=>x.id===id);
+  const nm = item ? (item.text||'').slice(0,20) : '';
+  if(!confirm((type==='doActions'?'DOアクション':'KDI')+(nm?`「${nm}」`:'')+'を削除しますか？')) return;
+  p[type] = (p[type]||[]).filter(x=>x.id!==id);
+  saveDB(); renderDo();
+}
+
+function achieveDoItem(type, id) {
+  const p = curP(); if (!p) return;
+  const arr = p[type]||[];
+  const idx = arr.findIndex(x=>x.id===id); if(idx<0) return;
+  arr[idx].achieved = !arr[idx].achieved;
+  const item = arr.splice(idx,1)[0];
+  if (item.achieved) arr.push(item); else arr.unshift(item);
+  saveDB(); renderDo(); setTimeout(restoreFoldState,0);
+}
+
+function updDoField(type, id, field, val) {
+  const p = curP(); if (!p) return;
+  const idx = (p[type]||[]).findIndex(x=>x.id===id); if(idx<0) return;
+  p[type][idx][field] = val;
+  if ((field==='impact'||field==='ease') && type==='doActions') {
+    const a = p[type][idx];
+    const m = {A:3,B:2,C:1};
+    a.score = (m[a.impact]||0)+(m[a.ease]||0);
+  }
+  saveDB();
+}
+
+function setDoABC(id, field, val) {
+  const p = curP(); if (!p) return;
+  const idx = (p.doActions||[]).findIndex(x=>x.id===id); if(idx<0) return;
+  p.doActions[idx][field] = val;
+  const m = {A:3,B:2,C:1};
+  p.doActions[idx].score = (m[p.doActions[idx].impact]||0)+(m[p.doActions[idx].ease]||0);
+  saveDB(); renderDoActions(); setTimeout(restoreFoldState,0);
+}
+
+function renderKDIs() {
+  const p = curP(); if (!p) return;
+  if (!p.kdis) p.kdis = [];
+  const doNums = (p.doActions||[]).map((a,i)=>({ num:i+1, text:a.text })).filter(x=>x.text);
+  document.getElementById('d-kdis').innerHTML = p.kdis.map((k,i) => {
+    const fid = 'kdi-'+k.id;
+    const doRef = (k.doNums||[]).map(n=>`DO${n}`).join('/');
+    return `<div class="item-fold${k.achieved?' achieved':''}" id="${fid}">
+      <div class="item-fold-header" onclick="toggleItemFold('${fid}')">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="item-fold-num">${i+1}</div>
+          <div style="font-size:10px;font-weight:700;color:var(--teal);flex-shrink:0">KDI ${i+1}</div>
+          <div class="item-fold-title ${k.text?'':'empty'}" style="white-space:normal">${esc(k.text||'（未入力）')}</div>
+          <div class="item-fold-chev open">▼</div>
+        </div>
+        ${doRef?`<div style="padding-left:34px;font-size:11px;color:var(--p);font-weight:500">${esc(doRef)}</div>`:''}
+      </div>
+      <button class="item-del-btn" onclick="delDoItem('kdis','${k.id}')">削除</button>
+      <button class="item-achieve-btn" onclick="achieveDoItem('kdis','${k.id}')">${k.achieved?'↩ 未達成':'✓ 達成'}</button>
+      <div class="item-fold-body">
+        <label class="lbl" style="margin-top:0">KDI内容（定量化）</label>
+        <input type="text" value="${esc(k.text||'')}" placeholder="例：毎朝8時に30分　週3回1回10件"
+          style="width:100%;margin-bottom:10px"
+          onchange="updDoField('kdis','${k.id}','text',this.value)">
+        ${doNums.length?`<div style="font-size:11px;color:var(--tx2);margin-bottom:6px">関連するDOアクション</div>
+        <div class="issue-check-grid">
+          ${doNums.map(d=>`<button class="issue-check-btn ${(k.doNums||[]).includes(d.num)?'checked':''}"
+            onclick="toggleKdiDo('${k.id}',${d.num})">
+            DO${d.num}. ${esc(d.text.length>10?d.text.slice(0,10)+'…':d.text)}
+          </button>`).join('')}
+        </div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleKdiDo(id, num) {
+  const p = curP(); if (!p) return;
+  const idx = (p.kdis||[]).findIndex(x=>x.id===id); if(idx<0) return;
+  const arr = p.kdis[idx].doNums||[];
+  p.kdis[idx].doNums = arr.includes(num)?arr.filter(n=>n!==num):[...arr,num].sort((a,b)=>a-b);
+  saveDB(); renderKDIs(); setTimeout(restoreFoldState,0);
+}
+
+function addKDI() {
+  const p = curP(); if (!p) return;
+  if (!p.kdis) p.kdis = [];
+  p.kdis.push({ id:Date.now()+'', text:'', doNums:[], achieved:false });
+  saveDB(); renderDo(); setTimeout(restoreFoldState,0);
+}
+
+function renderTodos() {
+  const p = curP(); if (!p) return;
   document.getElementById('d-todos').innerHTML = p.todos.length
     ? p.todos.map(t => `
       <div class="todo-item">
         <div class="st-dot ${ST_CLASS[t.status]||''}" onclick="cycleTodo('${t.id}')">${ST_ICON[t.status]||''}</div>
         <div class="todo-body">
           <div class="todo-name ${t.status==='完了'?'done-text':''}">${esc(t.name)}</div>
-          <div class="todo-meta">${t.action?'['+esc(t.action)+']　':''} ${t.date||''} ${t.person?'担当:'+esc(t.person):''}</div>
+          <div class="todo-meta">${t.doRef?`[DO${t.doRef}]　`:''} ${t.date||''} ${t.person?'担当:'+esc(t.person):''}</div>
         </div>
         <button class="del-btn" onclick="delTodo('${t.id}')">削除</button>
       </div>`).join('')
     : '<div style="font-size:13px;color:var(--tx2);padding:8px 0">タスクを追加しましょう</div>';
-  renderRoutines();
 }
+
 
 function addRoutine() {
   const p = curP(); if (!p) return;
@@ -2243,9 +2493,36 @@ const TIPS = {
       { num:'③', text:'優先度をつけたら<strong>４つの課題の解決にあたるくらいが理想</strong>。<br>・最重要KPIについては最低１つ、できれば２つ以上残す<br>・それ以外のKPIもインパクト重視で一つは残す<br>・短時間で終わるものはインパクトが弱くても残す' },
       { num:'④', text:'スコアの見方：<strong>インパクト＋気軽さ＋実現可能性</strong>で最高9点。時間はスコア対象外（メモ欄のみ）。' }
     ]
+  },
+  do_action: {
+    title: 'STEP①② DOアクションのコツ',
+    items: [
+      { num:'①', text:'解決案が<strong>抽象的だと考えられるDOは増える</strong>。計画段階で具体的だと既にDOレベルに落とし込めているケースもある。' },
+      { num:'②', text:'DOに優先順位をつけて<strong>スリムにしていく</strong>。解決案につき最低一つは実行に移したい。解決案にDOが一つしかない場合は無条件で選ぶ。' },
+      { num:'③', text:'それをしないと始まらない類のDOに関しては<strong>無条件に選ぶ</strong>。複数のDOがあってもこのルールは変わらない。' },
+      { num:'④', text:'スコアの見方：<strong>インパクト＋気軽さ</strong>で最高6点。時間はメモ欄のみ。優先スコアが高いものから実行に移そう。' }
+    ]
+  },
+  do_kdi: {
+    title: 'STEP③ KDI（行動目標）のコツ',
+    items: [
+      { num:'①', text:'KDIは「<strong>どれだけ計画を実行できたか</strong>」を表す指標。KPIが結果目標ならKDIは行動目標。' },
+      { num:'②', text:'KDIの例：「<strong>毎朝8時に20分</strong>」「<strong>週3回・1回30件</strong>」「<strong>月曜朝イチに確認</strong>」など、頻度と量を明確に。' },
+      { num:'③', text:'DOアクションを<strong>定量化</strong>することで実行できたかどうかが明確になる。あいまいなKDIは達成の判断ができない。' },
+      { num:'④', text:'KDIはCHECKフェーズで検証する。3日ごとに「KDI通り動けたか？」を確認してADJUSTへ。' }
+    ]
+  },
+  do_todo: {
+    title: 'STEP④ TODOタスクへの分解のコツ',
+    items: [
+      { num:'①', text:'TODOへの分解とは<strong>「迷わないレベルまで細かくする」</strong>こと。「何を・いつ・誰が・どうやって」まで決めて初めてTODOタスク。' },
+      { num:'②', text:'期日をきりスケジュールに落とし込みまでして初めてTODOタスク。<strong>「期日なし」は実行されない</strong>と思うべき。' },
+      { num:'③', text:'TODOの進捗確認は<strong>毎日の実行フェーズ</strong>に含まれる。検証フェーズではなく日常のルーティンとして管理する。' },
+      { num:'④', text:'1つのDOに対して複数のTODOをぶら下げてOK。<strong>DOを細分化</strong>するほど実行精度が上がる。' }
+    ]
   }
 };
-const TIPS_EMOJI = { goal:'🎯', gap:'📊', issues:'🔍', kpi:'📈', solutions:'💡' };
+const TIPS_EMOJI = { goal:'🎯', gap:'📊', issues:'🔍', kpi:'📈', solutions:'💡', do_action:'⚡', do_kdi:'📏', do_todo:'✅' };
 function showTips(key) {
   const data = TIPS[key];
   if (!data) return;
