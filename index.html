@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="2.9.3">
+<meta name="app-version" content="2.9.4">
 
 <style>
 /* ── リセット & ベース ── */
@@ -3053,13 +3053,16 @@ function renderKdiChecks() {
         const typeColor = isKeepOn ? '#E1F5EE' : '#FAEEDA';
         const typeText = isKeepOn ? '#085041' : '#633806';
 
+        const freqOptC = FREQ_OPTIONS.find(o=>o.value===(k.freq||''))||null;
+        const freqLblC = freqOptC && freqOptC.value ? freqOptC.label : '';
+        const qxtFreqC = [k.quantity||'', k.time||'', freqLblC].filter(Boolean).join(' × ');
         const headerHtml = `
           <div class="kdi-check-header">
             <div class="kdi-check-num">${i+1}</div>
             <div class="kdi-check-type" style="background:${typeColor};color:${typeText}">${typeLbl}</div>
             <div class="kdi-check-name">${esc(k.text||'（未入力）')}</div>
           </div>
-          ${qxt?`<div class="kdi-check-qxt">⏱ ${esc(qxt)}</div>`:''}`;
+          ${qxtFreqC?`<div class="kdi-check-qxt" style="font-size:11px;color:var(--tx2);padding-left:32px;margin-bottom:6px">${esc(qxtFreqC)}</div>`:''}`;
 
         if (!isKeepOn) {
           const isDone = res.done === true, isUndone = res.done === false;
@@ -3079,8 +3082,14 @@ function renderKdiChecks() {
         // 継続型: 毎日系は数値入力、低頻度系は「行動した？」選択
         const isLowFreq = freq === 'weekly_low' || freq === 'monthly';
         const expectedNum = getExpected(freq, k);
-        const planned = (res.planned !== undefined && res.planned !== '') ? res.planned : (expectedNum!==null&&expectedNum!==undefined?String(expectedNum):'');
-        const actual = res.actual !== undefined ? res.actual : '';
+        // 予定回数: draftに未設定 かつ 頻度から期待値が計算できる場合は自動セット
+        if ((res.planned === undefined || res.planned === '') && expectedNum !== null && expectedNum !== undefined) {
+          if (!draft.kdiResults[k.id]) draft.kdiResults[k.id] = {};
+          draft.kdiResults[k.id].planned = String(expectedNum);
+          res.planned = String(expectedNum);
+        }
+        const planned = (res.planned !== undefined && res.planned !== '') ? String(res.planned) : '';
+        const actual = res.actual !== undefined ? String(res.actual) : '';
         const rate = planned!=='' && actual!=='' && parseFloat(planned)>0
           ? Math.round(parseFloat(actual)/parseFloat(planned)*100) : null;
         const rateColor = rate===null?'#ccc':rate>=100?'#1D9E75':rate>=50?'var(--p)':'var(--red)';
@@ -3274,14 +3283,20 @@ function renderCheckHist() {
               </div>`;
             } else {
               // 行動数/予定数（達成率）の正しい表記
+              // 予定数: res.plannedがあればそれ、なければfreqのper3daysから補完
               const act = parseFloat(res.actual)||0;
-              const pln = parseFloat(res.planned)||0;
-              const rate = pln > 0 ? Math.round(act/pln*100) : null;
+              const freqOptH = FREQ_OPTIONS.find(o=>o.value===(k.freq||''))||null;
+              const autoPlanned = freqOptH && freqOptH.per3days !== null ? freqOptH.per3days : null;
+              const pln = res.planned !== undefined && res.planned !== '' 
+                ? parseFloat(res.planned)
+                : (autoPlanned !== null ? autoPlanned : null);
+              const rate = pln !== null && pln > 0 ? Math.round(act/pln*100) : null;
               const rateColor = rate===null?'var(--p)':rate>=100?'#1D9E75':rate>=50?'var(--p)':'var(--red)';
+              const plnStr = pln !== null ? `${pln}回` : '?回';
               return `<div style="font-size:12px;color:var(--tx2);margin-bottom:4px">
                 <span style="font-weight:600;color:var(--tx)">KDI${ki+1}: ${esc(k.text||'')}</span>
                 ${qxtFreq?`<span style="color:var(--tx3);margin-left:4px">(${esc(qxtFreq)})</span>`:''}
-                <span style="font-weight:700;color:${rateColor};margin-left:4px">${act}回/${pln||'?'}回${rate!==null?' ('+rate+'%)':''}</span>
+                <span style="font-weight:700;color:${rateColor};margin-left:4px">${act}回/${plnStr}${rate!==null?' ('+rate+'%)':''}</span>
               </div>`;
             }
           }).join('')}
