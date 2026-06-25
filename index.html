@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="2.1.0">
+<meta name="app-version" content="2.1.1">
 
 <style>
 /* ── リセット & ベース ── */
@@ -519,13 +519,13 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
 .fold-card.collapsed .fold-body{display:none}
 .fold-card.collapsed .fold-chevron{transform:rotate(0deg)}
 /* 項目折りたたみ（課題・KPI・解決案の各アイテム） */
-.item-fold{position:relative;border-bottom:0.5px solid var(--bd);padding-right:44px}
+.item-fold{position:relative;border-bottom:0.5px solid var(--bd);padding-right:44px;overflow:visible}
 .item-fold:last-child{border-bottom:none}
 .item-del-btn{
   position:absolute;top:10px;right:0;
   font-size:12px;color:var(--red);background:none;
   border:none;cursor:pointer;padding:8px 6px;
-  z-index:5;
+  z-index:2;
   -webkit-tap-highlight-color:rgba(163,45,45,.1);
 }
 .item-fold-header{
@@ -681,7 +681,7 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
   font-size:13px;font-weight:700;
   color:#1D9E75;background:none;
   border:none;cursor:pointer;padding:8px 6px;
-  z-index:5;
+  z-index:2;
   -webkit-tap-highlight-color:rgba(29,158,117,.1);
 }
 /* 達成済みアイテム */
@@ -945,7 +945,7 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
           </div>
           <div class="hint-box">インパクト・気軽さ　A=3点 B=2点 C=1点（最高6点）。スコア上位3つをKPIへ。</div>
           <div id="p-issues"></div>
-          <button class="add-row-btn" onclick="addIssue()">＋ 課題を追加</button>
+          <button class="add-row-btn" onclick="addIssue()" style="position:relative;z-index:10">＋ 課題を追加</button>
         </div>
       </div>
 
@@ -965,7 +965,7 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
             <button class="tips-btn" onclick="showTips('kpi')">コツを見る</button>
           </div>
           <div id="p-kpis"></div>
-          <button class="add-row-btn" onclick="addKPI()">＋ KPIを追加</button>
+          <button class="add-row-btn" onclick="addKPI()" style="position:relative;z-index:10">＋ KPIを追加</button>
         </div>
       </div>
 
@@ -986,7 +986,7 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
           </div>
           <div class="hint-box">インパクト・気軽さ・実現可能性　A=3点（最高9点）</div>
           <div id="p-solutions"></div>
-          <button class="add-row-btn" onclick="addSolution()">＋ 解決案を追加</button>
+          <button class="add-row-btn" onclick="addSolution()" style="position:relative;z-index:10">＋ 解決案を追加</button>
         </div>
       </div>
     </div>
@@ -1900,7 +1900,7 @@ function renderSolutions() {
       return k ? `KPI${n}:${k.kpi||k.issue||''}` : `KPI${n}`;
     }).filter(Boolean);
     const solMetaSub = relKpis.length ? '関連: ' + relKpis.join(' / ') : '';
-    return `<div class="item-fold${k.achieved?' achieved':''}" id="${fid}">
+    return `<div class="item-fold${s.achieved?' achieved':''}" id="${fid}">
       <div class="item-fold-header" onclick="toggleItemFold('${fid}')">
           <div style="display:flex;align-items:center;gap:8px">
             <div class="item-fold-num">${i+1}</div>
