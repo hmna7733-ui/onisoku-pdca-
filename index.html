@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="3.0.1">
+<meta name="app-version" content="3.1.0">
 
 <style>
 /* ── リセット & ベース ── */
@@ -988,6 +988,38 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
   letter-spacing:.5px;margin-bottom:6px;
 }
 
+/* ── データ転送モーダル ── */
+.transfer-modal-wrap{
+  position:fixed;inset:0;
+  background:rgba(10,8,25,.6);
+  z-index:200;
+  display:none;align-items:flex-end;justify-content:center;
+  backdrop-filter:blur(4px);
+}
+.transfer-modal-wrap.open{display:flex}
+.transfer-modal{
+  background:#fff;border-radius:28px 28px 0 0;
+  padding:0 0 44px;width:100%;max-width:430px;
+}
+.transfer-handle{width:40px;height:5px;border-radius:3px;background:#e0ddf0;margin:14px auto 0}
+.transfer-head{padding:16px 20px 12px;border-bottom:0.5px solid var(--bd)}
+.transfer-title{font-size:17px;font-weight:800;color:var(--tx)}
+.transfer-body{padding:20px 20px 0}
+.transfer-btn{
+  width:100%;padding:14px;border-radius:12px;
+  border:none;cursor:pointer;
+  font-size:15px;font-weight:700;
+  margin-bottom:10px;display:flex;align-items:center;gap:12px;
+  transition:opacity .12s;
+}
+.transfer-btn:active{opacity:.8}
+.transfer-btn-icon{font-size:24px;flex-shrink:0}
+.transfer-btn-text{text-align:left;flex:1}
+.transfer-btn-lbl{display:block;font-size:15px;font-weight:700}
+.transfer-btn-sub{display:block;font-size:11px;opacity:.7;margin-top:2px}
+.transfer-btn-export{background:linear-gradient(135deg,var(--p),var(--p2));color:#fff}
+.transfer-btn-import{background:linear-gradient(135deg,var(--teal),#1D9E75);color:#fff}
+.transfer-note{font-size:12px;color:var(--tx2);text-align:center;margin-top:8px;line-height:1.6}
 /* ── 更新ボタン（フローティング） ── */
 #refresh-fab{
   position:fixed;bottom:28px;right:16px;
@@ -1021,6 +1053,36 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
   </div>
 </div>
 
+<!-- ════════ データ転送モーダル ════════ -->
+<div class="transfer-modal-wrap" id="transfer-modal" onclick="closeTransferModal(event)">
+  <div class="transfer-modal">
+    <div class="transfer-handle"></div>
+    <div class="transfer-head">
+      <div class="transfer-title">📦 データ転送</div>
+    </div>
+    <div class="transfer-body">
+      <button class="transfer-btn transfer-btn-export" onclick="exportData()">
+        <span class="transfer-btn-icon">📤</span>
+        <span class="transfer-btn-text">
+          <span class="transfer-btn-lbl">エクスポート（このデバイス→転送）</span>
+          <span class="transfer-btn-sub">全データをJSONファイルとして保存</span>
+        </span>
+      </button>
+      <button class="transfer-btn transfer-btn-import" onclick="document.getElementById('import-file').click()">
+        <span class="transfer-btn-icon">📥</span>
+        <span class="transfer-btn-text">
+          <span class="transfer-btn-lbl">インポート（ファイルから読み込み）</span>
+          <span class="transfer-btn-sub">別デバイスのJSONファイルを読み込む</span>
+        </span>
+      </button>
+      <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
+      <div class="transfer-note">
+        エクスポートしたJSONをAirDrop・メール・LINEなどで<br>別デバイスに送り、インポートしてください
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ════════ 更新バナー ════════ -->
 <div id="update-banner">
   <span>🎉 新しいバージョンが利用可能です</span>
@@ -1044,6 +1106,7 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
             <div class="home-logo">鬼速<em>PDCA</em></div>
           </div>
           <div style="display:flex;gap:8px;align-items:center;position:relative;z-index:1">
+            <button class="settings-btn" onclick="showTransferModal()" title="データ転送" style="font-size:20px">📦</button>
             <button class="settings-btn" onclick="goScreen('s-settings')" title="設定">⚙</button>
             <button class="new-btn" onclick="showNewModal()">＋ 新規</button>
           </div>
@@ -3720,6 +3783,64 @@ function deleteCategory(catId) {
   DB.pdcas.forEach(p => { if (p.catId === catId) p.catId = ''; });
   DB.categories = DB.categories.filter(c => c.id !== catId);
   saveDB(); renderSettings();
+}
+
+/* ══════════════════════════════════════════
+   データ転送
+══════════════════════════════════════════ */
+function showTransferModal() {
+  document.getElementById('transfer-modal').classList.add('open');
+}
+
+function closeTransferModal(e) {
+  if (e.target === document.getElementById('transfer-modal')) {
+    document.getElementById('transfer-modal').classList.remove('open');
+  }
+}
+
+function exportData() {
+  const data = JSON.stringify(DB, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const date = new Date().toISOString().slice(0,10).replace(/-/g,'');
+  a.href = url;
+  a.download = `onisoku-pdca-${date}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  document.getElementById('transfer-modal').classList.remove('open');
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const imported = JSON.parse(e.target.result);
+      // 基本的なバリデーション
+      if (!imported.pdcas || !Array.isArray(imported.pdcas)) {
+        alert('このファイルは鬼速PDCAのデータではありません。');
+        return;
+      }
+      const count = imported.pdcas.length;
+      if (!confirm(`${count}件のPDCAデータを読み込みます。\n\n⚠️ 現在のデータは上書きされます。\nよろしいですか？`)) {
+        event.target.value = '';
+        return;
+      }
+      Object.assign(DB, imported);
+      saveDB();
+      document.getElementById('transfer-modal').classList.remove('open');
+      renderHome();
+      alert(`✅ インポート完了！\n${count}件のPDCAを読み込みました。`);
+    } catch(err) {
+      alert('ファイルの読み込みに失敗しました。\nJSONファイルを確認してください。');
+    }
+    event.target.value = '';
+  };
+  reader.readAsText(file);
 }
 
 loadDB();
