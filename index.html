@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="2.9.1">
+<meta name="app-version" content="2.9.2">
 
 <style>
 /* ── リセット & ベース ── */
@@ -2452,7 +2452,7 @@ function renderKDIs() {
     const doRef = (k.doNums||[]).map(n=>`DO${n}`).join(' / ');
     const typeLbl = k.kdiType||'継続型';
     // 折りたたみ時のmeta
-    const freqOpt = FREQ_OPTIONS.find(o=>o.value===(k.freq||'daily'))||FREQ_OPTIONS[0];
+    const freqOpt = FREQ_OPTIONS.find(o=>o.value===(k.freq||''))||FREQ_OPTIONS[0];
     const metaParts = [
       typeLbl,
       k.text||'',
@@ -2513,14 +2513,14 @@ function renderKDIs() {
             <div style="font-size:10px;color:var(--tx2);margin-bottom:3px">頻度</div>
             <select style="width:100%;font-size:13px;padding:9px 8px"
               onchange="updDoField('kdis','${k.id}','freq',this.value);renderKDIs();setTimeout(restoreFoldState,0)">
-              ${FREQ_OPTIONS.map(o=>`<option value="${o.value}" ${(k.freq||'daily')===o.value?'selected':''}>${o.label}</option>`).join('')}
+              ${FREQ_OPTIONS.map(o=>`<option value="${o.value}" ${(k.freq||'')===o.value?'selected':''}>${o.label}</option>`).join('')}
             </select>
           </div>
         </div>
-        <div style="font-size:12px;color:var(--p);font-weight:600;background:var(--p3);padding:6px 10px;border-radius:8px;margin-bottom:10px">
-          ${k.quantity||'?'} × ${k.time||'?'} × ${(FREQ_OPTIONS.find(o=>o.value===(k.freq||'daily'))||FREQ_OPTIONS[0]).label}
-          <span style="color:var(--tx2);font-weight:400;margin-left:6px">→ 3日で約${(FREQ_OPTIONS.find(o=>o.value===(k.freq||'daily'))||FREQ_OPTIONS[0]).per3days}回</span>
-        </div>
+        ${(k.quantity||k.time||k.freq)?`<div style="font-size:12px;color:var(--p);font-weight:600;background:var(--p3);padding:6px 10px;border-radius:8px;margin-bottom:10px">
+          ${k.quantity||'?'} × ${k.time||'?'} × ${(FREQ_OPTIONS.find(o=>o.value===(k.freq||''))||{label:'未設定'}).label}
+          ${k.freq?`<span style="color:var(--tx2);font-weight:400;margin-left:6px">→ 3日で約${(FREQ_OPTIONS.find(o=>o.value===k.freq)||{per3days:'?'}).per3days}回</span>`:''}
+        </div>`:''}
 
         ${doNums.length?`<label class="lbl" style="margin-top:0">④ 関連するDOアクション</label>
         <div class="issue-check-grid">
@@ -2545,7 +2545,7 @@ function toggleKdiDo(id, num) {
 function addKDI() {
   const p = curP(); if (!p) return;
   if (!p.kdis) p.kdis = [];
-  p.kdis.push({ id:Date.now()+'', kdiType:'継続型', text:'', quantity:'', time:'', freq:'daily', doNums:[], achieved:false });
+  p.kdis.push({ id:Date.now()+'', kdiType:'継続型', text:'', quantity:'', time:'', freq:'', doNums:[], achieved:false });
   saveDB(); renderDo(); setTimeout(restoreFoldState,0);
 }
 
@@ -2926,20 +2926,21 @@ function renderCA() {
 
 // 頻度定義（KDI設定で使用）
 const FREQ_OPTIONS = [
-  { value:'daily',    label:'毎日',  per3days:3,  group:'daily' },
-  { value:'w6',       label:'週6',   per3days:2,  group:'weekly_high' },
-  { value:'w5',       label:'週5',   per3days:2,  group:'weekly_high' },
-  { value:'w4',       label:'週4',   per3days:2,  group:'weekly_high' },
-  { value:'w3',       label:'週3',   per3days:1,  group:'weekly_high' },
-  { value:'w2',       label:'週2',   per3days:1,  group:'weekly_high' },
-  { value:'w1',       label:'週1',   per3days:0,  group:'weekly_low' },
-  { value:'m2',       label:'月2',   per3days:0,  group:'monthly' },
-  { value:'m1',       label:'月1',   per3days:0,  group:'monthly' },
+  { value:'',         label:'頻度を選択', per3days:null, group:'weekly_high' },
+  { value:'daily',    label:'毎日',       per3days:3,    group:'daily' },
+  { value:'w6',       label:'週6',        per3days:2,    group:'weekly_high' },
+  { value:'w5',       label:'週5',        per3days:2,    group:'weekly_high' },
+  { value:'w4',       label:'週4',        per3days:2,    group:'weekly_high' },
+  { value:'w3',       label:'週3',        per3days:1,    group:'weekly_high' },
+  { value:'w2',       label:'週2',        per3days:1,    group:'weekly_high' },
+  { value:'w1',       label:'週1',        per3days:0,    group:'weekly_low' },
+  { value:'m2',       label:'月2',        per3days:0,    group:'monthly' },
+  { value:'m1',       label:'月1',        per3days:0,    group:'monthly' },
 ];
 
 function detectFreq(k) {
-  // freqフィールドが設定済みならそこから判定
-  if (k.freq) {
+  // freqフィールドが設定済みで空でなければそこから判定
+  if (k.freq && k.freq !== '') {
     const opt = FREQ_OPTIONS.find(o => o.value === k.freq);
     if (opt) return opt.group;
   }
@@ -2953,10 +2954,10 @@ function detectFreq(k) {
 }
 
 function getExpected(freq, k) {
-  // freqフィールドが設定済みならper3daysを返す
-  if (k && k.freq) {
+  // freqフィールドが設定済みで空でなければper3daysを返す
+  if (k && k.freq && k.freq !== '') {
     const opt = FREQ_OPTIONS.find(o => o.value === k.freq);
-    if (opt) return opt.per3days;
+    if (opt && opt.per3days !== null) return opt.per3days;
   }
   if (freq === 'daily') return 3;
   if (freq === 'weekly_high') return 1;
@@ -2989,7 +2990,8 @@ function renderKdiChecks() {
     const isKeepOn = (k.kdiType||'継続型') === '継続型';
     if (isKeepOn) {
       totalActions += parseFloat(res.actual||0)||0;
-      totalPlanned += parseFloat(res.planned||getExpected(detectFreq(k),k))||0;
+      const exp = getExpected(detectFreq(k),k);
+      totalPlanned += parseFloat(res.planned!=null&&res.planned!==''?res.planned:(exp!==null?exp:0))||0;
     } else {
       if (res.done === true) totalActions += 1;
       totalPlanned += 1;
@@ -3028,6 +3030,7 @@ function renderKdiChecks() {
     const freq = detectFreq(k);
     (freqGroups[freq]||freqGroups.weekly_high).items.push({k,i,freq});
   });
+  // orderlyFreqGroups: daily → weekly_high → weekly_low → monthly の順を保証
 
   // 頻度グループ順に表示
   const orderedGroups = [
@@ -3076,7 +3079,7 @@ function renderKdiChecks() {
         // 継続型: 毎日系は数値入力、低頻度系は「行動した？」選択
         const isLowFreq = freq === 'weekly_low' || freq === 'monthly';
         const expectedNum = getExpected(freq, k);
-        const planned = res.planned !== undefined ? res.planned : (expectedNum!==undefined?String(expectedNum):'');
+        const planned = (res.planned !== undefined && res.planned !== '') ? res.planned : (expectedNum!==null&&expectedNum!==undefined?String(expectedNum):'');
         const actual = res.actual !== undefined ? res.actual : '';
         const rate = planned!=='' && actual!=='' && parseFloat(planned)>0
           ? Math.round(parseFloat(actual)/parseFloat(planned)*100) : null;
