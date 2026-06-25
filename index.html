@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="2.6.0">
+<meta name="app-version" content="2.7.0">
 
 <style>
 /* ── リセット & ベース ── */
@@ -1290,7 +1290,7 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
           <span class="star" onclick="setStar(4)">★</span>
           <span class="star" onclick="setStar(5)">★</span>
         </div>
-        <button class="save-btn" onclick="saveCheckRecord()">振り返りを保存</button>
+        <button class="save-btn" id="ca-save-btn" onclick="saveCheckRecord()">振り返りを保存</button>
       </div>
 
       <!-- 振り返り履歴 -->
@@ -2643,20 +2643,24 @@ function renderRoutines() {
 /* ══════════════════════════════════════════
    CHECK / ADJUST
 ══════════════════════════════════════════ */
-// 達成率計算（マイナス目標対応）
+// 達成率計算（%単位・マイナス目標対応）
 function calcAchievePct(target, current, baseVal) {
-  const t = parseFloat(target), c = parseFloat(current), b = parseFloat(baseVal||0);
+  // 文字列から数値へ（%記号を除去）
+  const clean = v => parseFloat(String(v||'').replace(/%/g,'').trim());
+  const t = clean(target), c = clean(current), b = clean(baseVal||0);
   if (isNaN(t) || isNaN(c)) return 0;
-  // マイナス目標（目標<基準値）：減少方向
-  if (!isNaN(b) && b > t) {
-    // 例: 基準100、目標60、現在80 → (100-80)/(100-60)=50%
-    const totalGap = b - t;
-    if (totalGap === 0) return 100;
-    return Math.round(Math.max(0, (b - c) / totalGap * 100));
-  }
-  // 通常（増加方向）: current/target * 100
+  // 目標=0 かつ 現在=0 → 100%達成
+  if (t === 0 && c === 0) return 100;
   if (t === 0) return 0;
-  return Math.round(Math.max(0, c / t * 100));
+  // ギャップ計算で達成率を算出（増加・減少どちらも対応）
+  if (!isNaN(b) && b !== t) {
+    // ギャップベース: (現在 - 基準) / (目標 - 基準) * 100
+    const totalGap = t - b;
+    const achievedGap = c - b;
+    return Math.round(achievedGap / totalGap * 100);
+  }
+  // 基準値なし: current / target * 100
+  return Math.round(c / t * 100);
 }
 
 function renderCA() {
@@ -2666,25 +2670,33 @@ function renderCA() {
   // ── KGI単独ヒーローカード ──
   const kgiWrap = document.getElementById('ca-kgi-wrap');
   if (pl.goal || pl.kgiVal) {
-    // 前回の現在値（最新振り返り記録から取得）
     const prevRecord = (p.checkRecords||[])[0];
-    const prevKgiVal = prevRecord?.kgiCurrent || null;
-    const curKgiVal = p.checkDraft.kgiCurrent || pl.curVal || '';
-    const pct = calcAchievePct(pl.kgiVal, curKgiVal||pl.curVal, pl.curVal);
-    const pctCapped = Math.min(pct, 100);
-    const prevDiff = prevKgiVal && curKgiVal
+    const prevKgiVal = prevRecord?.kgiCurrent ?? null;
+    // 今回値: draftに入力済み→その値, 未入力で前回記録あり→前回値をデフォルト
+    const draftKgiVal = p.checkDraft.kgiCurrent;
+    const defaultKgiVal = draftKgiVal !== undefined && draftKgiVal !== ''
+      ? draftKgiVal
+      : (prevKgiVal !== null ? prevKgiVal : (pl.curVal||''));
+    const curKgiVal = defaultKgiVal;
+    // draftに初期値をセット（初回のみ）
+    if ((p.checkDraft.kgiCurrent === undefined || p.checkDraft.kgiCurrent === '') && prevKgiVal !== null) {
+      p.checkDraft.kgiCurrent = prevKgiVal;
+    }
+    const pct = calcAchievePct(pl.kgiVal, curKgiVal, pl.curVal);
+    const pctCapped = Math.min(Math.max(pct,0), 100);
+    const prevDiff = prevKgiVal !== null && curKgiVal !== ''
       ? (parseFloat(curKgiVal) - parseFloat(prevKgiVal)) : null;
-    const diffStr = prevDiff !== null
-      ? `${prevDiff>=0?'+':''}${prevDiff}${pl.kgiUnit||''}`
-      : '';
+    const diffStr = prevDiff !== null && !isNaN(prevDiff)
+      ? `${prevDiff>=0?'+':''}${prevDiff}${pl.kgiUnit||''}` : '';
+    const unit = pl.kgiUnit||pl.curUnit||'';
     kgiWrap.innerHTML = `
       <div class="kgi-hero-card">
         <div class="kgi-hero-label">⭐ KGI — 最重要ゴール</div>
         <div class="kgi-hero-name">${esc(pl.goal||'ゴール未設定')}</div>
         <div class="kgi-hero-row">
           <div>
-            <div class="kgi-hero-num">${esc(curKgiVal||pl.curVal||'—')}<span class="kgi-hero-unit">${esc(pl.kgiUnit||pl.curUnit||'')}</span></div>
-            <div class="kgi-hero-target">目標: ${esc(pl.kgiVal||'—')}${esc(pl.kgiUnit||'')}</div>
+            <div class="kgi-hero-num">${esc(curKgiVal||'—')}<span class="kgi-hero-unit">${esc(unit)}</span></div>
+            <div class="kgi-hero-target">目標: ${esc(pl.kgiVal||'—')}${esc(unit)}</div>
           </div>
           <div class="kgi-hero-pct">
             <div class="kgi-hero-pct-num">${pct}%</div>
@@ -2693,13 +2705,21 @@ function renderCA() {
         </div>
         <div class="kgi-prog-bar"><div class="kgi-prog-fill" style="width:${pctCapped}%"></div></div>
         <div class="kgi-input-area">
-          <div class="kgi-input-label">今回の現在値を入力</div>
-          ${prevKgiVal ? `<div class="kgi-prev-val">前回: ${esc(prevKgiVal)}${esc(pl.kgiUnit||'')} ${diffStr?`<span style="color:${prevDiff>=0?'#1D9E75':'#A32D2D'};font-weight:700">${diffStr}</span>`:''}</div>` : ''}
-          <div class="kgi-input-row">
-            <input type="number" id="ca-kgi-current" value="${esc(curKgiVal||'')}"
-              placeholder="${esc(pl.curVal||'現在値を入力')}"
-              oninput="saveCheck()" style="font-size:16px;font-weight:600">
-            <div style="font-size:14px;font-weight:600;color:#666">${esc(pl.kgiUnit||pl.curUnit||'')}</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start">
+            ${prevKgiVal !== null ? `<div>
+              <div class="kgi-input-label" style="color:#888">前回の現在値</div>
+              <div style="font-size:20px;font-weight:800;color:#888;margin-top:4px">${esc(prevKgiVal)}<span style="font-size:13px;margin-left:2px">${esc(unit)}</span></div>
+              ${diffStr?`<div style="font-size:12px;font-weight:700;margin-top:2px;color:${prevDiff>=0?'#1D9E75':'#A32D2D'}">${diffStr}</div>`:''}
+            </div>` : '<div><div class="kgi-input-label" style="color:#888">前回記録なし</div></div>'}
+            <div>
+              <div class="kgi-input-label">今回の現在値</div>
+              <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
+                <input type="number" id="ca-kgi-current" value="${esc(curKgiVal||'')}"
+                  placeholder="入力"
+                  oninput="saveCheck()" style="font-size:18px;font-weight:700;width:80px">
+                <span style="font-size:13px;color:#666">${esc(unit)}</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>`;
@@ -2711,32 +2731,52 @@ function renderCA() {
   document.getElementById('ca-kpis').innerHTML = p.kpis.length
     ? p.kpis.map((k, i) => {
         const isFirst = i === 0;
-        const prevKpiVal = ((p.checkRecords||[])[0]?.kpiCurrents||{})[k.id] || null;
-        const curKpiVal = (p.checkDraft.kpiCurrents||{})[k.id] || k.current || '';
-        const pct = calcAchievePct(k.target, curKpiVal||k.current, k.current);
-        const pctCapped = Math.min(pct, 100);
-        const prevDiff = prevKpiVal && curKpiVal
+        const prevKpiVal = ((p.checkRecords||[])[0]?.kpiCurrents||{})[k.id] ?? null;
+        // デフォルト: draft値 → 前回値 → PLANの現在値
+        const draftKpiVal = (p.checkDraft.kpiCurrents||{})[k.id];
+        const defaultKpiVal = (draftKpiVal !== undefined && draftKpiVal !== '')
+          ? draftKpiVal
+          : (prevKpiVal !== null ? prevKpiVal : (k.current||''));
+        const curKpiVal = defaultKpiVal;
+        // draftに初期値セット
+        if ((draftKpiVal === undefined || draftKpiVal === '') && prevKpiVal !== null) {
+          if (!p.checkDraft.kpiCurrents) p.checkDraft.kpiCurrents = {};
+          p.checkDraft.kpiCurrents[k.id] = prevKpiVal;
+        }
+        const pct = calcAchievePct(k.target, curKpiVal, k.current);
+        const pctCapped = Math.min(Math.max(pct,0), 100);
+        const prevDiff = prevKpiVal !== null && curKpiVal !== ''
           ? (parseFloat(curKpiVal) - parseFloat(prevKpiVal)) : null;
-        const diffStr = prevDiff !== null ? `${prevDiff>=0?'+':''}${prevDiff}${k.unit||''}` : '';
+        const diffStr = prevDiff !== null && !isNaN(prevDiff)
+          ? `${prevDiff>=0?'+':''}${prevDiff}${k.unit||''}` : '';
         const color = pct>=100?'#1D9E75':pct>=50?'var(--p)':'var(--red)';
+        const unit = k.unit||'';
         const inner = `
           ${isFirst?'<div class="kpi-top-card-badge">⭐ 最重要KPI = サブゴール</div>':''}
-          <div style="font-size:14px;font-weight:700;color:${isFirst?'#1a1a2e':'var(--tx)'};margin-bottom:8px">${esc(k.kpiName||k.kpi||k.issue||'KPI'+(i+1))}</div>
-          <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap">
-            <div>
-              <div style="font-size:11px;color:#888;margin-bottom:2px">今回の現在値</div>
-              <input type="number" value="${esc(curKpiVal||'')}"
-                placeholder="${esc(k.current||'入力')}"
-                oninput="saveKpiCurrent('${k.id}',this.value)"
-                style="font-size:18px;font-weight:700;width:100px;color:var(--tx)">
-              <span style="font-size:12px;color:#888">${esc(k.unit||'')}</span>
-              ${prevKpiVal?`<div style="font-size:11px;color:#888;margin-top:2px">前回: ${esc(prevKpiVal)}${esc(k.unit||'')} <span style="color:${prevDiff>=0?'#1D9E75':'#A32D2D'};font-weight:700">${diffStr}</span></div>`:''}
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <div style="font-size:14px;font-weight:700;color:${isFirst?'#1a1a2e':'var(--tx)'}">${esc(k.kpiName||k.kpi||k.issue||'KPI'+(i+1))}</div>
+            <div style="text-align:right">
+              <div style="font-size:22px;font-weight:800;color:${color}">${pct}%</div>
+              <div style="font-size:10px;color:#888">目標: ${esc(k.target||'—')}${esc(unit)}</div>
             </div>
-            <div style="margin-left:auto;text-align:right">
-              <div style="font-size:24px;font-weight:800;color:${color}">${pct}%</div>
-              <div style="font-size:11px;color:#888">目標: ${esc(k.target||'—')}${esc(k.unit||'')}</div>
-              <div style="height:4px;background:#eee;border-radius:2px;overflow:hidden;margin-top:4px;width:80px">
-                <div style="height:100%;background:${color};width:${pctCapped}%;border-radius:2px"></div>
+          </div>
+          <div style="height:4px;background:#eee;border-radius:2px;overflow:hidden;margin-bottom:12px">
+            <div style="height:100%;background:${color};width:${pctCapped}%;border-radius:2px"></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            ${prevKpiVal !== null ? `<div>
+              <div style="font-size:10px;color:#888;font-weight:600;margin-bottom:3px">前回の現在値</div>
+              <div style="font-size:18px;font-weight:800;color:#aaa">${esc(prevKpiVal)}<span style="font-size:11px;margin-left:2px">${esc(unit)}</span></div>
+              ${diffStr?`<div style="font-size:11px;font-weight:700;color:${prevDiff>=0?'#1D9E75':'#A32D2D'}">${diffStr}</div>`:''}
+            </div>` : '<div><div style="font-size:10px;color:#aaa">前回記録なし</div></div>'}
+            <div>
+              <div style="font-size:10px;color:var(--p);font-weight:600;margin-bottom:3px">今回の現在値</div>
+              <div style="display:flex;align-items:center;gap:4px">
+                <input type="number" value="${esc(curKpiVal||'')}"
+                  placeholder="入力"
+                  oninput="saveKpiCurrent('${k.id}',this.value)"
+                  style="font-size:18px;font-weight:700;width:80px">
+                <span style="font-size:12px;color:#666">${esc(unit)}</span>
               </div>
             </div>
           </div>`;
@@ -2755,6 +2795,9 @@ function renderCA() {
   document.getElementById('ca-io').value = d.io||'';
   renderStars(d.star||0);
   renderCheckHist();
+  // 編集モード判定
+  const saveBtn = document.getElementById('ca-save-btn');
+  if (saveBtn) saveBtn.textContent = d._editingId ? '振り返りを更新' : '振り返りを保存';
 
   document.getElementById('ca-adj').innerHTML = p.issues.filter(x=>x.text).length
     ? p.issues.filter(x=>x.text).map(iss => `
@@ -2822,17 +2865,34 @@ function renderStars(n) {
 function saveCheckRecord() {
   const p = curP(); if (!p) return;
   const d = { ...p.checkDraft, id: Date.now()+'' };
-  if (!d.good && !d.bad && !d.insight) { alert('少なくとも一つ入力してください'); return; }
+  if (!d.good && !d.bad && !d.insight && !d.kgiCurrent) {
+    alert('少なくとも一つ入力してください');return;
+  }
   p.checkRecords.unshift(d);
   p.checkDraft = { date:'', good:'', bad:'', insight:'', next:'', io:'', star:0, kgiCurrent:'', kpiCurrents:{} };
   ['ca-date','ca-good','ca-bad','ca-insight','ca-next','ca-io'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
-  const kgiEl = document.getElementById('ca-kgi-current');
-  if (kgiEl) kgiEl.value = '';
   renderStars(0);
   saveDB(); renderCA();
   alert('振り返りを保存しました！');
+}
+
+function editCheckRecord(id) {
+  const p = curP(); if (!p) return;
+  const idx = (p.checkRecords||[]).findIndex(r => r.id === id);
+  if (idx < 0) return;
+  // 編集対象をdraftにコピーして編集モードに
+  p.checkDraft = { ...p.checkRecords[idx], _editingId: id };
+  p.checkRecords.splice(idx, 1); // 一旦削除
+  saveDB(); renderCA();
+}
+
+function deleteCheckRecord(id) {
+  const p = curP(); if (!p) return;
+  if (!confirm('この振り返り記録を削除しますか？')) return;
+  p.checkRecords = (p.checkRecords||[]).filter(r => r.id !== id);
+  saveDB(); renderCheckHist();
 }
 
 function renderCheckHist() {
@@ -2844,16 +2904,31 @@ function renderCheckHist() {
     const prevR = p.checkRecords[idx+1];
     const kgiDiff = r.kgiCurrent && prevR?.kgiCurrent
       ? (parseFloat(r.kgiCurrent)-parseFloat(prevR.kgiCurrent)) : null;
-    const diffStr = kgiDiff !== null ? `${kgiDiff>=0?'+':''}${kgiDiff}${pl.kgiUnit||''}` : '';
+    const diffStr = kgiDiff !== null && !isNaN(kgiDiff)
+      ? `${kgiDiff>=0?'+':''}${kgiDiff}${pl.kgiUnit||''}` : '';
+    const kgiPct = r.kgiCurrent ? calcAchievePct(pl.kgiVal, r.kgiCurrent, pl.curVal) : null;
     return `<div class="hist-item">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-        <div style="font-size:12px;color:var(--tx2)">${esc(r.date||'日付なし')}　${'★'.repeat(r.star||0)}</div>
-        ${r.kgiCurrent?`<span style="font-size:12px;font-weight:700;color:var(--p);background:var(--p3);padding:2px 8px;border-radius:10px">${esc(r.kgiCurrent)}${esc(pl.kgiUnit||'')} ${diffStr?`<span style="color:${kgiDiff>=0?'#1D9E75':'#A32D2D'}">${diffStr}</span>`:''}</span>`:''}
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px">
+        <div>
+          <div style="font-size:12px;color:var(--tx2);margin-bottom:4px">${esc(r.date||'日付なし')}　${'★'.repeat(r.star||0)}</div>
+          ${r.kgiCurrent?`<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <span style="font-size:14px;font-weight:800;color:var(--p)">${esc(r.kgiCurrent)}${esc(pl.kgiUnit||'')}</span>
+            ${diffStr?`<span style="font-size:12px;font-weight:700;color:${kgiDiff>=0?'#1D9E75':'#A32D2D'}">${diffStr}</span>`:''}
+            ${kgiPct!==null?`<span style="font-size:11px;background:var(--p3);color:var(--p);padding:1px 7px;border-radius:10px;font-weight:700">${kgiPct}%</span>`:''}
+          </div>`:''}
+        </div>
+        <div style="display:flex;gap:4px;flex-shrink:0">
+          <button onclick="editCheckRecord('${r.id}')"
+            style="font-size:11px;padding:4px 8px;border:1px solid var(--bd2);border-radius:6px;background:none;cursor:pointer;color:var(--p)">✏ 編集</button>
+          <button onclick="deleteCheckRecord('${r.id}')"
+            style="font-size:11px;padding:4px 8px;border:1px solid #F7C1C1;border-radius:6px;background:none;cursor:pointer;color:var(--red)">削除</button>
+        </div>
       </div>
-      ${r.good?`<div style="font-size:13px;color:var(--tx)">✅ ${esc(r.good)}</div>`:''}
-      ${r.insight?`<div style="font-size:12px;color:var(--tx2);margin-top:3px">💡 ${esc(r.insight)}</div>`:''}
-      ${r.next?`<div style="font-size:12px;color:var(--p);margin-top:3px">🚀 ${esc(r.next)}</div>`:''}
-      ${r.io?`<div style="font-size:12px;color:var(--tx2);margin-top:3px">📚 ${esc(r.io)}</div>`:''}
+      ${r.good?`<div style="font-size:13px;color:var(--tx);margin-bottom:3px">✅ ${esc(r.good)}</div>`:''}
+      ${r.bad?`<div style="font-size:12px;color:var(--tx2);margin-bottom:3px">❌ ${esc(r.bad)}</div>`:''}
+      ${r.insight?`<div style="font-size:12px;color:var(--tx2);margin-bottom:3px">💡 ${esc(r.insight)}</div>`:''}
+      ${r.next?`<div style="font-size:12px;color:var(--p);margin-bottom:3px">🚀 ${esc(r.next)}</div>`:''}
+      ${r.io?`<div style="font-size:12px;color:var(--tx2)">📚 ${esc(r.io)}</div>`:''}
     </div>`;
   }).join('');
 }
