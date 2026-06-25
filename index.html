@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="3.0.0">
+<meta name="app-version" content="3.0.1">
 
 <style>
 /* ── リセット & ベース ── */
@@ -1674,16 +1674,18 @@ function renderHome() {
   const avgPct = total ? Math.round(DB.pdcas.reduce((s,p)=>s+calcPct(p),0)/total) : 0;
   document.getElementById('h-avg').textContent = avgPct + '%';
 
-  const makeCard = (p) => {
-    const cat = DB.categories.find(c => c.id === p.catId);
+  const makeCard = (p, muted) => {
     const pct = calcPct(p);
-    return `<div class="pdca-card${p.paused?' paused':''} ${isCompleted?'completed-pdca':''}">
+    const isCompleted = !!p.completed;
+    return `<div class="pdca-card${muted?' paused':''}${isCompleted?' completed-pdca':''}">
       <div class="pdca-card-row1">
         <div class="pdca-card-title" onclick="openPDCA('${p.id}')" style="cursor:pointer;flex:1">${esc(p.title)}</div>
         ${isCompleted?'<span class="pdca-completed-badge">🏆 達成</span>':''}
         <button onclick="quickEditTitle('${p.id}')"
           style="background:none;border:none;font-size:15px;cursor:pointer;padding:4px 8px;color:var(--tx2);flex-shrink:0">✏</button>
-        <div class="status-pill ${p.paused?'pill-paused':'pill-active'}" onclick="openPDCA('${p.id}')" style="cursor:pointer">${p.paused?'停止中':'進行中'}</div>
+        <div class="status-pill ${isCompleted?'pill-paused':muted?'pill-paused':'pill-active'}" onclick="openPDCA('${p.id}')" style="cursor:pointer">
+          ${isCompleted?'🏆 達成':muted?'停止中':'進行中'}
+        </div>
       </div>
       <div class="pdca-kgi" onclick="openPDCA('${p.id}')" style="cursor:pointer">${esc(p.kgi||'KGI未設定')}</div>
       <div class="card-foot" onclick="openPDCA('${p.id}')" style="cursor:pointer">
