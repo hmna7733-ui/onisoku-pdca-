@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="2.0.4">
+<meta name="app-version" content="2.1.0">
 
 <style>
 /* ── リセット & ベース ── */
@@ -658,13 +658,13 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
   display:inline;
 }
 
-/* コツボタン */
+/* コツボタン（展開時のみ表示） */
 .tips-btn{
   display:flex;align-items:center;gap:5px;
   background:linear-gradient(135deg,#7F77DD,#D4537E);
   border:none;cursor:pointer;
   font-size:11px;font-weight:800;color:#fff;
-  padding:5px 11px;margin-left:auto;flex-shrink:0;
+  padding:5px 11px;flex-shrink:0;
   white-space:nowrap;border-radius:20px;
   letter-spacing:.3px;
   box-shadow:0 2px 8px rgba(127,119,221,.4);
@@ -672,6 +672,43 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
 }
 .tips-btn::before{content:'💡';font-size:12px}
 .tips-btn:active{transform:scale(0.93);box-shadow:0 1px 4px rgba(127,119,221,.3)}
+/* 折りたたみ時はコツボタン非表示 */
+.fold-card.collapsed .tips-btn{display:none}
+
+/* 達成ボタン */
+.item-achieve-btn{
+  position:absolute;top:40px;right:0;
+  font-size:13px;font-weight:700;
+  color:#1D9E75;background:none;
+  border:none;cursor:pointer;padding:8px 6px;
+  z-index:5;
+  -webkit-tap-highlight-color:rgba(29,158,117,.1);
+}
+/* 達成済みアイテム */
+.item-fold.achieved{
+  opacity:.38;
+  background:rgba(0,0,0,.03);
+  border-radius:8px;
+}
+.item-fold.achieved .item-fold-header{
+  pointer-events:none;
+}
+.item-fold.achieved .item-fold-body{
+  display:none;
+}
+.item-fold.achieved .item-del-btn,
+.item-fold.achieved .item-achieve-btn{
+  pointer-events:auto;
+}
+.achieved-section{
+  margin-top:10px;
+  border-top:1px dashed var(--bd2);
+  padding-top:8px;
+}
+.achieved-section-label{
+  font-size:11px;font-weight:600;color:var(--tx3);
+  letter-spacing:.5px;margin-bottom:6px;
+}
 
 /* ── 更新ボタン（フローティング） ── */
 #refresh-fab{
@@ -850,6 +887,9 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
           <div class="fold-chevron open" id="fc-goal-chev">▼</div>
         </div>
         <div class="fold-body">
+          <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+            <button class="tips-btn" onclick="showTips('goal')">コツを見る</button>
+          </div>
           <label class="lbl">ゴール（定性）</label>
           <input type="text" id="p-goal" placeholder="例：営業成績1位" oninput="savePlan()">
           <div class="row2">
@@ -873,6 +913,9 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
           <div class="fold-chevron open" id="fc-gap-chev">▼</div>
         </div>
         <div class="fold-body">
+          <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+            <button class="tips-btn" onclick="showTips('gap')">コツを見る</button>
+          </div>
           <div class="row2">
             <div><label class="lbl">現在値</label><input type="number" id="p-cur" placeholder="12" oninput="calcGap()"></div>
             <div><label class="lbl">単位（ゴールから自動）</label><input type="text" id="p-cur-unit" placeholder="件/月" oninput="savePlan()"></div>
@@ -897,6 +940,9 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
           <div class="fold-chevron open" id="fc-issues-chev">▼</div>
         </div>
         <div class="fold-body">
+          <div style="display:flex;justify-content:flex-end;margin-bottom:6px">
+            <button class="tips-btn" onclick="showTips('issues')">コツを見る</button>
+          </div>
           <div class="hint-box">インパクト・気軽さ　A=3点 B=2点 C=1点（最高6点）。スコア上位3つをKPIへ。</div>
           <div id="p-issues"></div>
           <button class="add-row-btn" onclick="addIssue()">＋ 課題を追加</button>
@@ -915,6 +961,9 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
           <div class="fold-chevron open" id="fc-kpis-chev">▼</div>
         </div>
         <div class="fold-body">
+          <div style="display:flex;justify-content:flex-end;margin-bottom:6px">
+            <button class="tips-btn" onclick="showTips('kpi')">コツを見る</button>
+          </div>
           <div id="p-kpis"></div>
           <button class="add-row-btn" onclick="addKPI()">＋ KPIを追加</button>
         </div>
@@ -932,6 +981,9 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
           <div class="fold-chevron open" id="fc-solutions-chev">▼</div>
         </div>
         <div class="fold-body">
+          <div style="display:flex;justify-content:flex-end;margin-bottom:6px">
+            <button class="tips-btn" onclick="showTips('solutions')">コツを見る</button>
+          </div>
           <div class="hint-box">インパクト・気軽さ・実現可能性　A=3点（最高9点）</div>
           <div id="p-solutions"></div>
           <button class="add-row-btn" onclick="addSolution()">＋ 解決案を追加</button>
@@ -1610,6 +1662,21 @@ function setABC(id, field, val, type) {
   if (type === 'solutions') { renderSolutions(); setTimeout(restoreFoldState,0); }
 }
 
+function achieveItem(type, id) {
+  const p = curP(); if (!p) return;
+  const arr = p[type];
+  const idx = arr.findIndex(x => x.id === id); if (idx < 0) return;
+  arr[idx].achieved = !arr[idx].achieved;
+  // 達成済みを末尾に移動
+  const item = arr.splice(idx, 1)[0];
+  if (item.achieved) arr.push(item);
+  else arr.unshift(item);
+  saveDB();
+  if (type==='issues') { renderIssues(); updateFoldSummaries(); setTimeout(restoreFoldState,0); }
+  if (type==='kpis') { renderKPIs(); setTimeout(restoreFoldState,0); }
+  if (type==='solutions') { renderSolutions(); setTimeout(restoreFoldState,0); }
+}
+
 function updField(type, id, field, val) {
   const p = curP(); if (!p) return;
   const idx = p[type].findIndex(x => x.id === id); if (idx < 0) return;
@@ -1653,7 +1720,7 @@ function renderIssues() {
     const scoreLbl = iss.score ? `スコア${iss.score}/6` : '';
     const meta = [impLbl, easeLbl, timeLbl, scoreLbl].filter(Boolean).join('　');
     return `
-    <div class="item-fold" id="${fid}">
+    <div class="item-fold${iss.achieved?' achieved':''}" id="${fid}">
       <div class="item-fold-header" onclick="toggleItemFold('${fid}')">
           <div style="display:flex;align-items:center;gap:8px">
             <div class="item-fold-num">${i+1}</div>
@@ -1666,6 +1733,7 @@ function renderIssues() {
           </div>
       </div>
       <button class="item-del-btn" onclick="delItem('issues','${iss.id}')">削除</button>
+      <button class="item-achieve-btn" onclick="achieveItem('issues','${iss.id}')">${iss.achieved?'↩ 未達成':'✓ 達成'}</button>
       <div class="item-fold-body">
         <input type="text" value="${esc(iss.text)}" placeholder="課題を入力" style="width:100%;margin-bottom:10px"
           onchange="updField('issues','${iss.id}','text',this.value);renderIssues();setTimeout(restoreFoldState,0)">
@@ -1761,7 +1829,7 @@ function renderKPIs() {
     const meta = [metaMain, metaSub].filter(Boolean).join(' ');
     const numCls = isFirst ? 'first' : 'kpi-num';
     const numStyle = isFirst ? 'background:linear-gradient(135deg,#FFD966,#FF9500)' : 'background:#7F77DD';
-    return `<div class="item-fold" id="${fid}">
+    return `<div class="item-fold${k.achieved?' achieved':''}" id="${fid}">
       <div class="item-fold-header" onclick="toggleItemFold('${fid}')">
           <div style="display:flex;align-items:center;gap:8px">
             <div class="item-fold-num ${numCls}" style="${numStyle};color:#fff">${isFirst?'⭐':i+1}</div>
@@ -1775,6 +1843,7 @@ function renderKPIs() {
           </div>
       </div>
       <button class="item-del-btn" onclick="delItem('kpis','${k.id}')">削除</button>
+      <button class="item-achieve-btn" onclick="achieveItem('kpis','${k.id}')">${k.achieved?'↩ 未達成':'✓ 達成'}</button>
       <div class="item-fold-body">${kpiCard(k, i, isFirst)}</div>
     </div>`;
   }).join('');
@@ -1831,7 +1900,7 @@ function renderSolutions() {
       return k ? `KPI${n}:${k.kpi||k.issue||''}` : `KPI${n}`;
     }).filter(Boolean);
     const solMetaSub = relKpis.length ? '関連: ' + relKpis.join(' / ') : '';
-    return `<div class="item-fold" id="${fid}">
+    return `<div class="item-fold${k.achieved?' achieved':''}" id="${fid}">
       <div class="item-fold-header" onclick="toggleItemFold('${fid}')">
           <div style="display:flex;align-items:center;gap:8px">
             <div class="item-fold-num">${i+1}</div>
@@ -1845,6 +1914,7 @@ function renderSolutions() {
           </div>
       </div>
       <button class="item-del-btn" onclick="delItem('solutions','${s.id}')">削除</button>
+      <button class="item-achieve-btn" onclick="achieveItem('solutions','${s.id}')">${s.achieved?'↩ 未達成':'✓ 達成'}</button>
       <div class="item-fold-body">
         <input type="text" value="${esc(s.text)}" placeholder="解決案" style="width:100%;margin-bottom:10px"
           onchange="updField('solutions','${s.id}','text',this.value);renderSolutions();setTimeout(restoreFoldState,0)">
