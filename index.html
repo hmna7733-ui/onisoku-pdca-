@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="3.4.5">
+<meta name="app-version" content="3.4.6">
 
 <style>
 /* ── リセット & ベース ── */
@@ -1798,10 +1798,12 @@ function goScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   if (id === 's-menu') renderMenu();
-  if (id === 's-plan') renderPlan();
-  if (id === 's-do') renderDo();
-  if (id === 's-ca') renderCA();
+  if (id === 's-plan') { renderPlan(); }
+  if (id === 's-do') { renderDo(); }
+  if (id === 's-ca') { renderCA(); }
   if (id === 's-settings') renderSettings();
+  // 画面遷移後に折りたたみ状態を復元
+  setTimeout(restoreFoldState, 50);
 }
 
 /* ══════════════════════════════════════════
@@ -2673,7 +2675,7 @@ function renderDo() {
   const actSummary = document.getElementById('fs-do-actions');
   if (actSummary) actSummary.textContent = (p.doActions||[]).length ? (p.doActions||[]).map((a,i)=>`DO${i+1}: ${a.text}`).join('　') : '未入力';
   const kdiSummary = document.getElementById('fs-do-kdi');
-  if (kdiSummary) kdiSummary.textContent = (p.kdis||[]).length ? (p.kdis||[]).map(k=>k.text).join('　') : '未入力';
+  if (kdiSummary) kdiSummary.textContent = (p.kdis||[]).length ? (p.kdis||[]).map((k,i)=>`KDI${i+1}: ${k.text}`).join('　') : '未入力';
   const todoSummary = document.getElementById('fs-do-todos');
   if (todoSummary) todoSummary.textContent = p.todos.length ? `${p.todos.filter(t=>t.status==='完了').length}/${p.todos.length}件完了` : '未入力';
   // 折りたたみ状態を復元
@@ -2799,7 +2801,17 @@ function renderKDIs() {
   const p = curP(); if (!p) return;
   if (!p.kdis) p.kdis = [];
   const doNums = (p.doActions||[]).map((a,i)=>({ num:i+1, text:a.text })).filter(x=>x.text);
-  document.getElementById('d-kdis').innerHTML = p.kdis.map((k,i) => {
+  // スコア順ソート（量×時間×頻度のper3daysをスコアとして使用）
+  // スコアがない場合は追加日時順（元のindexで）
+  const sortedKdis = [...p.kdis].map((k,i)=>({...k,_origIdx:i}))
+    .sort((a,b) => {
+      const aFreq = FREQ_OPTIONS.find(o=>o.value===(a.freq||''));
+      const bFreq = FREQ_OPTIONS.find(o=>o.value===(b.freq||''));
+      const aScore = aFreq ? (aFreq.per3days||0) : 0;
+      const bScore = bFreq ? (bFreq.per3days||0) : 0;
+      return bScore - aScore || a._origIdx - b._origIdx;
+    });
+  document.getElementById('d-kdis').innerHTML = sortedKdis.map((k,i) => {
     const fid = 'kdi-'+k.id;
     const doRef = (k.doNums||[]).map(n=>`DO${n}`).join(' / ');
     const typeLbl = k.kdiType||'継続型';
@@ -2823,8 +2835,8 @@ function renderKDIs() {
     return `<div class="item-fold${k.achieved?' achieved':''}" id="${fid}">
       <div class="item-fold-header" onclick="toggleItemFold('${fid}')">
         <div style="display:flex;align-items:center;gap:8px">
-          <div class="item-fold-num">${i+1}</div>
-          <div style="font-size:10px;font-weight:700;color:var(--teal);flex-shrink:0">KDI ${i+1}</div>
+          <div class="item-fold-num">${k._origIdx+1}</div>
+          <div style="font-size:10px;font-weight:700;color:var(--teal);flex-shrink:0">KDI ${k._origIdx+1}</div>
           <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;
             background:${typeLbl==='完結型'?'var(--amber2)':'var(--teal2)'};
             color:${typeLbl==='完結型'?'var(--amber3)':'var(--teal3)'};flex-shrink:0">${typeLbl}</span>
