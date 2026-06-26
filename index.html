@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="3.4.7">
+<meta name="app-version" content="3.4.8">
 
 <style>
 /* ── リセット & ベース ── */
@@ -2493,7 +2493,7 @@ function renderKPIs() {
             <div class="item-fold-num ${numCls}" style="${numStyle};color:#fff">${isFirst?'⭐':i+1}</div>
             <div style="font-size:10px;font-weight:700;color:${isFirst?'#FF9500':'#7F77DD'};letter-spacing:.5px;flex-shrink:0">${isFirst?'KPI 1　最重要':'KPI '+(i+1)}</div>
             <div class="item-fold-title ${(k.kpi||k.issue)?'':'empty'}" style="white-space:normal">${esc(label)}</div>
-            <div class="item-fold-chev open">▼</div>
+            <div class="item-fold-chev ${(DB.foldState&&DB.foldState[fid])?'':' open'}">▼</div>
           </div>
           <div style="padding-left:34px;display:flex;flex-direction:column;gap:2px">
             <div style="font-size:12px;color:var(--tx2);line-height:1.6;word-break:break-all">${esc(metaMain)}</div>
@@ -2567,7 +2567,7 @@ function renderSolutions() {
             <div class="item-fold-num">${s._origIdx+1}</div>
             <div style="font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:.5px;flex-shrink:0">解決案 ${s._origIdx+1}</div>
             <div class="item-fold-title ${s.text?'':'empty'}" style="white-space:normal">${esc(label)}</div>
-            <div class="item-fold-chev open">▼</div>
+            <div class="item-fold-chev ${(DB.foldState&&DB.foldState[fid])?'':' open'}">▼</div>
           </div>
           <div style="padding-left:34px;display:flex;flex-direction:column;gap:2px">
             <div style="font-size:12px;color:var(--tx2);line-height:1.6;word-break:break-all">${esc(solMetaMain)}</div>
@@ -2704,13 +2704,13 @@ function renderDoActions() {
           </button>`).join('')}
         </div>
       </div>` : '';
-    return `<div class="item-fold${a.achieved?' achieved':''}" id="${fid}">
+    return `<div class="item-fold${a.achieved?' achieved':''} ${(DB.foldState&&DB.foldState[fid])?' collapsed':''}" id="${fid}">
       <div class="item-fold-header" onclick="toggleItemFold('${fid}')">
         <div style="display:flex;align-items:center;gap:8px">
           <div class="item-fold-num">${i+1}</div>
           <div style="font-size:10px;font-weight:700;color:var(--tx3);flex-shrink:0">DO ${i+1}</div>
           <div class="item-fold-title ${a.text?'':'empty'}" style="white-space:normal">${esc(a.text||'（未入力）')}</div>
-          <div class="item-fold-chev open">▼</div>
+          <div class="item-fold-chev ${(DB.foldState&&DB.foldState[fid])?' ':' open'}">▼</div>
         </div>
         <div style="padding-left:34px">
           <div style="font-size:12px;color:var(--tx2);line-height:1.6">${esc(meta)}</div>
@@ -2763,7 +2763,7 @@ function delDoItem(type, id) {
   const nm = item ? (item.text||'').slice(0,20) : '';
   if(!confirm((type==='doActions'?'DOアクション':'KDI')+(nm?`「${nm}」`:'')+'を削除しますか？')) return;
   p[type] = (p[type]||[]).filter(x=>x.id!==id);
-  saveDB(); renderDo();
+  saveDB(); renderDo(); setTimeout(restoreFoldState,0);
 }
 
 function achieveDoItem(type, id) {
