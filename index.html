@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="3.5.0">
+<meta name="app-version" content="3.6.0">
 
 <style>
 /* ── リセット & ベース ── */
@@ -1020,6 +1020,183 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
 .transfer-btn-export{background:linear-gradient(135deg,var(--p),var(--p2));color:#fff}
 .transfer-btn-import{background:linear-gradient(135deg,var(--teal),#1D9E75);color:#fff}
 .transfer-note{font-size:12px;color:var(--tx2);text-align:center;margin-top:8px;line-height:1.6}
+/* ── TODOリスト/ルーチン画面 ── */
+.tl-tab-bar{
+  display:flex;gap:8px;padding:16px 16px 0;
+}
+.tl-tab{
+  flex:1;padding:10px;border-radius:12px;
+  border:1.5px solid var(--bd2);background:var(--surf2);
+  font-size:14px;font-weight:700;color:var(--tx2);
+  cursor:pointer;text-align:center;transition:all .15s;
+}
+.tl-tab.active{
+  background:var(--p);color:#fff;border-color:var(--p);
+  box-shadow:0 2px 10px rgba(83,74,183,.3);
+}
+.tl-panel{display:none;padding:12px 16px}
+.tl-panel.active{display:block}
+/* TODOアイテム */
+.tl-todo-card{
+  background:var(--surf);border:0.5px solid var(--bd);
+  border-radius:12px;padding:12px 14px;margin-bottom:10px;
+}
+.tl-todo-header{
+  display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;
+}
+.tl-todo-name{font-size:14px;font-weight:600;color:var(--tx);flex:1}
+.tl-todo-name.done{text-decoration:line-through;color:var(--tx2)}
+.tl-todo-meta{
+  display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;
+}
+.tl-meta-chip{
+  font-size:11px;padding:2px 8px;border-radius:10px;
+  background:var(--surf2);color:var(--tx2);
+}
+.tl-meta-chip.urgent{background:#FEF3F2;color:#C0392B}
+.tl-meta-chip.soon{background:#FFFBEE;color:#9A6C00}
+.tl-status-row{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:5px;
+}
+.tl-st-btn{
+  padding:6px 4px;border-radius:8px;border:1.5px solid var(--bd2);
+  background:var(--surf2);font-size:10px;font-weight:700;
+  color:var(--tx2);cursor:pointer;text-align:center;
+  transition:all .12s;
+}
+.tl-st-btn.sel-未着手{background:#eee;color:#666;border-color:#ccc}
+.tl-st-btn.sel-完了{background:var(--teal2);color:var(--teal3);border-color:#9FE1CB}
+.tl-st-btn.sel-カレンダー{background:var(--p3);color:var(--p);border-color:var(--p4)}
+.tl-st-btn.sel-ルーチン{background:var(--amber2);color:var(--amber3);border-color:#FAC775}
+.tl-st-btn.sel-保留{background:#F5F5F5;color:#777;border-color:#ddd}
+.tl-st-btn.sel-中止{background:var(--red2);color:var(--red);border-color:#F7C1C1}
+/* ルーチンチェックシート */
+.rc-week-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 0;margin-bottom:8px;
+}
+.rc-week-label{font-size:15px;font-weight:700;color:var(--tx)}
+.rc-nav-btn{
+  background:none;border:1px solid var(--bd2);
+  border-radius:8px;padding:4px 12px;cursor:pointer;
+  font-size:13px;color:var(--p);font-weight:600;
+}
+.rc-item-card{
+  background:var(--surf);border:0.5px solid var(--bd);
+  border-radius:12px;padding:12px 14px;margin-bottom:10px;
+}
+.rc-item-header{
+  display:flex;align-items:center;gap:8px;margin-bottom:10px;
+}
+.rc-item-name{font-size:14px;font-weight:600;color:var(--tx);flex:1}
+.rc-item-type{
+  font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;
+}
+.rc-day-row{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.rc-day{display:flex;flex-direction:column;align-items:center;gap:3px}
+.rc-day-lbl{font-size:10px;color:var(--tx2);font-weight:600}
+.rc-check-btn{
+  width:34px;height:34px;border-radius:50%;
+  border:2px solid var(--bd2);background:var(--surf2);
+  cursor:pointer;font-size:14px;display:flex;
+  align-items:center;justify-content:center;
+  transition:all .12s;
+}
+.rc-check-btn.checked{background:var(--teal);border-color:var(--teal);color:#fff}
+.rc-check-btn.checked::after{content:'✓'}
+.rc-progress{
+  margin-top:8px;display:flex;align-items:center;gap:8px;
+}
+.rc-prog-bar{flex:1;height:4px;background:var(--surf2);border-radius:2px;overflow:hidden}
+.rc-prog-fill{height:100%;background:var(--teal);border-radius:2px;transition:width .3s}
+.rc-prog-pct{font-size:11px;font-weight:700;color:var(--teal);white-space:nowrap}
+.rc-section-lbl{
+  font-size:11px;font-weight:700;color:var(--tx3);
+  letter-spacing:.8px;margin:12px 0 6px;
+}
+
+/* ── TODOリスト/ルーチン画面 ── */
+.tl-screen{ padding:0 16px 100px }
+.tl-tab-bar{ display:flex;gap:8px;margin-bottom:16px;padding-top:4px }
+.tl-tab{
+  flex:1;padding:10px;border-radius:12px;
+  border:1.5px solid var(--bd2);
+  background:var(--surf2);
+  font-size:13px;font-weight:700;color:var(--tx2);
+  cursor:pointer;text-align:center;transition:all .15s;
+}
+.tl-tab.active{background:var(--p);color:#fff;border-color:var(--p)}
+/* TODOリスト */
+.tl-todo-card{
+  background:var(--surf);border:0.5px solid var(--bd);
+  border-radius:12px;padding:12px 14px;margin-bottom:8px;
+}
+.tl-todo-pdca-name{font-size:10px;font-weight:700;color:var(--p);letter-spacing:.5px;margin-bottom:4px}
+.tl-todo-name{font-size:14px;font-weight:600;color:var(--tx);margin-bottom:6px}
+.tl-todo-meta{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.tl-todo-chip{
+  font-size:11px;color:var(--tx2);
+  background:var(--surf2);padding:2px 8px;border-radius:10px;
+}
+.tl-st-row{display:flex;gap:4px;flex-wrap:wrap}
+.tl-st-btn{
+  flex:1;min-width:0;padding:5px 3px;border-radius:8px;
+  border:1.5px solid var(--bd);background:var(--surf2);
+  font-size:10px;font-weight:700;color:var(--tx2);
+  cursor:pointer;text-align:center;white-space:nowrap;
+}
+.tl-st-btn.sel-未着手{background:#eee;color:#666;border-color:#ccc}
+.tl-st-btn.sel-完了{background:var(--p3);color:var(--p);border-color:var(--p4)}
+.tl-st-btn.sel-カレンダー{background:#E3F2FD;color:#1565C0;border-color:#90CAF9}
+.tl-st-btn.sel-ルーチン{background:var(--teal2);color:var(--teal3);border-color:#9FE1CB}
+.tl-st-btn.sel-保留{background:var(--amber2);color:var(--amber3);border-color:#FAC775}
+.tl-st-btn.sel-中止{background:var(--red2);color:var(--red);border-color:#F7C1C1}
+/* ルーチンチェックシート */
+.rc-week-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:12px;
+}
+.rc-week-nav{
+  background:none;border:1px solid var(--bd2);border-radius:8px;
+  padding:4px 10px;font-size:13px;cursor:pointer;color:var(--tx2);
+}
+.rc-week-label{font-size:14px;font-weight:700;color:var(--tx)}
+.rc-card{
+  background:var(--surf);border:0.5px solid var(--bd);
+  border-radius:12px;margin-bottom:10px;overflow:hidden;
+}
+.rc-card-header{
+  padding:10px 14px;border-bottom:0.5px solid var(--bd);
+  display:flex;align-items:center;gap:8px;
+}
+.rc-card-name{font-size:13px;font-weight:600;color:var(--tx);flex:1}
+.rc-card-type{font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px}
+.rc-days-grid{
+  display:grid;grid-template-columns:repeat(7,1fr);
+  padding:10px 10px;gap:4px;
+}
+.rc-day-cell{
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+}
+.rc-day-lbl{font-size:10px;color:var(--tx3);font-weight:600}
+.rc-day-btn{
+  width:30px;height:30px;border-radius:50%;
+  border:1.5px solid var(--bd);
+  background:var(--surf2);cursor:pointer;
+  font-size:14px;display:flex;align-items:center;justify-content:center;
+  transition:all .12s;
+}
+.rc-day-btn.done{background:var(--teal2);border-color:#9FE1CB}
+.rc-week-rate{
+  padding:8px 14px;border-top:0.5px solid var(--bd);
+  font-size:11px;color:var(--tx2);display:flex;align-items:center;gap:6px;
+}
+.rc-rate-bar{flex:1;height:4px;background:var(--surf2);border-radius:2px;overflow:hidden}
+.rc-rate-fill{height:100%;background:var(--teal);border-radius:2px}
+.rc-from-todo-badge{
+  font-size:10px;background:#E3F2FD;color:#1565C0;
+  padding:1px 6px;border-radius:8px;font-weight:700;flex-shrink:0;
+}
 /* ── 更新ボタン（フローティング） ── */
 #refresh-fab{
   position:fixed;bottom:28px;right:16px;
@@ -1487,6 +1664,22 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
     </div>
   </div>
 
+  <!-- ════════════ SCREEN: TODO LIST / ROUTINE ════════════ -->
+  <div class="screen" id="s-todolist">
+    <div class="hdr">
+      <button class="hdr-back" onclick="goScreen('s-menu')">‹</button>
+      <div class="hdr-title">TODOリスト / ルーティン</div>
+    </div>
+    <div class="sheet-scroll tl-screen">
+      <div class="tl-tab-bar">
+        <button class="tl-tab active" id="tl-tab-todo" onclick="switchTlTab('todo')">📋 TODOリスト</button>
+        <button class="tl-tab" id="tl-tab-routine" onclick="switchTlTab('routine')">🔄 ルーティンチェック</button>
+      </div>
+      <div id="tl-todo-panel"></div>
+      <div id="tl-routine-panel" style="display:none"></div>
+    </div>
+  </div>
+
   <!-- ════════════ SCREEN: CHECK/ADJUST ════════════ -->
   <div class="screen" id="s-ca">
     <div class="hdr">
@@ -1801,6 +1994,7 @@ function goScreen(id) {
   if (id === 's-plan') { renderPlan(); }
   if (id === 's-do') { renderDo(); }
   if (id === 's-ca') { renderCA(); }
+  if (id === 's-todolist') { renderTodoList(); }
   if (id === 's-settings') renderSettings();
   // 画面遷移後に折りたたみ状態を復元
   setTimeout(restoreFoldState, 50);
@@ -1930,7 +2124,7 @@ function createPDCA() {
     plan: { goal:'', kgiVal:'', kgiUnit:'', deadline:'', curVal:'', curUnit:'' },
     issues: [], kpis: [], solutions: [],
     doActions: [], kdis: [],
-    todos: [], routines: [],
+    todos: [], routines: [], routineChecks: {},
     checkDraft: { date:'', good:'', bad:'', insight:'', next:'', star:0 },
     checkRecords: [],
     adjJudge: {},
@@ -4289,6 +4483,210 @@ function importData(event) {
     event.target.value = '';
   };
   reader.readAsText(file);
+}
+
+/* ══════════════════════════════════════════
+   TODOリスト / ルーティンチェック
+══════════════════════════════════════════ */
+
+let tlCurrentTab = 'todo';
+let rcWeekOffset = 0; // 0=今週, -1=先週, 1=来週
+
+function goTodoList() {
+  goScreen('s-todolist');
+  renderTodoList();
+}
+
+function switchTlTab(tab) {
+  tlCurrentTab = tab;
+  document.getElementById('tl-tab-todo').classList.toggle('active', tab==='todo');
+  document.getElementById('tl-tab-routine').classList.toggle('active', tab==='routine');
+  document.getElementById('tl-todo-panel').style.display = tab==='todo' ? '' : 'none';
+  document.getElementById('tl-routine-panel').style.display = tab==='routine' ? '' : 'none';
+  if (tab==='todo') renderTodoList();
+  else renderRoutineSheet();
+}
+
+const TL_ST = ['未着手','完了','カレンダー転記完了','ルーチンへ転記','保留','中止'];
+const TL_ST_SHORT = {'未着手':'未着手','完了':'完了','カレンダー転記完了':'📅転記済','ルーチンへ転記':'🔄ルーチン','保留':'保留','中止':'中止'};
+
+function renderTodoList() {
+  const panel = document.getElementById('tl-todo-panel');
+  if (!panel) return;
+
+  // 全PDCAのTODOを収集
+  const allTodos = [];
+  DB.pdcas.forEach(p => {
+    (p.todos||[]).forEach(t => {
+      // 関連KDI名を取得
+      const kdi = (p.kdis||[]).find(k=>k.id===t.kdiRef);
+      const kdiName = kdi ? kdi.text : '';
+      allTodos.push({ ...t, _pdcaId:p.id, _pdcaTitle:p.title, _kdiName:kdiName });
+    });
+  });
+
+  // 期日順ソート（期日なしは末尾）
+  allTodos.sort((a,b)=>{
+    if (!a.date && !b.date) return 0;
+    if (!a.date) return 1;
+    if (!b.date) return -1;
+    return a.date.localeCompare(b.date);
+  });
+
+  if (!allTodos.length) {
+    panel.innerHTML = '<div style="font-size:13px;color:var(--tx2);text-align:center;padding:32px 0">TODOタスクがありません</div>';
+    return;
+  }
+
+  panel.innerHTML = allTodos.map(t => {
+    const overdue = t.date && t.date < new Date().toISOString().slice(0,10) && t.status!=='完了' && t.status!=='中止';
+    const chips = [
+      t._kdiName ? `🎯 ${esc(t._kdiName)}` : '',
+      t.person ? `👤 ${esc(t.person)}` : '',
+      t.date ? `📅 ${esc(t.date)}${overdue?' ⚠️過期':''}` : ''
+    ].filter(Boolean).map(c=>`<span class="tl-todo-chip" style="${overdue&&c.includes('📅')?'color:var(--red)':''}">${c}</span>`).join('');
+    const stBtns = TL_ST.map(s=>`
+      <button class="tl-st-btn ${t.status===s?'sel-'+(s==='カレンダー転記完了'?'カレンダー':s==='ルーチンへ転記'?'ルーチン':s):''}"
+        onclick="setTlTodoStatus('${t._pdcaId}','${t.id}','${s}')">${TL_ST_SHORT[s]}</button>`).join('');
+    return `<div class="tl-todo-card" id="tlt-${t.id}">
+      <div class="tl-todo-pdca-name">${esc(t._pdcaTitle)}</div>
+      <div class="tl-todo-name ${t.status==='完了'||t.status==='中止'?'done-text':''}">${esc(t.name)}</div>
+      <div class="tl-todo-meta">${chips}</div>
+      <div class="tl-st-row">${stBtns}</div>
+    </div>`;
+  }).join('');
+}
+
+function setTlTodoStatus(pdcaId, todoId, status) {
+  const p = DB.pdcas.find(x=>x.id===pdcaId); if (!p) return;
+  const t = (p.todos||[]).find(x=>x.id===todoId); if (!t) return;
+  t.status = status;
+  // ルーチンへ転記→ルーチンチェックシートに追加
+  if (status === 'ルーチンへ転記') {
+    if (!p.routineChecks) p.routineChecks = {};
+    const rkey = 'todo-'+todoId;
+    if (!p.routineChecks[rkey]) {
+      p.routineChecks[rkey] = {
+        id: rkey, type:'todo', name:t.name, weeks:{}, fromTodo:true
+      };
+    }
+  }
+  saveDB();
+  renderTodoList();
+}
+
+// ── ルーティンチェックシート ──
+function getWeekDates(offset) {
+  const now = new Date();
+  const day = now.getDay(); // 0=日
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - (day===0?6:day-1) + offset*7);
+  return Array.from({length:7},(_,i)=>{
+    const d = new Date(monday);
+    d.setDate(monday.getDate()+i);
+    return d.toISOString().slice(0,10);
+  });
+}
+
+const DAY_LABELS = ['月','火','水','木','金','土','日'];
+
+function renderRoutineSheet() {
+  const p = curP(); if (!p) return;
+  const panel = document.getElementById('tl-routine-panel');
+  if (!panel) return;
+
+  const dates = getWeekDates(rcWeekOffset);
+  const weekLabel = `${dates[0].slice(5).replace('-','/')} 〜 ${dates[6].slice(5).replace('-','/')}`;
+
+  // ルーティンアイテム収集: KDI継続型 + ルーチンへ転記されたTODO
+  const items = [];
+
+  // KDI継続型を自動追加
+  (p.kdis||[]).forEach((k,i) => {
+    if ((k.kdiType||'継続型') === '継続型' && k.text) {
+      const freqOpt = FREQ_OPTIONS.find(o=>o.value===k.freq&&k.freq!=='')||null;
+      items.push({
+        id:'kdi-'+k.id, type:'kdi', name:k.text,
+        sub: [k.quantity,k.time,freqOpt?freqOpt.label:''].filter(Boolean).join(' × '),
+        num: i+1
+      });
+    }
+  });
+
+  // ルーチンへ転記されたTODO
+  Object.values(p.routineChecks||{}).forEach(rc => {
+    if (rc.fromTodo) items.push({...rc});
+  });
+
+  if (!items.length) {
+    panel.innerHTML = `
+      <div class="rc-week-header">
+        <button class="rc-week-nav" onclick="rcChangeWeek(-1)">‹ 前週</button>
+        <div class="rc-week-label">${weekLabel}</div>
+        <button class="rc-week-nav" onclick="rcChangeWeek(1)">次週 ›</button>
+      </div>
+      <div style="font-size:13px;color:var(--tx2);text-align:center;padding:32px 0">
+        継続型KDIまたはルーチンへ転記されたTODOがありません
+      </div>`;
+    return;
+  }
+
+  const rcData = p.routineChecks || {};
+
+  const cardsHtml = items.map(item => {
+    const weekKey = dates[0]; // 週のキー
+    const checks = (rcData[item.id]?.weeks||{})[weekKey] || [false,false,false,false,false,false,false];
+    const doneCount = checks.filter(Boolean).length;
+    const rate = Math.round(doneCount/7*100);
+    const dayBtns = dates.map((d,di) => {
+      const isToday = d === new Date().toISOString().slice(0,10);
+      return `<div class="rc-day-cell">
+        <div class="rc-day-lbl" style="${isToday?'color:var(--p);font-weight:800':''}">${DAY_LABELS[di]}</div>
+        <button class="rc-day-btn ${checks[di]?'done':''}"
+          onclick="rcToggleDay('${item.id}','${weekKey}',${di})">
+          ${checks[di]?'✓':''}
+        </button>
+      </div>`;
+    }).join('');
+    return `<div class="rc-card">
+      <div class="rc-card-header">
+        ${item.fromTodo?`<span class="rc-from-todo-badge">TODO転記</span>`:`<span style="font-size:11px;color:var(--tx3);font-weight:600">KDI ${item.num}</span>`}
+        <div class="rc-card-name">${esc(item.name)}</div>
+      </div>
+      ${item.sub?`<div style="font-size:11px;color:var(--p);padding:6px 14px">${esc(item.sub)}</div>`:''}
+      <div class="rc-days-grid">${dayBtns}</div>
+      <div class="rc-week-rate">
+        <div class="rc-rate-bar"><div class="rc-rate-fill" style="width:${rate}%"></div></div>
+        <div style="font-size:12px;font-weight:700;color:var(--teal3)">${doneCount}/7日 ${rate}%</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  panel.innerHTML = `
+    <div class="rc-week-header">
+      <button class="rc-week-nav" onclick="rcChangeWeek(-1)">‹ 前週</button>
+      <div class="rc-week-label">${weekLabel}</div>
+      <button class="rc-week-nav" onclick="rcChangeWeek(1)">次週 ›</button>
+    </div>
+    ${cardsHtml}`;
+}
+
+function rcChangeWeek(dir) {
+  rcWeekOffset += dir;
+  renderRoutineSheet();
+}
+
+function rcToggleDay(itemId, weekKey, dayIdx) {
+  const p = curP(); if (!p) return;
+  if (!p.routineChecks) p.routineChecks = {};
+  if (!p.routineChecks[itemId]) p.routineChecks[itemId] = {id:itemId,weeks:{}};
+  if (!p.routineChecks[itemId].weeks) p.routineChecks[itemId].weeks = {};
+  if (!p.routineChecks[itemId].weeks[weekKey]) {
+    p.routineChecks[itemId].weeks[weekKey] = [false,false,false,false,false,false,false];
+  }
+  p.routineChecks[itemId].weeks[weekKey][dayIdx] = !p.routineChecks[itemId].weeks[weekKey][dayIdx];
+  saveDB();
+  renderRoutineSheet();
 }
 
 // Firebase起動
