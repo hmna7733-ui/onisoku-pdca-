@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="3.4.0">
+<meta name="app-version" content="3.4.1">
 
 <style>
 /* ── リセット & ベース ── */
@@ -2080,7 +2080,7 @@ function updateFoldSummaries() {
   // 課題
   const gi = document.getElementById('fs-issues');
   const issued = p.issues.filter(x=>x.text);
-  if (gi) gi.textContent = issued.length ? issued.map((x,i)=>`課題${i+1}: ${x.text}`).join('　／　') : '未入力';
+  if (gi) gi.textContent = issued.length ? issued.map((x,i)=>`課題${p.issues.indexOf(x)+1}: ${x.text}`).join('　／　') : '未入力';
   // KPI
   const gk = document.getElementById('fs-kpis');
   const kpid = p.kpis.filter(x=>x.issue||x.kpi||x.target);
@@ -2092,7 +2092,7 @@ function updateFoldSummaries() {
   // 解決案
   const gsl = document.getElementById('fs-solutions');
   const sold = p.solutions.filter(x=>x.text);
-  if (gsl) gsl.textContent = sold.length ? sold.map((x,i)=>`解決案${i+1}: ${x.text}`).join('　／　') : '未入力';
+  if (gsl) gsl.textContent = sold.length ? sold.map((x,i)=>`解決案${p.solutions.indexOf(x)+1}: ${x.text}`).join('　／　') : '未入力';
 
 
 }
