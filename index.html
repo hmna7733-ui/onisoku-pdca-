@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="3.6.1">
+<meta name="app-version" content="3.6.2">
 
 <style>
 /* ── リセット & ベース ── */
@@ -1172,18 +1172,18 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
 .rc-card-name{font-size:13px;font-weight:600;color:var(--tx);flex:1}
 .rc-card-type{font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px}
 .rc-days-grid{
-  display:grid;grid-template-columns:repeat(7,1fr);
-  padding:10px 10px;gap:4px;
+  display:grid;grid-template-columns:repeat(3,1fr);
+  padding:12px 16px;gap:8px;
 }
 .rc-day-cell{
   display:flex;flex-direction:column;align-items:center;gap:3px;
 }
 .rc-day-lbl{font-size:10px;color:var(--tx3);font-weight:600}
 .rc-day-btn{
-  width:30px;height:30px;border-radius:50%;
-  border:1.5px solid var(--bd);
+  width:56px;height:56px;border-radius:50%;
+  border:2px solid var(--bd);
   background:var(--surf2);cursor:pointer;
-  font-size:14px;display:flex;align-items:center;justify-content:center;
+  font-size:20px;display:flex;align-items:center;justify-content:center;
   transition:all .12s;
 }
 .rc-day-btn.done{background:var(--teal2);border-color:#9FE1CB}
@@ -4498,7 +4498,7 @@ function importData(event) {
 ══════════════════════════════════════════ */
 
 let tlCurrentTab = 'todo';
-let rcWeekOffset = 0; // 0=今週, -1=先週, 1=来週
+let rcWeekOffset = 0; // 0=今サイクル, -1=前サイクル, 1=次サイクル
 
 function goTodoList() {
   goScreen('s-todolist');
@@ -4584,19 +4584,24 @@ function setTlTodoStatus(pdcaId, todoId, status) {
 }
 
 // ── ルーティンチェックシート ──
-function getWeekDates(offset) {
+function get3DayDates(offset) {
+  // 3日周期：offset=0で今のサイクル、-1で前サイクル、+1で次サイクル
   const now = new Date();
-  const day = now.getDay(); // 0=日
-  const monday = new Date(now);
-  monday.setDate(now.getDate() - (day===0?6:day-1) + offset*7);
-  return Array.from({length:7},(_,i)=>{
-    const d = new Date(monday);
-    d.setDate(monday.getDate()+i);
+  // 2026-01-01を起点として3日単位でサイクルを計算
+  const origin = new Date('2026-01-01');
+  const totalDays = Math.floor((now - origin) / (1000*60*60*24));
+  const currentCycle = Math.floor(totalDays / 3);
+  const targetCycle = currentCycle + offset;
+  const startDay = new Date(origin);
+  startDay.setDate(origin.getDate() + targetCycle * 3);
+  return Array.from({length:3},(_,i)=>{
+    const d = new Date(startDay);
+    d.setDate(startDay.getDate()+i);
     return d.toISOString().slice(0,10);
   });
 }
 
-const DAY_LABELS = ['月','火','水','木','金','土','日'];
+const DAY_LABELS_3 = ['1日目','2日目','3日目'];
 
 function renderRoutineSheet() {
   const p = curP(); if (!p) return;
@@ -4604,34 +4609,22 @@ function renderRoutineSheet() {
   if (!panel) return;
 
   const dates = getWeekDates(rcWeekOffset);
-  const weekLabel = `${dates[0].slice(5).replace('-','/')} 〜 ${dates[6].slice(5).replace('-','/')}`;
+  const weekLabel = `${dates[0].slice(5).replace('-','/')} 〜 ${dates[2].slice(5).replace('-','/')}`;
 
   // ルーティンアイテム収集: KDI継続型 + ルーチンへ転記されたTODO
   const items = [];
 
-  // KDI継続型を自動追加
-  (p.kdis||[]).forEach((k,i) => {
-    if ((k.kdiType||'継続型') === '継続型' && k.text) {
-      const freqOpt = FREQ_OPTIONS.find(o=>o.value===k.freq&&k.freq!=='')||null;
-      items.push({
-        id:'kdi-'+k.id, type:'kdi', name:k.text,
-        sub: [k.quantity,k.time,freqOpt?freqOpt.label:''].filter(Boolean).join(' × '),
-        num: i+1
-      });
-    }
-  });
-
-  // ルーチンへ転記されたTODO
+  // ルーチンへ転記されたTODOのみ表示
   Object.values(p.routineChecks||{}).forEach(rc => {
-    if (rc.fromTodo) items.push({...rc});
+    items.push({...rc});
   });
 
   if (!items.length) {
     panel.innerHTML = `
       <div class="rc-week-header">
-        <button class="rc-week-nav" onclick="rcChangeWeek(-1)">‹ 前週</button>
+        <button class="rc-week-nav" onclick="rcChangeWeek(-1)">‹ 前サイクル</button>
         <div class="rc-week-label">${weekLabel}</div>
-        <button class="rc-week-nav" onclick="rcChangeWeek(1)">次週 ›</button>
+        <button class="rc-week-nav" onclick="rcChangeWeek(1)">次サイクル ›</button>
       </div>
       <div style="font-size:13px;color:var(--tx2);text-align:center;padding:32px 0">
         継続型KDIまたはルーチンへ転記されたTODOがありません
@@ -4643,13 +4636,15 @@ function renderRoutineSheet() {
 
   const cardsHtml = items.map(item => {
     const weekKey = dates[0]; // 週のキー
-    const checks = (rcData[item.id]?.weeks||{})[weekKey] || [false,false,false,false,false,false,false];
+    const checks = (rcData[item.id]?.weeks||{})[weekKey] || [false,false,false];
     const doneCount = checks.filter(Boolean).length;
-    const rate = Math.round(doneCount/7*100);
+    const rate = Math.round(doneCount/3*100);
     const dayBtns = dates.map((d,di) => {
       const isToday = d === new Date().toISOString().slice(0,10);
       return `<div class="rc-day-cell">
-        <div class="rc-day-lbl" style="${isToday?'color:var(--p);font-weight:800':''}">${DAY_LABELS[di]}</div>
+        <div class="rc-day-lbl" style="${isToday?'color:var(--p);font-weight:800':''}">
+          ${DAY_LABELS_3[di]}<br><span style="font-size:9px;color:var(--tx3)">${d.slice(5).replace('-','/')}</span>
+        </div>
         <button class="rc-day-btn ${checks[di]?'done':''}"
           onclick="rcToggleDay('${item.id}','${weekKey}',${di})">
           ${checks[di]?'✓':''}
@@ -4665,7 +4660,7 @@ function renderRoutineSheet() {
       <div class="rc-days-grid">${dayBtns}</div>
       <div class="rc-week-rate">
         <div class="rc-rate-bar"><div class="rc-rate-fill" style="width:${rate}%"></div></div>
-        <div style="font-size:12px;font-weight:700;color:var(--teal3)">${doneCount}/7日 ${rate}%</div>
+        <div style="font-size:12px;font-weight:700;color:var(--teal3)">${doneCount}/3日 ${rate}%</div>
       </div>
     </div>`;
   }).join('');
@@ -4690,7 +4685,7 @@ function rcToggleDay(itemId, weekKey, dayIdx) {
   if (!p.routineChecks[itemId]) p.routineChecks[itemId] = {id:itemId,weeks:{}};
   if (!p.routineChecks[itemId].weeks) p.routineChecks[itemId].weeks = {};
   if (!p.routineChecks[itemId].weeks[weekKey]) {
-    p.routineChecks[itemId].weeks[weekKey] = [false,false,false,false,false,false,false];
+    p.routineChecks[itemId].weeks[weekKey] = [false,false,false];
   }
   p.routineChecks[itemId].weeks[weekKey][dayIdx] = !p.routineChecks[itemId].weeks[weekKey][dayIdx];
   saveDB();
