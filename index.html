@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="3.2.6">
+<meta name="app-version" content="3.2.7">
 
 <style>
 /* ── リセット & ベース ── */
@@ -3865,6 +3865,7 @@ const firebaseConfig = {
 };
 
 let firebaseApp, auth, db_fs, currentUser = null;
+let skipLoginMode = false; // ログインなしモードフラグ
 
 function initFirebase() {
   try {
@@ -3872,33 +3873,35 @@ function initFirebase() {
     auth = firebase.auth();
     db_fs = firebase.firestore();
 
-    // onAuthStateChangedで認証状態を監視（リダイレクト後も含む）
+    // onAuthStateChangedで認証状態を監視
     auth.onAuthStateChanged(user => {
+      // ログインなしモードでは何もしない
+      if (skipLoginMode) return;
+
       if (user) {
-        // ログイン済み
         currentUser = user;
         const ls = document.getElementById('login-screen');
         if (ls) ls.style.display = 'none';
         loadDB();
         renderHome();
       } else {
-        // 未ログイン → リダイレクト結果を確認してからログイン画面を表示
+        // リダイレクト結果を確認
         auth.getRedirectResult().then(result => {
+          if (skipLoginMode) return; // 非同期で戻ってきた時も確認
           if (result && result.user) {
-            // リダイレクト直後（onAuthStateChangedが先に来るはずだが念のため）
             currentUser = result.user;
             const ls = document.getElementById('login-screen');
             if (ls) ls.style.display = 'none';
             loadDB();
             renderHome();
           } else {
-            // 本当に未ログイン → ログイン画面を表示
             currentUser = null;
             const ls = document.getElementById('login-screen');
             if (ls) ls.style.display = 'flex';
           }
         }).catch(err => {
           console.error('Redirect result error:', err.code, err.message);
+          if (skipLoginMode) return;
           currentUser = null;
           const ls = document.getElementById('login-screen');
           if (ls) {
@@ -3921,7 +3924,7 @@ function initFirebase() {
 }
 
 function skipLogin() {
-  // ログインなしでlocalStorageのみで動作
+  skipLoginMode = true; // onAuthStateChangedを無視するフラグ
   document.getElementById('login-screen').style.display = 'none';
   loadDB();
   renderHome();
@@ -3944,7 +3947,13 @@ function signInWithGoogle() {
 }
 
 function signOut() {
-  if (auth) auth.signOut();
+  skipLoginMode = false;
+  if (auth) {
+    auth.signOut().then(() => {
+      const ls = document.getElementById('login-screen');
+      if (ls) ls.style.display = 'flex';
+    });
+  }
 }
 
 /* ══════════════════════════════════════════
