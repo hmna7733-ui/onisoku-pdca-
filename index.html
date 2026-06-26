@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="3.4.6">
+<meta name="app-version" content="3.4.7">
 
 <style>
 /* ── リセット & ベース ── */
@@ -2378,7 +2378,7 @@ function renderIssues() {
     const scoreLbl = iss.score ? `スコア${iss.score}/6` : '';
     const meta = [impLbl, easeLbl, timeLbl, scoreLbl].filter(Boolean).join('　');
     return `
-    <div class="item-fold${iss.achieved?' achieved':''}" id="${fid}">
+    <div class="item-fold${iss.achieved?' achieved':''}${(DB.foldState&&DB.foldState[fid])?' collapsed':''}" id="${fid}">
       <div class="item-fold-header" onclick="toggleItemFold('${fid}')">
           <div style="display:flex;align-items:center;gap:8px">
             <div class="item-fold-num">${iss._origIdx+1}</div>
@@ -2487,7 +2487,7 @@ function renderKPIs() {
     const meta = [metaMain, metaSub].filter(Boolean).join(' ');
     const numCls = isFirst ? 'first' : 'kpi-num';
     const numStyle = isFirst ? 'background:linear-gradient(135deg,#FFD966,#FF9500)' : 'background:#7F77DD';
-    return `<div class="item-fold${k.achieved?' achieved':''}" id="${fid}">
+    return `<div class="item-fold${k.achieved?' achieved':''}${(DB.foldState&&DB.foldState[fid])?' collapsed':''}" id="${fid}">
       <div class="item-fold-header" onclick="toggleItemFold('${fid}')">
           <div style="display:flex;align-items:center;gap:8px">
             <div class="item-fold-num ${numCls}" style="${numStyle};color:#fff">${isFirst?'⭐':i+1}</div>
@@ -2561,7 +2561,7 @@ function renderSolutions() {
       return k ? `KPI${n}:${k.kpi||k.issue||''}` : `KPI${n}`;
     }).filter(Boolean);
     const solMetaSub = relKpis.length ? '関連: ' + relKpis.join(' / ') : '';
-    return `<div class="item-fold${s.achieved?' achieved':''}" id="${fid}">
+    return `<div class="item-fold${s.achieved?' achieved':''}${(DB.foldState&&DB.foldState[fid])?' collapsed':''}" id="${fid}">
       <div class="item-fold-header" onclick="toggleItemFold('${fid}')">
           <div style="display:flex;align-items:center;gap:8px">
             <div class="item-fold-num">${s._origIdx+1}</div>
@@ -2816,11 +2816,12 @@ function renderKDIs() {
     const doRef = (k.doNums||[]).map(n=>`DO${n}`).join(' / ');
     const typeLbl = k.kdiType||'継続型';
     // 折りたたみ時のmeta
-    const freqOpt = FREQ_OPTIONS.find(o=>o.value===(k.freq||''))||FREQ_OPTIONS[0];
+    const freqOpt = FREQ_OPTIONS.find(o=>o.value===k.freq&&k.freq!=='')||null;
+    const freqLbl = freqOpt ? freqOpt.label : '';
     const metaParts = [
       typeLbl,
       k.text||'',
-      [k.quantity||'', k.time||'', freqOpt.label].filter(Boolean).join('×')
+      [k.quantity||'', k.time||'', freqLbl].filter(Boolean).join(' × ')
     ].filter(Boolean);
     const metaMain = metaParts.join('　');
 
@@ -2832,7 +2833,7 @@ function renderKDIs() {
         font-size:12px;font-weight:700;cursor:pointer">${t}</button>`
     ).join('');
 
-    return `<div class="item-fold${k.achieved?' achieved':''}" id="${fid}">
+    return `<div class="item-fold${k.achieved?' achieved':''}${(DB.foldState&&DB.foldState[fid])?' collapsed':''}" id="${fid}">
       <div class="item-fold-header" onclick="toggleItemFold('${fid}')">
         <div style="display:flex;align-items:center;gap:8px">
           <div class="item-fold-num">${k._origIdx+1}</div>
