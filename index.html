@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="3.6.0">
+<meta name="app-version" content="3.6.1">
 
 <style>
 /* ── リセット & ベース ── */
@@ -1439,6 +1439,14 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
           <div class="menu-text">
             <div class="menu-btn-title">DO — 実行</div>
             <div class="menu-btn-desc">タスク管理・ルーティン習慣</div>
+          </div>
+          <div class="menu-arr">›</div>
+        </button>
+        <button class="menu-btn" onclick="goTodoList()" style="background:linear-gradient(135deg,#f0f4ff,#e8f0fe)">
+          <div class="menu-icon" style="background:linear-gradient(135deg,#534AB7,#7F77DD);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px">📋</div>
+          <div class="menu-text">
+            <div class="menu-btn-title">TODOリスト / ルーティンチェック</div>
+            <div class="menu-btn-desc">タスク一覧・週次ルーティン管理</div>
           </div>
           <div class="menu-arr">›</div>
         </button>
@@ -4525,9 +4533,9 @@ function renderTodoList() {
     });
   });
 
-  // 期日順ソート（期日なしは末尾）
+  // 期日順ソート（期日なしは末尾、期日なし同士はPDCA名+タスク名順）
   allTodos.sort((a,b)=>{
-    if (!a.date && !b.date) return 0;
+    if (!a.date && !b.date) return (a._pdcaTitle+a.name).localeCompare(b._pdcaTitle+b.name);
     if (!a.date) return 1;
     if (!b.date) return -1;
     return a.date.localeCompare(b.date);
