@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="3.4.2">
+<meta name="app-version" content="3.4.3">
 
 <style>
 /* ── リセット & ベース ── */
@@ -1243,6 +1243,8 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
           <div class="menu-prog-pct" id="menu-prog-pct">0%</div>
         </div>
       </div>
+      <!-- ゴール大型ヒーロー（stats欄の上） -->
+      <div id="menu-goal-hero" style="padding:0 16px;margin-bottom:8px"></div>
       <!-- KGI/KPI/KDIサマリー（PLANの上に表示） -->
       <div id="menu-summary-cards" style="padding:0 16px;margin-bottom:8px"></div>
       <div class="menu-stats">
@@ -1301,10 +1303,13 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
               <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap">
                 <span id="fs-goal-val" style="font-size:26px;font-weight:800;color:#FF9500;line-height:1"></span>
                 <span id="fs-goal-unit" style="font-size:14px;font-weight:600;color:var(--tx2)"></span>
-                <span id="fs-goal-deadline" style="font-size:12px;font-weight:600;color:var(--tx2);margin-left:4px"></span>
               </div>
             </div>
             <div class="fold-summary" id="fs-goal">未入力</div>
+            <!-- 達成期日は折りたたみ時でも常に表示 -->
+            <div id="fs-goal-deadline-always" style="font-size:12px;font-weight:700;color:#FF9500;margin-top:3px;display:none">
+              📅 <span id="fs-goal-deadline"></span>
+            </div>
           </div>
           <div class="fold-chevron open" id="fc-goal-chev">▼</div>
         </div>
@@ -2057,7 +2062,10 @@ function updateFoldSummaries() {
     if (gsText) gsText.textContent = pl.goal || '';
     if (gsVal) gsVal.textContent = pl.kgiVal ? pl.kgiVal : '';
     if (gsUnit) gsUnit.textContent = pl.kgiUnit || '';
-    if (gsDeadline) gsDeadline.textContent = pl.deadline ? '📅 ' + pl.deadline : '';
+    // 常に表示する期日エリア
+    const gsDeadlineAlways = document.getElementById('fs-goal-deadline-always');
+    if (gsDeadline) gsDeadline.textContent = pl.deadline || '';
+    if (gsDeadlineAlways) gsDeadlineAlways.style.display = pl.deadline ? '' : 'none';
   }
   // ギャップ — fs-gap-numとfs-gapを状況に応じて切り替え
   const gg = document.getElementById('fs-gap');
