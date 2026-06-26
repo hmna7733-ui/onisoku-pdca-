@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="3.7.0">
+<meta name="app-version" content="3.7.1">
 
 <style>
 /* ── リセット & ベース ── */
@@ -2882,8 +2882,10 @@ function saveTodoEdit(id, efid) {
   const name = (document.getElementById(efid+'-name')||{}).value?.trim();
   if (!name) { alert('タスク詳細を入力してください'); return; }
   p.todos[idx].name = name;
-  p.todos[idx].todoType = (document.getElementById(efid+'-type')||{}).value||p.todos[idx].todoType||'完結型';
-  p.todos[idx].date = (document.getElementById(efid+'-date')||{}).value||'';
+  const _editType = (document.getElementById(efid+'-type')||{}).value||p.todos[idx].todoType||'完結型';
+  p.todos[idx].todoType = _editType;
+  p.todos[idx].date = _editType==='完結型' ? ((document.getElementById(efid+'-date')||{}).value||'') : '';
+  p.todos[idx].freq = _editType==='継続型' ? ((document.getElementById(efid+'-freq')||{}).value||'') : '';
   p.todos[idx].person = (document.getElementById(efid+'-person')||{}).value||'';
   saveDB(); renderTodos(); setTimeout(restoreFoldState,0);
 }
@@ -3186,8 +3188,9 @@ function renderTodos() {
 
     const todoItems = myTodos.map(t => {
       const efid = 'tef-'+t.id;
+      const _freqLbl = t.freq ? (TODO_FREQ_OPTIONS.find(o=>o.value===t.freq)||{label:t.freq}).label : '';
       const metaChips = [
-        t.date ? `📅 ${t.date}` : '',
+        (t.todoType||'完結型')==='継続型' && _freqLbl ? `🔄 ${_freqLbl}` : (t.date ? `📅 ${t.date}` : ''),
         t.person ? `👤 ${esc(t.person)}` : ''
       ].filter(Boolean).map(c=>`<span class="todo-meta-chip">${c}</span>`).join('');
       const stBadges = STATUS_OPTS.map(s=>
@@ -3216,8 +3219,16 @@ function renderTodos() {
           <input type="hidden" id="${efid}-type" value="${t.todoType||'完結型'}">
           <label class="lbl">タスク詳細</label>
           <input type="text" value="${esc(t.name)}" id="${efid}-name">
-          <label class="lbl">期日</label>
-          <input type="date" value="${esc(t.date||'')}" id="${efid}-date">
+          <div id="${efid}-date-area" style="display:${(t.todoType||'完結型')==='完結型'?'':'none'}">
+            <label class="lbl">期日</label>
+            <input type="date" value="${esc(t.date||'')}" id="${efid}-date">
+          </div>
+          <div id="${efid}-freq-area" style="display:${(t.todoType||'完結型')==='継続型'?'':'none'}">
+            <label class="lbl">頻度</label>
+            <select id="${efid}-freq" style="width:100%;padding:9px 8px;font-size:14px">
+              ${TODO_FREQ_OPTIONS.map(o=>`<option value="${o.value}" ${(t.freq||'')==o.value?'selected':''}>${o.label}</option>`).join('')}
+            </select>
+          </div>
           <label class="lbl">担当者</label>
           <input type="text" value="${esc(t.person||'')}" placeholder="例：自分" id="${efid}-person">
           <div class="form-actions" style="margin-top:10px">
@@ -3251,8 +3262,16 @@ function renderTodos() {
           <input type="hidden" id="${formId}-type" value="完結型">
           <label class="lbl">TODOタスク詳細</label>
           <input type="text" id="${formId}-name" placeholder="例：ヒアリングシートを作成する">
-          <label class="lbl">期日</label>
-          <input type="date" id="${formId}-date">
+          <div id="${formId}-date-area">
+            <label class="lbl">期日</label>
+            <input type="date" id="${formId}-date">
+          </div>
+          <div id="${formId}-freq-area" style="display:none">
+            <label class="lbl">頻度</label>
+            <select id="${formId}-freq" style="width:100%;padding:9px 8px;font-size:14px">
+              ${TODO_FREQ_OPTIONS.map(o=>`<option value="${o.value}">${o.label}</option>`).join('')}
+            </select>
+          </div>
           <label class="lbl">担当者</label>
           <input type="text" id="${formId}-person" placeholder="例：自分">
           <div class="form-actions" style="margin-top:10px">
@@ -3288,8 +3307,17 @@ function openTodoForm(formId) {
     if (nameInput) { nameInput.value=''; nameInput.focus(); }
     const dateInput = document.getElementById(formId+'-date');
     if (dateInput) dateInput.value='';
+    const freqInput = document.getElementById(formId+'-freq');
+    if (freqInput) freqInput.value='';
     const personInput = document.getElementById(formId+'-person');
     if (personInput) personInput.value='自分';
+    // タイプを完結型にリセット
+    const typeInput = document.getElementById(formId+'-type');
+    if (typeInput) typeInput.value='完結型';
+    const dateArea = document.getElementById(formId+'-date-area');
+    const freqArea = document.getElementById(formId+'-freq-area');
+    if (dateArea) dateArea.style.display='';
+    if (freqArea) freqArea.style.display='none';
   }
 }
 
@@ -3302,12 +3330,14 @@ function addTodoInline(formId, kdiId) {
   const p = curP(); if (!p) return;
   const name = (document.getElementById(formId+'-name')||{}).value?.trim();
   if (!name) { alert('タスク詳細を入力してください'); return; }
+  const _type = (document.getElementById(formId+'-type')||{}).value||'完結型';
   p.todos.push({
     id: Date.now()+'',
     name,
     kdiRef: kdiId,
-    todoType: (document.getElementById(formId+'-type')||{}).value||'完結型',
-    date: (document.getElementById(formId+'-date')||{}).value||'',
+    todoType: _type,
+    date: _type==='完結型' ? ((document.getElementById(formId+'-date')||{}).value||'') : '',
+    freq: _type==='継続型' ? ((document.getElementById(formId+'-freq')||{}).value||'') : '',
     person: (document.getElementById(formId+'-person')||{}).value||'自分',
     status: '未着手'
   });
@@ -4560,6 +4590,19 @@ function switchTlTab(tab) {
 }
 
 const TL_ST = ['未着手','完了','カレンダー転記完了','ルーチンへ転記','保留','中止'];
+
+const TODO_FREQ_OPTIONS = [
+  { value:'',       label:'頻度を選択' },
+  { value:'daily',  label:'毎日' },
+  { value:'3days',  label:'3日ごと' },
+  { value:'w2',     label:'週2' },
+  { value:'w1',     label:'毎週' },
+  { value:'m2',     label:'月2' },
+  { value:'m1',     label:'月1' },
+  { value:'1h',     label:'1時間' },
+  { value:'2h',     label:'2時間' },
+  { value:'3h',     label:'3時間' },
+];
 const TL_ST_SHORT = {'未着手':'未着手','完了':'完了','カレンダー転記完了':'📅転記済','ルーチンへ転記':'🔄ルーチン','保留':'保留','中止':'中止'};
 
 // フォルダの開閉状態
@@ -4597,10 +4640,12 @@ function renderTodoList() {
   const makeCard = (t, archived=false) => {
     const overdue = !archived && t.date && t.date < new Date().toISOString().slice(0,10);
     const typeBadge = `<span class="tl-type-badge ${(t.todoType||'完結型')==='継続型'?'keizoku':'kanketsu'}">${t.todoType||'完結型'}</span>`;
+    const freqLblT = t.freq ? (TODO_FREQ_OPTIONS.find(o=>o.value===t.freq)||{label:t.freq}).label : '';
     const chips = [
       t._kdiName?`🎯 ${esc(t._kdiName)}`:'',
       t.person?`👤 ${esc(t.person)}`:'',
-      t.date?`📅 ${esc(t.date)}${overdue?' ⚠️':''}`:'',
+      t.todoType==='継続型' && freqLblT ? `🔄 ${esc(freqLblT)}` :
+        (t.date?`📅 ${esc(t.date)}${overdue?' ⚠️':''}`:''),
     ].filter(Boolean).map(c=>`<span class="tl-todo-chip" style="${overdue&&c.includes('📅')?'color:var(--red)':''}">${c}</span>`).join('');
     const stBtns = TL_ST.map(s=>`
       <button class="tl-st-btn ${t.status===s?'sel-'+(s==='カレンダー転記完了'?'カレンダー':s==='ルーチンへ転記'?'ルーチン':s):''}"
@@ -4657,19 +4702,20 @@ function toggleTlFolder(key) {
 function selectTodoFormType(formId, type, btn) {
   const hiddenInput = document.getElementById(formId+'-type');
   if (hiddenInput) hiddenInput.value = type;
-  // 兄弟ボタンのスタイルをリセット
+  // ボタンのスタイル切り替え
   const parent = btn.parentElement;
   parent.querySelectorAll('button').forEach(b => {
-    if (b.textContent.trim()==='完結型') {
-      b.style.background = type==='完結型'?'var(--amber2)':'var(--surf2)';
-      b.style.color = type==='完結型'?'var(--amber3)':'var(--tx2)';
-      b.style.borderColor = type==='完結型'?'var(--amber3)':'var(--bd)';
-    } else {
-      b.style.background = type==='継続型'?'var(--teal2)':'var(--surf2)';
-      b.style.color = type==='継続型'?'var(--teal3)':'var(--tx2)';
-      b.style.borderColor = type==='継続型'?'var(--teal)':'var(--bd)';
-    }
+    const isKanketsu = b.textContent.trim()==='完結型';
+    const isSelected = isKanketsu ? type==='完結型' : type==='継続型';
+    b.style.background = isSelected ? (isKanketsu?'var(--amber2)':'var(--teal2)') : 'var(--surf2)';
+    b.style.color = isSelected ? (isKanketsu?'var(--amber3)':'var(--teal3)') : 'var(--tx2)';
+    b.style.borderColor = isSelected ? (isKanketsu?'var(--amber3)':'var(--teal)') : 'var(--bd)';
   });
+  // 期日欄 ↔ 頻度欄の切り替え
+  const dateArea = document.getElementById(formId+'-date-area');
+  const freqArea = document.getElementById(formId+'-freq-area');
+  if (dateArea) dateArea.style.display = type==='完結型' ? '' : 'none';
+  if (freqArea) freqArea.style.display = type==='継続型' ? '' : 'none';
 }
 
 function setTlTodoStatus(pdcaId, todoId, status) {
