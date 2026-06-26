@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="3.4.1">
+<meta name="app-version" content="3.4.2">
 
 <style>
 /* ── リセット & ベース ── */
@@ -2295,8 +2295,8 @@ function renderIssues() {
     <div class="item-fold${iss.achieved?' achieved':''}" id="${fid}">
       <div class="item-fold-header" onclick="toggleItemFold('${fid}')">
           <div style="display:flex;align-items:center;gap:8px">
-            <div class="item-fold-num">${i+1}</div>
-            <div style="font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:.5px;flex-shrink:0">課題 ${i+1}</div>
+            <div class="item-fold-num">${iss._origIdx+1}</div>
+            <div style="font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:.5px;flex-shrink:0">課題 ${iss._origIdx+1}</div>
             <div class="item-fold-title ${iss.text?'':'empty'}" style="white-space:normal">${esc(label)}</div>
             <div class="item-fold-chev open">▼</div>
           </div>
@@ -2478,8 +2478,8 @@ function renderSolutions() {
     return `<div class="item-fold${s.achieved?' achieved':''}" id="${fid}">
       <div class="item-fold-header" onclick="toggleItemFold('${fid}')">
           <div style="display:flex;align-items:center;gap:8px">
-            <div class="item-fold-num">${i+1}</div>
-            <div style="font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:.5px;flex-shrink:0">解決案 ${i+1}</div>
+            <div class="item-fold-num">${s._origIdx+1}</div>
+            <div style="font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:.5px;flex-shrink:0">解決案 ${s._origIdx+1}</div>
             <div class="item-fold-title ${s.text?'':'empty'}" style="white-space:normal">${esc(label)}</div>
             <div class="item-fold-chev open">▼</div>
           </div>
