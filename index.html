@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="3.4.9">
+<meta name="app-version" content="3.5.0">
 
 <style>
 /* ── リセット & ベース ── */
@@ -2947,10 +2947,11 @@ function renderTodos() {
       ? [doingCount?`実行中${doingCount}`:'', doneCount?`完了${doneCount}`:'', `計${myTodos.length}`].filter(Boolean).join(' / ')
       : '';
 
-    // 量×時間の表示
-    const qxt = (k.quantity||k.time)
-      ? `${k.quantity||'?'} × ${k.time||'?'}`
-      : '';
+    // 量×時間×頻度の表示
+    const freqOptT = FREQ_OPTIONS.find(o=>o.value===k.freq&&k.freq!=='')||null;
+    const freqLblT = freqOptT ? freqOptT.label : '';
+    const qxtFreq = [k.quantity||'', k.time||'', freqLblT].filter(Boolean).join(' × ');
+    const qxt = qxtFreq; // 後方互換
     const typeLbl = k.kdiType||'継続型';
 
     const todoItems = myTodos.map(t => {
