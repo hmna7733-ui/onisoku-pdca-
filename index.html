@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="3.7.1">
+<meta name="app-version" content="3.8.0">
 
 <style>
 /* ── リセット & ベース ── */
@@ -515,6 +515,78 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
 }
 .tl-type-badge.kanketsu{background:var(--amber2);color:var(--amber3)}
 .tl-type-badge.keizoku{background:var(--teal2);color:var(--teal3)}
+/* ── ドラム式頻度ピッカー ── */
+.drum-picker-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.45);
+  z-index:300;display:none;align-items:flex-end;justify-content:center;
+  backdrop-filter:blur(3px);
+}
+.drum-picker-overlay.open{display:flex}
+.drum-picker-sheet{
+  background:#fff;border-radius:24px 24px 0 0;
+  width:100%;max-width:430px;padding-bottom:40px;
+  overflow:hidden;
+}
+.drum-picker-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 20px 12px;border-bottom:0.5px solid #eee;
+}
+.drum-picker-title{font-size:15px;font-weight:700;color:#1a1a2e}
+.drum-picker-ok{
+  background:var(--p);color:#fff;border:none;border-radius:10px;
+  padding:6px 16px;font-size:14px;font-weight:700;cursor:pointer;
+}
+.drum-picker-cancel{
+  background:none;border:none;color:#888;font-size:14px;cursor:pointer;
+}
+.drum-picker-body{
+  display:flex;justify-content:center;align-items:stretch;
+  height:200px;overflow:hidden;position:relative;
+}
+.drum-picker-body::before,.drum-picker-body::after{
+  content:'';position:absolute;left:0;right:0;z-index:2;pointer-events:none;
+  height:72px;
+}
+.drum-picker-body::before{
+  top:0;background:linear-gradient(to bottom,rgba(255,255,255,.95),transparent);
+}
+.drum-picker-body::after{
+  bottom:0;background:linear-gradient(to top,rgba(255,255,255,.95),transparent);
+}
+.drum-picker-body::after{
+  bottom:0;
+}
+/* 選択中ライン */
+.drum-picker-selection-line{
+  position:absolute;top:50%;left:16px;right:16px;
+  height:44px;margin-top:-22px;
+  border-top:1.5px solid var(--p);border-bottom:1.5px solid var(--p);
+  border-radius:10px;background:var(--p3);
+  z-index:1;pointer-events:none;
+}
+.drum-picker-col{
+  flex:1;overflow-y:scroll;scroll-snap-type:y mandatory;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:none;position:relative;z-index:3;
+}
+.drum-picker-col::-webkit-scrollbar{display:none}
+.drum-item{
+  height:44px;display:flex;align-items:center;justify-content:center;
+  font-size:16px;font-weight:500;color:#888;
+  scroll-snap-align:center;transition:color .1s;cursor:pointer;
+  flex-shrink:0;
+}
+.drum-item.selected{color:var(--p);font-weight:700;font-size:17px}
+/* トリガーボタン */
+.drum-trigger{
+  width:100%;padding:11px 14px;border-radius:12px;
+  border:1.5px solid var(--bd2);background:var(--surf);
+  font-size:14px;font-weight:600;color:var(--tx);
+  cursor:pointer;text-align:left;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.drum-trigger-val{color:var(--p)}
+.drum-trigger-arr{color:var(--tx3);font-size:12px}
 /* ── KDI実績カード ── */
 /* 総行動数バナー */
 .kdi-total-banner{
@@ -1355,6 +1427,21 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
       <div style="font-size:17px;font-weight:800;color:#1a1a2e">📋 PDCAを個別エクスポート</div>
     </div>
     <div style="padding:16px 20px 0" id="pdca-export-list"></div>
+  </div>
+</div>
+
+<!-- ════════ ドラム式頻度ピッカー ════════ -->
+<div class="drum-picker-overlay" id="drum-picker" onclick="drumPickerOutside(event)">
+  <div class="drum-picker-sheet">
+    <div class="drum-picker-head">
+      <button class="drum-picker-cancel" onclick="closeDrumPicker()">キャンセル</button>
+      <div class="drum-picker-title" id="drum-picker-title">頻度を選択</div>
+      <button class="drum-picker-ok" onclick="confirmDrumPicker()">決定</button>
+    </div>
+    <div class="drum-picker-body">
+      <div class="drum-picker-selection-line"></div>
+      <div class="drum-picker-col" id="drum-picker-col"></div>
+    </div>
   </div>
 </div>
 
@@ -3111,10 +3198,11 @@ function renderKDIs() {
           <div style="font-size:16px;font-weight:800;color:var(--p);text-align:center;padding-top:14px">×</div>
           <div>
             <div style="font-size:10px;color:var(--tx2);margin-bottom:3px">頻度</div>
-            <select style="width:100%;font-size:13px;padding:9px 8px"
-              onchange="updDoField('kdis','${k.id}','freq',this.value);renderKDIs();setTimeout(restoreFoldState,0)">
-              ${FREQ_OPTIONS.map(o=>`<option value="${o.value}" ${(k.freq||'')===o.value?'selected':''}>${o.label}</option>`).join('')}
-            </select>
+            <button class="drum-trigger" onclick="openDrumPicker('${k.freq||'daily'}', function(v){ updDoField('kdis','${k.id}','freq',v);renderKDIs();setTimeout(restoreFoldState,0); }, '頻度を選択')">
+              <span style="color:var(--tx2);font-size:12px">頻度</span>
+              <span class="drum-trigger-val">${(FREQ_OPTIONS.find(o=>o.value===(k.freq||''))&&k.freq)?FREQ_OPTIONS.find(o=>o.value===k.freq).label:'毎日'}</span>
+              <span class="drum-trigger-arr">▼</span>
+            </button>
           </div>
         </div>
         ${(k.quantity||k.time||k.freq)?`<div style="font-size:12px;color:var(--p);font-weight:600;background:var(--p3);padding:6px 10px;border-radius:8px;margin-bottom:10px">
@@ -3225,9 +3313,12 @@ function renderTodos() {
           </div>
           <div id="${efid}-freq-area" style="display:${(t.todoType||'完結型')==='継続型'?'':'none'}">
             <label class="lbl">頻度</label>
-            <select id="${efid}-freq" style="width:100%;padding:9px 8px;font-size:14px">
-              ${TODO_FREQ_OPTIONS.map(o=>`<option value="${o.value}" ${(t.freq||'')==o.value?'selected':''}>${o.label}</option>`).join('')}
-            </select>
+            <button class="drum-trigger" id="${efid}-freq-btn" onclick="openDrumPicker('${t.freq||'daily'}', function(v){ var el=document.getElementById('${efid}-freq'); if(el) el.value=v; var btn=document.getElementById('${efid}-freq-btn'); if(btn) btn.querySelector('.drum-trigger-val').textContent=(TODO_FREQ_OPTIONS.find(o=>o.value===v)||{label:'毎日'}).label; }, '頻度を選択')">
+              <span style="color:var(--tx2);font-size:12px">頻度</span>
+              <span class="drum-trigger-val">${(TODO_FREQ_OPTIONS.find(o=>o.value===(t.freq||''))||{label:'毎日'}).label}</span>
+              <span class="drum-trigger-arr">▼</span>
+            </button>
+            <input type="hidden" id="${efid}-freq" value="${t.freq||'daily'}">
           </div>
           <label class="lbl">担当者</label>
           <input type="text" value="${esc(t.person||'')}" placeholder="例：自分" id="${efid}-person">
@@ -3268,9 +3359,12 @@ function renderTodos() {
           </div>
           <div id="${formId}-freq-area" style="display:none">
             <label class="lbl">頻度</label>
-            <select id="${formId}-freq" style="width:100%;padding:9px 8px;font-size:14px">
-              ${TODO_FREQ_OPTIONS.map(o=>`<option value="${o.value}">${o.label}</option>`).join('')}
-            </select>
+            <button class="drum-trigger" onclick="openDrumPicker(document.getElementById('${formId}-freq').value||'daily', function(v){ document.getElementById('${formId}-freq').value=v; this.querySelector('.drum-trigger-val').textContent=(TODO_FREQ_OPTIONS.find(o=>o.value===v)||{label:'毎日'}).label; }.bind(this.parentElement.querySelector('.drum-trigger')), '頻度を選択')">
+              <span style="color:var(--tx2);font-size:12px">頻度</span>
+              <span class="drum-trigger-val">毎日</span>
+              <span class="drum-trigger-arr">▼</span>
+            </button>
+            <input type="hidden" id="${formId}-freq" value="daily">
           </div>
           <label class="lbl">担当者</label>
           <input type="text" id="${formId}-person" placeholder="例：自分">
@@ -3561,16 +3655,21 @@ function renderCA() {
 
 // 頻度定義（KDI設定で使用）
 const FREQ_OPTIONS = [
-  { value:'',         label:'頻度を選択', per3days:null, group:'weekly_high' },
-  { value:'daily',    label:'毎日',       per3days:3,    group:'daily' },
-  { value:'w6',       label:'週6',        per3days:2,    group:'weekly_high' },
-  { value:'w5',       label:'週5',        per3days:2,    group:'weekly_high' },
-  { value:'w4',       label:'週4',        per3days:2,    group:'weekly_high' },
-  { value:'w3',       label:'週3',        per3days:1,    group:'weekly_high' },
-  { value:'w2',       label:'週2',        per3days:1,    group:'weekly_high' },
-  { value:'w1',       label:'週1',        per3days:0,    group:'weekly_low' },
-  { value:'m2',       label:'月2',        per3days:0,    group:'monthly' },
-  { value:'m1',       label:'月1',        per3days:0,    group:'monthly' },
+  { value:'', label:'頻度を選択', per3days:null, group:'weekly_high' },
+  { value:'m1', label:'月1', per3days:0, group:'monthly' },
+  { value:'m2', label:'月2', per3days:0, group:'monthly' },
+  { value:'w1', label:'週1', per3days:0, group:'weekly_low' },
+  { value:'w2', label:'週2', per3days:1, group:'weekly_high' },
+  { value:'w3', label:'週3', per3days:1, group:'weekly_high' },
+  { value:'w4', label:'週4', per3days:2, group:'weekly_high' },
+  { value:'w5', label:'週5', per3days:2, group:'weekly_high' },
+  { value:'w6', label:'週6', per3days:2, group:'weekly_high' },
+  { value:'daily', label:'毎日', per3days:3, group:'daily' },
+  { value:'d2', label:'1日2回', per3days:6, group:'daily' },
+  { value:'d3', label:'1日3回', per3days:9, group:'daily' },
+  { value:'h3', label:'3時間に1回', per3days:8, group:'daily' },
+  { value:'h2', label:'2時間に1回', per3days:12, group:'daily' },
+  { value:'h1', label:'毎時', per3days:24, group:'daily' },
 ];
 
 function detectFreq(k) {
@@ -4589,19 +4688,103 @@ function switchTlTab(tab) {
   else renderRoutineSheet();
 }
 
+/* ══════════════════════════════════════════
+   ドラム式頻度ピッカー
+══════════════════════════════════════════ */
+let _drumCallback = null;
+let _drumCurrentVal = 'daily';
+
+// 実際のFREQ_OPTIONSから空欄を除いたもの
+function getFreqList() {
+  return FREQ_OPTIONS.filter(o => o.value !== '');
+}
+
+function openDrumPicker(currentVal, callback, title='頻度を選択') {
+  _drumCallback = callback;
+  _drumCurrentVal = currentVal || 'daily';
+  document.getElementById('drum-picker-title').textContent = title;
+
+  const list = getFreqList();
+  const col = document.getElementById('drum-picker-col');
+
+  // 前後に空パディング（中央配置のため）
+  const pad = '<div class="drum-item" style="pointer-events:none"> </div><div class="drum-item" style="pointer-events:none"> </div>';
+  col.innerHTML = pad + list.map((o,i) =>
+    `<div class="drum-item ${o.value===_drumCurrentVal?'selected':''}" data-val="${o.value}" onclick="drumSelectItem('${o.value}')">${o.label}</div>`
+  ).join('') + pad;
+
+  // 選択中アイテムにスクロール
+  const idx = list.findIndex(o => o.value === _drumCurrentVal);
+  const scrollTarget = idx >= 0 ? idx : list.findIndex(o=>o.value==='daily');
+  setTimeout(() => {
+    col.scrollTop = scrollTarget * 44;
+  }, 30);
+
+  // スクロール終了で中央のアイテムを選択
+  col.onscroll = () => {
+    const i = Math.round(col.scrollTop / 44);
+    const items = col.querySelectorAll('.drum-item[data-val]');
+    items.forEach((el,ii) => el.classList.toggle('selected', ii===i));
+    if (list[i]) _drumCurrentVal = list[i].value;
+  };
+
+  document.getElementById('drum-picker').classList.add('open');
+}
+
+function drumSelectItem(val) {
+  _drumCurrentVal = val;
+  const list = getFreqList();
+  const idx = list.findIndex(o=>o.value===val);
+  const col = document.getElementById('drum-picker-col');
+  col.scrollTo({top: idx*44, behavior:'smooth'});
+  col.querySelectorAll('.drum-item[data-val]').forEach((el,i) =>
+    el.classList.toggle('selected', i===idx));
+}
+
+function closeDrumPicker() {
+  document.getElementById('drum-picker').classList.remove('open');
+}
+
+function confirmDrumPicker() {
+  closeDrumPicker();
+  if (_drumCallback) _drumCallback(_drumCurrentVal);
+}
+
+function drumPickerOutside(e) {
+  if (e.target === document.getElementById('drum-picker')) closeDrumPicker();
+}
+
+// selectドロップダウンをドラムピッカーで置き換えるヘルパー
+function drumTriggerHtml(id, currentVal, callbackStr) {
+  const list = getFreqList();
+  const opt = list.find(o=>o.value===currentVal);
+  const lbl = opt ? opt.label : '毎日';
+  return `<button class="drum-trigger" onclick="${callbackStr}">
+    <span style="color:var(--tx2);font-size:12px">頻度</span>
+    <span class="drum-trigger-val">${lbl}</span>
+    <span class="drum-trigger-arr">▼</span>
+  </button>
+  <input type="hidden" id="${id}" value="${currentVal||'daily'}">`;
+}
+
 const TL_ST = ['未着手','完了','カレンダー転記完了','ルーチンへ転記','保留','中止'];
 
 const TODO_FREQ_OPTIONS = [
-  { value:'',       label:'頻度を選択' },
-  { value:'daily',  label:'毎日' },
-  { value:'3days',  label:'3日ごと' },
-  { value:'w2',     label:'週2' },
-  { value:'w1',     label:'毎週' },
-  { value:'m2',     label:'月2' },
-  { value:'m1',     label:'月1' },
-  { value:'1h',     label:'1時間' },
-  { value:'2h',     label:'2時間' },
-  { value:'3h',     label:'3時間' },
+  { value:'', label:'頻度を選択' },
+  { value:'m1', label:'月1' },
+  { value:'m2', label:'月2' },
+  { value:'w1', label:'週1' },
+  { value:'w2', label:'週2' },
+  { value:'w3', label:'週3' },
+  { value:'w4', label:'週4' },
+  { value:'w5', label:'週5' },
+  { value:'w6', label:'週6' },
+  { value:'daily', label:'毎日' },
+  { value:'d2', label:'1日2回' },
+  { value:'d3', label:'1日3回' },
+  { value:'h3', label:'3時間に1回' },
+  { value:'h2', label:'2時間に1回' },
+  { value:'h1', label:'毎時' },
 ];
 const TL_ST_SHORT = {'未着手':'未着手','完了':'完了','カレンダー転記完了':'📅転記済','ルーチンへ転記':'🔄ルーチン','保留':'保留','中止':'中止'};
 
