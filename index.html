@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="3.6.2">
+<meta name="app-version" content="3.7.0">
 
 <style>
 /* ── リセット & ベース ── */
@@ -488,6 +488,33 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
   padding:2px 8px;border-radius:20px;
 }
 
+/* ── TODOフォルダ ── */
+.tl-folder{
+  background:var(--surf);border:0.5px solid var(--bd);
+  border-radius:14px;margin-bottom:12px;overflow:hidden;
+}
+.tl-folder-header{
+  display:flex;align-items:center;gap:10px;padding:12px 14px;
+  cursor:pointer;
+}
+.tl-folder-icon{font-size:20px;flex-shrink:0}
+.tl-folder-title{font-size:14px;font-weight:700;color:var(--tx);flex:1}
+.tl-folder-count{font-size:12px;color:var(--tx3);font-weight:600}
+.tl-folder-chev{font-size:12px;color:var(--tx3);transition:transform .15s}
+.tl-folder-chev.open{transform:rotate(180deg)}
+.tl-folder-body{display:none;padding:0 10px 10px}
+.tl-folder-body.open{display:block}
+/* 暗転カード */
+.tl-todo-card.archived{
+  opacity:.5;
+  background:var(--surf2);
+}
+/* タスクタイプバッジ */
+.tl-type-badge{
+  font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;flex-shrink:0;
+}
+.tl-type-badge.kanketsu{background:var(--amber2);color:var(--amber3)}
+.tl-type-badge.keizoku{background:var(--teal2);color:var(--teal3)}
 /* ── KDI実績カード ── */
 /* 総行動数バナー */
 .kdi-total-banner{
@@ -2855,6 +2882,7 @@ function saveTodoEdit(id, efid) {
   const name = (document.getElementById(efid+'-name')||{}).value?.trim();
   if (!name) { alert('タスク詳細を入力してください'); return; }
   p.todos[idx].name = name;
+  p.todos[idx].todoType = (document.getElementById(efid+'-type')||{}).value||p.todos[idx].todoType||'完結型';
   p.todos[idx].date = (document.getElementById(efid+'-date')||{}).value||'';
   p.todos[idx].person = (document.getElementById(efid+'-person')||{}).value||'';
   saveDB(); renderTodos(); setTimeout(restoreFoldState,0);
@@ -3169,7 +3197,10 @@ function renderTodos() {
       return `<div class="todo-card" id="tc-${t.id}">
         <div class="todo-card-main">
           <div class="todo-card-info">
-            <div class="todo-card-name ${t.status==='完了'?'done-text':''}">${esc(t.name)}</div>
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+              <div class="todo-card-name ${t.status==='完了'?'done-text':''}">${esc(t.name)}</div>
+              <span class="tl-type-badge ${(t.todoType||'完結型')==='継続型'?'keizoku':'kanketsu'}">${t.todoType||'完結型'}</span>
+            </div>
             <div class="todo-card-meta">${metaChips||'<span class="todo-meta-chip" style="color:var(--tx3)">期日・担当者なし</span>'}</div>
           </div>
           <button class="todo-edit-btn" onclick="toggleTodoEdit('${efid}')" title="編集">✏</button>
@@ -3177,7 +3208,13 @@ function renderTodos() {
         </div>
         <div class="todo-status-row">${stBadges}</div>
         <div class="todo-edit-form" id="${efid}">
-          <label class="lbl" style="margin-top:0">タスク詳細</label>
+          <label class="lbl" style="margin-top:0">タイプ</label>
+          <div style="display:flex;gap:8px;margin-bottom:10px">
+            <button onclick="selectTodoFormType('${efid}','完結型',this)" style="flex:1;padding:7px;border-radius:8px;border:1.5px solid ${(t.todoType||'完結型')==='完結型'?'var(--amber3)':'var(--bd)'};background:${(t.todoType||'完結型')==='完結型'?'var(--amber2)':'var(--surf2)'};color:${(t.todoType||'完結型')==='完結型'?'var(--amber3)':'var(--tx2)'};font-size:12px;font-weight:700;cursor:pointer">完結型</button>
+            <button onclick="selectTodoFormType('${efid}','継続型',this)" style="flex:1;padding:7px;border-radius:8px;border:1.5px solid ${(t.todoType||'完結型')==='継続型'?'var(--teal)':'var(--bd)'};background:${(t.todoType||'完結型')==='継続型'?'var(--teal2)':'var(--surf2)'};color:${(t.todoType||'完結型')==='継続型'?'var(--teal3)':'var(--tx2)'};font-size:12px;font-weight:700;cursor:pointer">継続型</button>
+          </div>
+          <input type="hidden" id="${efid}-type" value="${t.todoType||'完結型'}">
+          <label class="lbl">タスク詳細</label>
           <input type="text" value="${esc(t.name)}" id="${efid}-name">
           <label class="lbl">期日</label>
           <input type="date" value="${esc(t.date||'')}" id="${efid}-date">
@@ -3206,7 +3243,13 @@ function renderTodos() {
       <div class="do-group-body">
         ${todoItems || '<div style="font-size:13px;color:var(--tx2);margin-bottom:8px">タスクがありません</div>'}
         <div class="todo-inline-form" id="${formId}">
-          <label class="lbl" style="margin-top:0">TODOタスク詳細</label>
+          <label class="lbl" style="margin-top:0">タイプ</label>
+          <div style="display:flex;gap:8px;margin-bottom:10px">
+            <button onclick="selectTodoFormType('${formId}','完結型',this)" style="flex:1;padding:7px;border-radius:8px;border:1.5px solid var(--bd2);background:var(--amber2);color:var(--amber3);font-size:12px;font-weight:700;cursor:pointer">完結型</button>
+            <button onclick="selectTodoFormType('${formId}','継続型',this)" style="flex:1;padding:7px;border-radius:8px;border:1.5px solid var(--bd);background:var(--surf2);color:var(--tx2);font-size:12px;font-weight:700;cursor:pointer">継続型</button>
+          </div>
+          <input type="hidden" id="${formId}-type" value="完結型">
+          <label class="lbl">TODOタスク詳細</label>
           <input type="text" id="${formId}-name" placeholder="例：ヒアリングシートを作成する">
           <label class="lbl">期日</label>
           <input type="date" id="${formId}-date">
@@ -3262,7 +3305,8 @@ function addTodoInline(formId, kdiId) {
   p.todos.push({
     id: Date.now()+'',
     name,
-    kdiRef: kdiId,  // KDI IDで紐付け
+    kdiRef: kdiId,
+    todoType: (document.getElementById(formId+'-type')||{}).value||'完結型',
     date: (document.getElementById(formId+'-date')||{}).value||'',
     person: (document.getElementById(formId+'-person')||{}).value||'自分',
     status: '未着手'
@@ -4518,6 +4562,9 @@ function switchTlTab(tab) {
 const TL_ST = ['未着手','完了','カレンダー転記完了','ルーチンへ転記','保留','中止'];
 const TL_ST_SHORT = {'未着手':'未着手','完了':'完了','カレンダー転記完了':'📅転記済','ルーチンへ転記':'🔄ルーチン','保留':'保留','中止':'中止'};
 
+// フォルダの開閉状態
+const tlFolderState = { active:true, done:false, calendar:false, routine:false, hold:false, stop:false };
+
 function renderTodoList() {
   const panel = document.getElementById('tl-todo-panel');
   if (!panel) return;
@@ -4526,43 +4573,103 @@ function renderTodoList() {
   const allTodos = [];
   DB.pdcas.forEach(p => {
     (p.todos||[]).forEach(t => {
-      // 関連KDI名を取得
       const kdi = (p.kdis||[]).find(k=>k.id===t.kdiRef);
-      const kdiName = kdi ? kdi.text : '';
-      allTodos.push({ ...t, _pdcaId:p.id, _pdcaTitle:p.title, _kdiName:kdiName });
+      allTodos.push({ ...t, _pdcaId:p.id, _pdcaTitle:p.title, _kdiName:kdi?kdi.text:'' });
     });
   });
 
-  // 期日順ソート（期日なしは末尾、期日なし同士はPDCA名+タスク名順）
-  allTodos.sort((a,b)=>{
+  // ステータスでグループ分け
+  const ARCHIVED_ST = ['完了','カレンダー転記完了','ルーチンへ転記'];
+  const active  = allTodos.filter(t=>!ARCHIVED_ST.includes(t.status)&&t.status!=='保留'&&t.status!=='中止');
+  const done    = allTodos.filter(t=>t.status==='完了');
+  const calendar= allTodos.filter(t=>t.status==='カレンダー転記完了');
+  const routine = allTodos.filter(t=>t.status==='ルーチンへ転記');
+  const hold    = allTodos.filter(t=>t.status==='保留');
+  const stop    = allTodos.filter(t=>t.status==='中止');
+
+  // 期日順ソート
+  const sortByDate = arr => [...arr].sort((a,b)=>{
     if (!a.date && !b.date) return (a._pdcaTitle+a.name).localeCompare(b._pdcaTitle+b.name);
-    if (!a.date) return 1;
-    if (!b.date) return -1;
+    if (!a.date) return 1; if (!b.date) return -1;
     return a.date.localeCompare(b.date);
   });
 
-  if (!allTodos.length) {
-    panel.innerHTML = '<div style="font-size:13px;color:var(--tx2);text-align:center;padding:32px 0">TODOタスクがありません</div>';
-    return;
-  }
-
-  panel.innerHTML = allTodos.map(t => {
-    const overdue = t.date && t.date < new Date().toISOString().slice(0,10) && t.status!=='完了' && t.status!=='中止';
+  const makeCard = (t, archived=false) => {
+    const overdue = !archived && t.date && t.date < new Date().toISOString().slice(0,10);
+    const typeBadge = `<span class="tl-type-badge ${(t.todoType||'完結型')==='継続型'?'keizoku':'kanketsu'}">${t.todoType||'完結型'}</span>`;
     const chips = [
-      t._kdiName ? `🎯 ${esc(t._kdiName)}` : '',
-      t.person ? `👤 ${esc(t.person)}` : '',
-      t.date ? `📅 ${esc(t.date)}${overdue?' ⚠️過期':''}` : ''
+      t._kdiName?`🎯 ${esc(t._kdiName)}`:'',
+      t.person?`👤 ${esc(t.person)}`:'',
+      t.date?`📅 ${esc(t.date)}${overdue?' ⚠️':''}`:'',
     ].filter(Boolean).map(c=>`<span class="tl-todo-chip" style="${overdue&&c.includes('📅')?'color:var(--red)':''}">${c}</span>`).join('');
     const stBtns = TL_ST.map(s=>`
       <button class="tl-st-btn ${t.status===s?'sel-'+(s==='カレンダー転記完了'?'カレンダー':s==='ルーチンへ転記'?'ルーチン':s):''}"
         onclick="setTlTodoStatus('${t._pdcaId}','${t.id}','${s}')">${TL_ST_SHORT[s]}</button>`).join('');
-    return `<div class="tl-todo-card" id="tlt-${t.id}">
-      <div class="tl-todo-pdca-name">${esc(t._pdcaTitle)}</div>
-      <div class="tl-todo-name ${t.status==='完了'||t.status==='中止'?'done-text':''}">${esc(t.name)}</div>
+    return `<div class="tl-todo-card${archived?' archived':''}" id="tlt-${t.id}">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+        <span class="tl-todo-pdca-name" style="margin:0">${esc(t._pdcaTitle)}</span>
+        ${typeBadge}
+      </div>
+      <div class="tl-todo-name ${archived?'done-text':''}">${esc(t.name)}</div>
       <div class="tl-todo-meta">${chips}</div>
       <div class="tl-st-row">${stBtns}</div>
     </div>`;
-  }).join('');
+  };
+
+  const makeFolder = (key, icon, title, items, archived=true) => {
+    const isOpen = tlFolderState[key];
+    const cards = sortByDate(items).map(t=>makeCard(t,archived)).join('');
+    return `<div class="tl-folder">
+      <div class="tl-folder-header" onclick="toggleTlFolder('${key}')">
+        <span class="tl-folder-icon">${icon}</span>
+        <span class="tl-folder-title">${title}</span>
+        <span class="tl-folder-count">${items.length}件</span>
+        <span class="tl-folder-chev ${isOpen?'open':''}">▼</span>
+      </div>
+      <div class="tl-folder-body ${isOpen?'open':''}">${cards||'<div style="font-size:13px;color:var(--tx3);padding:8px 4px">なし</div>'}</div>
+    </div>`;
+  };
+
+  let html = '';
+  // アクティブ（フォルダなし・直接表示）
+  if (!allTodos.length) {
+    html = '<div style="font-size:13px;color:var(--tx2);text-align:center;padding:32px 0">TODOタスクがありません</div>';
+  } else {
+    if (active.length || !allTodos.length) {
+      html += sortByDate(active).map(t=>makeCard(t,false)).join('');
+      if (!active.length) html += '<div style="font-size:13px;color:var(--tx3);text-align:center;padding:16px 0">アクティブなタスクはありません</div>';
+    }
+    // フォルダ
+    if (done.length)     html += makeFolder('done',    '✅','完了',              done,    true);
+    if (calendar.length) html += makeFolder('calendar','📅','カレンダー転記済', calendar,true);
+    if (routine.length)  html += makeFolder('routine', '🔄','ルーティンチェック転記済', routine, true);
+    if (hold.length)     html += makeFolder('hold',    '⏸','保留',              hold,    true);
+    if (stop.length)     html += makeFolder('stop',    '🚫','中止',              stop,    true);
+  }
+  panel.innerHTML = html;
+}
+
+function toggleTlFolder(key) {
+  tlFolderState[key] = !tlFolderState[key];
+  renderTodoList();
+}
+
+function selectTodoFormType(formId, type, btn) {
+  const hiddenInput = document.getElementById(formId+'-type');
+  if (hiddenInput) hiddenInput.value = type;
+  // 兄弟ボタンのスタイルをリセット
+  const parent = btn.parentElement;
+  parent.querySelectorAll('button').forEach(b => {
+    if (b.textContent.trim()==='完結型') {
+      b.style.background = type==='完結型'?'var(--amber2)':'var(--surf2)';
+      b.style.color = type==='完結型'?'var(--amber3)':'var(--tx2)';
+      b.style.borderColor = type==='完結型'?'var(--amber3)':'var(--bd)';
+    } else {
+      b.style.background = type==='継続型'?'var(--teal2)':'var(--surf2)';
+      b.style.color = type==='継続型'?'var(--teal3)':'var(--tx2)';
+      b.style.borderColor = type==='継続型'?'var(--teal)':'var(--bd)';
+    }
+  });
 }
 
 function setTlTodoStatus(pdcaId, todoId, status) {
