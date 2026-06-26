@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="3.2.5">
+<meta name="app-version" content="3.2.6">
 
 <style>
 /* ── リセット & ベース ── */
@@ -1092,7 +1092,7 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
   position:fixed;inset:0;
   background:linear-gradient(135deg,#0f0c1e,#26215C);
   z-index:1000;
-  display:flex;flex-direction:column;
+  display:none;flex-direction:column;
   align-items:center;justify-content:center;
   padding:32px;
 ">
@@ -3872,35 +3872,48 @@ function initFirebase() {
     auth = firebase.auth();
     db_fs = firebase.firestore();
 
-    // リダイレクトログイン後の結果を処理
-    auth.getRedirectResult().then(result => {
-      if (result && result.user) {
-        // リダイレクト後のログイン成功はonAuthStateChangedで処理される
-        console.log('Redirect login success:', result.user.email);
-      }
-    }).catch(err => {
-      console.error('Redirect result error:', err.code, err.message);
-      const errEl = document.getElementById('login-error');
-      if (errEl && err.code) {
-        errEl.style.display = '';
-        errEl.textContent = 'エラー: ' + err.code;
-      }
-    });
-
+    // onAuthStateChangedで認証状態を監視（リダイレクト後も含む）
     auth.onAuthStateChanged(user => {
       if (user) {
+        // ログイン済み
         currentUser = user;
-        document.getElementById('login-screen').style.display = 'none';
+        const ls = document.getElementById('login-screen');
+        if (ls) ls.style.display = 'none';
         loadDB();
         renderHome();
       } else {
-        currentUser = null;
-        document.getElementById('login-screen').style.display = 'flex';
+        // 未ログイン → リダイレクト結果を確認してからログイン画面を表示
+        auth.getRedirectResult().then(result => {
+          if (result && result.user) {
+            // リダイレクト直後（onAuthStateChangedが先に来るはずだが念のため）
+            currentUser = result.user;
+            const ls = document.getElementById('login-screen');
+            if (ls) ls.style.display = 'none';
+            loadDB();
+            renderHome();
+          } else {
+            // 本当に未ログイン → ログイン画面を表示
+            currentUser = null;
+            const ls = document.getElementById('login-screen');
+            if (ls) ls.style.display = 'flex';
+          }
+        }).catch(err => {
+          console.error('Redirect result error:', err.code, err.message);
+          currentUser = null;
+          const ls = document.getElementById('login-screen');
+          if (ls) {
+            ls.style.display = 'flex';
+            const errEl = document.getElementById('login-error');
+            if (errEl && err.code) {
+              errEl.style.display = '';
+              errEl.textContent = 'エラー: ' + err.code;
+            }
+          }
+        });
       }
     });
   } catch(e) {
     console.error('Firebase init error:', e);
-    // Firebaseが使えない場合はlocalStorageで動作
     document.getElementById('login-screen').style.display = 'none';
     loadDB();
     renderHome();

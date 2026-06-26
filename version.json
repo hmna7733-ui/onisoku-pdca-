@@ -1,1 +1,1 @@
-{"version":"3.2.5","updated":"2026-06-26","notes":"Firebase APIキー修正・ログインなしボタン追加"}
+{"version":"3.2.6","updated":"2026-06-26","notes":"Googleログイン後にアプリが開くよう認証フロー修正"}
