@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="3.8.1">
+<meta name="app-version" content="3.8.2">
 
 <style>
 /* ── リセット & ベース ── */
@@ -1571,6 +1571,17 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
             <div class="menu-btn-desc">振り返り・改善判断・次サイクルへ</div>
           </div>
           <div class="menu-arr">›</div>
+        </button>
+      </div>
+      <!-- サイクル履歴ボタン -->
+      <div style="padding:0 16px 8px">
+        <button style="width:100%;display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:14px;border:0.5px solid var(--bd);background:var(--surf);cursor:pointer;text-align:left" onclick="goScreen('s-cycle-history');renderCycleHistory()">
+          <span style="font-size:22px">📊</span>
+          <span style="flex:1">
+            <span style="display:block;font-size:14px;font-weight:700;color:var(--tx)">サイクル履歴</span>
+            <span style="display:block;font-size:12px;color:var(--tx2)" id="menu-cycle-hist-desc">過去の振り返りをまとめて確認</span>
+          </span>
+          <span style="color:var(--tx3)">›</span>
         </button>
       </div>
       <div class="menu-footer">
@@ -4304,13 +4315,22 @@ function completePDCA() {
 
 function nextCycle() {
   const p = curP(); if (!p) return;
-  if (!confirm(`第${p.cycle}サイクルを完了して次へ進みますか？`)) return;
+  if (!confirm(`第${p.cycle}サイクルを完了して、第${p.cycle+1}サイクルへ進みますか？`)) return;
+  // サイクル履歴に振り返り記録を自動保存
+  if (!p.cycleHistory) p.cycleHistory = [];
+  p.cycleHistory.unshift({
+    cycle: p.cycle,
+    completedAt: new Date().toLocaleDateString('ja'),
+    checkRecords: JSON.parse(JSON.stringify(p.checkRecords||[])),
+    adj: JSON.parse(JSON.stringify(p.adj||{})),
+  });
+  // TODOはサイクル完了でも削除しない
   p.cycle++;
-  p.todos = []; p.adjJudge = {};
-  p.adj = { newgoal:'', carry:'', new:'', comment:'' };
-  saveDB();
-  goScreen('s-menu');
-  alert(`第${p.cycle}サイクルを開始しました！\nPLANを更新してください。`);
+  p.checkRecords = [];
+  p.checkDraft = { date:'', good:'', bad:'', insight:'', next:'', io:'', star:0, kgiCurrent:'', kpiCurrents:{}, kdiResults:{} };
+  p.adj = {};
+  saveDB(); renderCA(); renderMenu(); renderHome();
+  alert(`第${p.cycle}サイクルを開始しました！\n前サイクルの記録はサイクル履歴から確認できます。`);
 }
 
 /* ══════════════════════════════════════════
