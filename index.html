@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="3.4.4">
+<meta name="app-version" content="3.4.5">
 
 <style>
 /* ── リセット & ベース ── */
@@ -1232,16 +1232,12 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
       <div class="hdr-badge" id="menu-cycle-badge"></div>
     </div>
     <div class="menu-scroll">
-      <div class="menu-hero">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-          <div class="menu-pdca-name" id="menu-pdca-name" style="margin-bottom:0"></div>
-          <button onclick="editPDCATitle()" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:6px;color:#fff;font-size:11px;padding:3px 8px;cursor:pointer;flex-shrink:0">編集</button>
-        </div>
-        <div class="menu-kgi-text" id="menu-kgi-text"></div>
-        <div class="menu-prog-row">
-          <div class="menu-prog-bar"><div class="menu-prog-fill" id="menu-prog-fill" style="width:0%"></div></div>
-          <div class="menu-prog-pct" id="menu-prog-pct">0%</div>
-        </div>
+      <!-- menu-hero削除：ゴールヒーローカードに統合 -->
+      <div style="display:none">
+        <div id="menu-pdca-name"></div>
+        <div id="menu-kgi-text"></div>
+        <div id="menu-prog-fill"></div>
+        <div id="menu-prog-pct"></div>
       </div>
       <!-- ゴール大型ヒーロー（stats欄の上） -->
       <div id="menu-goal-hero" style="padding:0 16px;margin-bottom:8px"></div>
