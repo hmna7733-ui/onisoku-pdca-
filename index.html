@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="3.3.0">
+<meta name="app-version" content="3.4.0">
 
 <style>
 /* ── リセット & ベース ── */
@@ -1068,20 +1068,27 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
       <button class="transfer-btn transfer-btn-export" onclick="exportData()">
         <span class="transfer-btn-icon">📤</span>
         <span class="transfer-btn-text">
-          <span class="transfer-btn-lbl">エクスポート（このデバイス→転送）</span>
-          <span class="transfer-btn-sub">全データをJSONファイルとして保存</span>
+          <span class="transfer-btn-lbl">全データをエクスポート</span>
+          <span class="transfer-btn-sub">すべてのPDCAをまとめて保存</span>
+        </span>
+      </button>
+      <button class="transfer-btn" style="background:linear-gradient(135deg,#534AB7,#7F77DD);color:#fff" onclick="showPdcaExportModal()">
+        <span class="transfer-btn-icon">📋</span>
+        <span class="transfer-btn-text">
+          <span class="transfer-btn-lbl">PDCAを個別にエクスポート</span>
+          <span class="transfer-btn-sub">特定のPDCAだけを書き出す</span>
         </span>
       </button>
       <button class="transfer-btn transfer-btn-import" onclick="document.getElementById('import-file').click()">
         <span class="transfer-btn-icon">📥</span>
         <span class="transfer-btn-text">
           <span class="transfer-btn-lbl">インポート（ファイルから読み込み）</span>
-          <span class="transfer-btn-sub">別デバイスのJSONファイルを読み込む</span>
+          <span class="transfer-btn-sub">JSONファイルを読み込む</span>
         </span>
       </button>
       <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
       <div class="transfer-note">
-        エクスポートしたJSONをAirDrop・メール・LINEなどで<br>別デバイスに送り、インポートしてください
+        JSONをAirDrop・メール・LINEなどで送り、インポートしてください
       </div>
     </div>
   </div>
@@ -1130,6 +1137,20 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
   <div id="login-error" style="color:#F7A8A8;font-size:13px;margin-top:12px;text-align:center;display:none"></div>
   <div style="color:rgba(255,255,255,.3);font-size:11px;margin-top:16px;text-align:center;line-height:1.6">
     メール＋パスワードで複数デバイス間でデータ同期
+  </div>
+</div>
+
+<!-- ════════ PDCA個別エクスポートモーダル ════════ -->
+<div id="pdca-export-modal" style="
+  position:fixed;inset:0;background:rgba(10,8,25,.6);
+  z-index:210;display:none;align-items:flex-end;justify-content:center;
+  backdrop-filter:blur(4px);" onclick="closePdcaExportModal(event)">
+  <div style="background:#fff;border-radius:28px 28px 0 0;padding:0 0 44px;width:100%;max-width:430px;max-height:70vh;overflow-y:auto">
+    <div style="width:40px;height:5px;border-radius:3px;background:#e0ddf0;margin:14px auto 0"></div>
+    <div style="padding:16px 20px 12px;border-bottom:0.5px solid #eee">
+      <div style="font-size:17px;font-weight:800;color:#1a1a2e">📋 PDCAを個別エクスポート</div>
+    </div>
+    <div style="padding:16px 20px 0" id="pdca-export-list"></div>
   </div>
 </div>
 
@@ -3464,7 +3485,8 @@ function deleteCheckRecord(id) {
   const p = curP(); if (!p) return;
   if (!confirm('この振り返り記録を削除しますか？')) return;
   p.checkRecords = (p.checkRecords||[]).filter(r => r.id !== id);
-  saveDB(); renderCheckHist();
+  // 現サイクルの記録がなくなり、前サイクルに戻れる場合は確認
+  saveDB(); renderCA();
 }
 
 function renderCheckHist() {
@@ -3979,11 +4001,17 @@ function submitAuth() {
   if (btn) { btn.textContent = '処理中...'; btn.disabled = true; }
   if (errEl) errEl.style.display = 'none';
 
+  // ログイン情報を保存（次回自動入力のため）
+  try { localStorage.setItem('auth_email', email); } catch(e) {}
+
   const action = authMode === 'signup'
     ? auth.createUserWithEmailAndPassword(email, password)
     : auth.signInWithEmailAndPassword(email, password);
 
-  action.catch(err => {
+  action.then(() => {
+    // ログイン成功時にパスワードも保存
+    try { localStorage.setItem('auth_password', password); } catch(e) {}
+  }).catch(err => {
     console.error('Auth error:', err.code);
     const msgs = {
       'auth/user-not-found': 'このメールアドレスは登録されていません',
@@ -3999,6 +4027,28 @@ function submitAuth() {
     }
     if (btn) { btn.textContent = authMode === 'signup' ? '新規登録' : 'ログイン'; btn.disabled = false; }
   });
+}
+
+// 保存済みログイン情報を入力欄に自動セット
+function restoreSavedAuth() {
+  try {
+    const email = localStorage.getItem('auth_email');
+    const password = localStorage.getItem('auth_password');
+    if (email) {
+      const eEl = document.getElementById('auth-email');
+      if (eEl) eEl.value = email;
+    }
+    if (password) {
+      const pEl = document.getElementById('auth-password');
+      if (pEl) pEl.value = password;
+    }
+    // 保存情報があれば自動ログイン試行
+    if (email && password && auth) {
+      auth.signInWithEmailAndPassword(email, password).catch(() => {
+        // 自動ログイン失敗は無視（手動入力に任せる）
+      });
+    }
+  } catch(e) {}
 }
 
 function signOut() {
@@ -4025,6 +4075,50 @@ function closeTransferModal(e) {
   }
 }
 
+function showPdcaExportModal() {
+  document.getElementById('transfer-modal').classList.remove('open');
+  const modal = document.getElementById('pdca-export-modal');
+  const list = document.getElementById('pdca-export-list');
+  if (!modal || !list) return;
+  list.innerHTML = DB.pdcas.map(p => `
+    <div style="display:flex;align-items:center;padding:12px 0;border-bottom:0.5px solid #eee">
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:600;color:#1a1a2e">${esc(p.title)}</div>
+        <div style="font-size:12px;color:#888">第${p.cycle}サイクル　${p.completed?'🏆達成':p.paused?'⏸停止中':'進行中'}</div>
+      </div>
+      <button onclick="exportSinglePdca('${p.id}')" style="
+        background:linear-gradient(135deg,#534AB7,#7F77DD);color:#fff;
+        border:none;border-radius:10px;padding:8px 14px;
+        font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0
+      ">📤 書き出し</button>
+    </div>`).join('');
+  modal.style.display = 'flex';
+}
+
+function closePdcaExportModal(e) {
+  if (e.target === document.getElementById('pdca-export-modal')) {
+    document.getElementById('pdca-export-modal').style.display = 'none';
+  }
+}
+
+function exportSinglePdca(id) {
+  const p = DB.pdcas.find(x => x.id === id);
+  if (!p) return;
+  const exportData = { type: 'single_pdca', pdca: p, exportedAt: new Date().toLocaleDateString('ja') };
+  const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const date = new Date().toISOString().slice(0,10).replace(/-/g,'');
+  const title = (p.title||'pdca').replace(/[^\w぀-鿿]/g, '_').slice(0,20);
+  a.href = url;
+  a.download = `pdca-${title}-${date}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  document.getElementById('pdca-export-modal').style.display = 'none';
+}
+
 function exportData() {
   const data = JSON.stringify(DB, null, 2);
   const blob = new Blob([data], { type: 'application/json' });
@@ -4047,9 +4141,30 @@ function importData(event) {
   reader.onload = function(e) {
     try {
       const imported = JSON.parse(e.target.result);
-      // 基本的なバリデーション
+
+      // 個別PDCAのインポート
+      if (imported.type === 'single_pdca' && imported.pdca) {
+        const p = imported.pdca;
+        const choice = confirm(
+          `「${p.title}」をインポートします。\n\n` +
+          `【OK】自分のPDCAとして追加\n` +
+          `【キャンセル】閲覧のみで追加（編集不可フラグ付き）`
+        );
+        const newPdca = { ...p, id: Date.now()+'_imported' };
+        if (!choice) newPdca.readOnly = true; // 閲覧のみ
+        DB.pdcas.push(newPdca);
+        saveDB();
+        document.getElementById('transfer-modal').classList.remove('open');
+        renderHome();
+        alert(`✅ 「${p.title}」を${choice?'自分のPDCAとして':'閲覧用として'}追加しました！`);
+        event.target.value = '';
+        return;
+      }
+
+      // 全データのインポート
       if (!imported.pdcas || !Array.isArray(imported.pdcas)) {
         alert('このファイルは鬼速PDCAのデータではありません。');
+        event.target.value = '';
         return;
       }
       const count = imported.pdcas.length;
