@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="3.4.8">
+<meta name="app-version" content="3.4.9">
 
 <style>
 /* ── リセット & ベース ── */
@@ -2686,7 +2686,10 @@ function renderDoActions() {
   const p = curP(); if (!p) return;
   if (!p.doActions) p.doActions = [];
   const solNums = (p.solutions||[]).map((s,i)=>({ num:i+1, text:s.text })).filter(x=>x.text);
-  document.getElementById('d-actions').innerHTML = p.doActions.map((a,i) => {
+  // スコア降順ソート（元番号維持）
+  const sortedDoActions = [...p.doActions].map((a,i)=>({...a,_origIdx:i}))
+    .sort((a,b)=>(b.score||0)-(a.score||0)||a._origIdx-b._origIdx);
+  document.getElementById('d-actions').innerHTML = sortedDoActions.map((a,i) => {
     const fid = 'da-' + a.id;
     const impLbl = a.impact ? `インパクト${a.impact}` : '';
     const easeLbl = a.ease ? `気軽さ${a.ease}` : '';
@@ -2707,8 +2710,8 @@ function renderDoActions() {
     return `<div class="item-fold${a.achieved?' achieved':''} ${(DB.foldState&&DB.foldState[fid])?' collapsed':''}" id="${fid}">
       <div class="item-fold-header" onclick="toggleItemFold('${fid}')">
         <div style="display:flex;align-items:center;gap:8px">
-          <div class="item-fold-num">${i+1}</div>
-          <div style="font-size:10px;font-weight:700;color:var(--tx3);flex-shrink:0">DO ${i+1}</div>
+          <div class="item-fold-num">${a._origIdx+1}</div>
+          <div style="font-size:10px;font-weight:700;color:var(--tx3);flex-shrink:0">DO ${a._origIdx+1}</div>
           <div class="item-fold-title ${a.text?'':'empty'}" style="white-space:normal">${esc(a.text||'（未入力）')}</div>
           <div class="item-fold-chev ${(DB.foldState&&DB.foldState[fid])?' ':' open'}">▼</div>
         </div>
@@ -2845,7 +2848,7 @@ function renderKDIs() {
           <div class="item-fold-chev open">▼</div>
         </div>
         <div style="padding-left:34px;display:flex;flex-direction:column;gap:2px">
-          ${(k.quantity||k.time)?`<div style="font-size:12px;color:var(--tx2)">${esc(k.quantity||'?')} × ${esc(k.time||'?')}</div>`:''}
+          ${(k.quantity||k.time||freqLbl)?`<div style="font-size:12px;color:var(--tx2)">${[k.quantity,k.time,freqLbl].filter(Boolean).map(v=>esc(v)).join(' × ')}</div>`:''}
           ${doRef?`<div style="font-size:11px;color:var(--p);font-weight:500">関連: ${esc(doRef)}</div>`:''}
         </div>
       </div>
@@ -2932,7 +2935,12 @@ function renderTodos() {
     const gid = 'kdig-' + k.id;
     const isExpanded = foldState[gid] !== false;
     // このKDIに紐づくTODO（kdiRefで管理）
-    const myTodos = p.todos.filter(t => t.kdiRef === k.id);
+    // kdiRefがないTODO（旧データ）も最初のKDIグループに表示
+    const myTodos = p.todos.filter(t => {
+      if (t.kdiRef) return t.kdiRef === k.id;
+      // kdiRefなし旧データ: doRef番号と一致するKDI、またはKDIが1件目に全部表示
+      return i === 0 && !t.kdiRef;
+    });
     const doneCount = myTodos.filter(t => t.status === '完了').length;
     const doingCount = myTodos.filter(t => t.status === '実行中').length;
     const countStr = myTodos.length
