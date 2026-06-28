@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="3.9.6">
+<meta name="app-version" content="3.9.9">
 
 <style>
 /* ── リセット & ベース ── */
@@ -2735,11 +2735,15 @@ function achieveItem(type, id) {
   const p = curP(); if (!p) return;
   const arr = p[type];
   const idx = arr.findIndex(x => x.id === id); if (idx < 0) return;
+  const item = arr[idx];
+  if (!item.achieved) {
+    if (!confirm(`「${item.text||item.kpiName||item.kpi||'この項目'}」を達成にマークしますか？`)) return;
+  }
   arr[idx].achieved = !arr[idx].achieved;
   // 達成済みを末尾に移動
-  const item = arr.splice(idx, 1)[0];
-  if (item.achieved) arr.push(item);
-  else arr.unshift(item);
+  const movedItem = arr.splice(idx, 1)[0];
+  if (movedItem.achieved) arr.push(movedItem);
+  else arr.unshift(movedItem);
   saveDB();
   if (type==='issues') { renderIssues(); updateFoldSummaries(); setTimeout(restoreFoldState,0); }
   if (type==='kpis') { renderKPIs(); setTimeout(restoreFoldState,0); }
@@ -3190,9 +3194,13 @@ function achieveDoItem(type, id) {
   const p = curP(); if (!p) return;
   const arr = p[type]||[];
   const idx = arr.findIndex(x=>x.id===id); if(idx<0) return;
+  const doItem = arr[idx];
+  if (!doItem.achieved) {
+    if (!confirm(`「${doItem.text||'この項目'}」を達成にマークしますか？`)) return;
+  }
   arr[idx].achieved = !arr[idx].achieved;
-  const item = arr.splice(idx,1)[0];
-  if (item.achieved) arr.push(item); else arr.unshift(item);
+  const movedDoItem = arr.splice(idx,1)[0];
+  if (movedDoItem.achieved) arr.push(movedDoItem); else arr.unshift(movedDoItem);
   saveDB(); renderDo(); setTimeout(restoreFoldState,0);
 }
 
@@ -3651,6 +3659,29 @@ function renderCycleHistory() {
         </div>`;
     } else {
       doneKdiEl.innerHTML = '';
+    }
+    // 達成済みKPIフォルダ
+    const doneKpis = p.doneKpis || [];
+    if (doneKpis.length) {
+      const dkpiOpen = tlFolderState['doneKpi'] !== false;
+      doneKdiEl.innerHTML += `
+        <div style="background:var(--surf);border:0.5px solid var(--bd);border-radius:14px;margin-bottom:14px;overflow:hidden">
+          <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;background:linear-gradient(135deg,var(--p3),#eeeaff)" onclick="tlFolderState['doneKpi']=!tlFolderState['doneKpi'];renderCycleHistory()">
+            <span style="font-size:20px">🎯</span>
+            <span style="flex:1;font-size:14px;font-weight:700;color:var(--p)">達成済みKPI（次サイクルから除外）</span>
+            <span style="font-size:12px;color:var(--p);font-weight:600">${doneKpis.length}件</span>
+            <span style="font-size:12px;color:var(--tx3)">${dkpiOpen?'▲':'▼'}</span>
+          </div>
+          ${dkpiOpen?`<div style="padding:10px 14px">
+            ${doneKpis.map(k=>`<div style="border-bottom:0.5px solid var(--bd);padding:8px 0;display:flex;align-items:center;gap:8px">
+              <span style="font-size:20px">🎯</span>
+              <div style="flex:1">
+                <div style="font-size:13px;font-weight:600;color:var(--tx)">${esc(k.kpiName||k.kpi||k.issue||'')}</div>
+                <div style="font-size:11px;color:var(--tx3)">第${k._cycle}サイクル達成 · ${esc(k._doneAt||'')}　目標: ${esc(k.target||'')}${esc(k.unit||'')}</div>
+              </div>
+            </div>`).join('')}
+          </div>`:''}
+        </div>`;
     }
   }
 
@@ -4553,6 +4584,18 @@ function nextCycle() {
     }
   });
   p.kdis = keptKdis;
+
+  // 達成済みKPIをdoneKpisに移動（次サイクルから除外）
+  if (!p.doneKpis) p.doneKpis = [];
+  const keptKpis = [];
+  (p.kpis||[]).forEach(k => {
+    if (k.achieved) {
+      p.doneKpis.push({ ...k, _doneAt: new Date().toLocaleDateString('ja'), _cycle: p.cycle });
+    } else {
+      keptKpis.push(k);
+    }
+  });
+  p.kpis = keptKpis;
 
   // TODOはサイクル完了でも削除しない
   // checkRecords・checkDraftもそのまま引き継ぐ（前回値として使用）
