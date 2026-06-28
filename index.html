@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="4.0.0">
+<meta name="app-version" content="4.0.1">
 
 <style>
 /* ── リセット & ベース ── */
@@ -3627,61 +3627,62 @@ function renderCycleHistory() {
   const desc = document.getElementById('menu-cycle-hist-desc');
   if (desc) desc.textContent = `${history.length}サイクル分の記録`;
 
-  // 完了KDIフォルダ
+  // 達成フォルダをまとめて表示
   const doneKdiEl = document.getElementById('done-kdi-section');
   if (doneKdiEl) {
-    const doneKdis = p.doneKdis || [];
-    if (doneKdis.length) {
-      const [dkOpen, setDkOpen] = [tlFolderState['doneKdi']!==false, v=>{ tlFolderState['doneKdi']=v; renderCycleHistory(); }];
-      doneKdiEl.innerHTML = `
-        <div style="background:var(--surf);border:0.5px solid var(--bd);border-radius:14px;margin-bottom:14px;overflow:hidden">
-          <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;background:linear-gradient(135deg,#E1F5EE,#F0FDF8)" onclick="tlFolderState['doneKdi']=!tlFolderState['doneKdi'];renderCycleHistory()">
-            <span style="font-size:20px">✅</span>
-            <span style="flex:1;font-size:14px;font-weight:700;color:#085041">完了KDI（次サイクルから除外）</span>
-            <span style="font-size:12px;color:var(--teal3);font-weight:600">${doneKdis.length}件</span>
-            <span style="font-size:12px;color:var(--tx3)">${dkOpen?'▲':'▼'}</span>
-          </div>
-          ${dkOpen?`<div style="padding:10px 14px">
-            ${doneKdis.map(k=>{
-              const freqOpt = FREQ_OPTIONS.find(o=>o.value===k.freq&&k.freq!=='')||null;
-              const qxtf = [k.quantity||'',k.time||'',freqOpt?freqOpt.label:''].filter(Boolean).join(' × ');
-              return `<div style="border-bottom:0.5px solid var(--bd);padding:8px 0;display:flex;align-items:center;gap:8px">
-                <span style="font-size:20px">✅</span>
-                <div style="flex:1">
-                  <div style="font-size:13px;font-weight:600;color:var(--tx)">${esc(k.text||'')}</div>
-                  ${qxtf?`<div style="font-size:11px;color:var(--p)">${esc(qxtf)}</div>`:''}
-                  <div style="font-size:10px;color:var(--tx3)">第${k._cycle}サイクル完了 · ${esc(k._doneAt||'')}</div>
-                </div>
-              </div>`;
-            }).join('')}
-          </div>`:''}
-        </div>`;
-    } else {
-      doneKdiEl.innerHTML = '';
-    }
-    // 達成済みKPIフォルダ
-    const doneKpis = p.doneKpis || [];
-    if (doneKpis.length) {
-      const dkpiOpen = tlFolderState['doneKpi'] !== false;
-      doneKdiEl.innerHTML += `
-        <div style="background:var(--surf);border:0.5px solid var(--bd);border-radius:14px;margin-bottom:14px;overflow:hidden">
-          <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;background:linear-gradient(135deg,var(--p3),#eeeaff)" onclick="tlFolderState['doneKpi']=!tlFolderState['doneKpi'];renderCycleHistory()">
-            <span style="font-size:20px">🎯</span>
-            <span style="flex:1;font-size:14px;font-weight:700;color:var(--p)">達成済みKPI（次サイクルから除外）</span>
-            <span style="font-size:12px;color:var(--p);font-weight:600">${doneKpis.length}件</span>
-            <span style="font-size:12px;color:var(--tx3)">${dkpiOpen?'▲':'▼'}</span>
-          </div>
-          ${dkpiOpen?`<div style="padding:10px 14px">
-            ${doneKpis.map(k=>`<div style="border-bottom:0.5px solid var(--bd);padding:8px 0;display:flex;align-items:center;gap:8px">
-              <span style="font-size:20px">🎯</span>
-              <div style="flex:1">
-                <div style="font-size:13px;font-weight:600;color:var(--tx)">${esc(k.kpiName||k.kpi||k.issue||'')}</div>
-                <div style="font-size:11px;color:var(--tx3)">第${k._cycle}サイクル達成 · ${esc(k._doneAt||'')}　目標: ${esc(k.target||'')}${esc(k.unit||'')}</div>
-              </div>
-            </div>`).join('')}
-          </div>`:''}
-        </div>`;
-    }
+    let doneHtml = '';
+    const makeFolder = (key, icon, title, color, items, renderFn) => {
+      if (!items.length) return '';
+      const isOpen = tlFolderState['done_'+key] !== false;
+      return `<div style="background:var(--surf);border:0.5px solid var(--bd);border-radius:14px;margin-bottom:10px;overflow:hidden">
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;background:${color}" onclick="tlFolderState['done_${key}']=!tlFolderState['done_${key}'];renderCycleHistory()">
+          <span style="font-size:20px">${icon}</span>
+          <span style="flex:1;font-size:14px;font-weight:700">${title}</span>
+          <span style="font-size:12px;font-weight:600">${items.length}件</span>
+          <span style="font-size:12px;color:var(--tx3)">${isOpen?'▲':'▼'}</span>
+        </div>
+        ${isOpen?`<div style="padding:10px 14px">${items.map(renderFn).join('')}</div>`:''}
+      </div>`;
+    };
+    const itemRow = (icon, name, sub, cycle, date) =>
+      `<div style="border-bottom:0.5px solid var(--bd);padding:8px 0;display:flex;align-items:flex-start;gap:8px">
+        <span style="font-size:18px;flex-shrink:0">${icon}</span>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600;color:var(--tx)">${esc(name||'')}</div>
+          ${sub?`<div style="font-size:11px;color:var(--p)">${esc(sub)}</div>`:''}
+          <div style="font-size:10px;color:var(--tx3)">第${cycle}サイクル · ${esc(date||'')}</div>
+        </div>
+      </div>`;
+
+    // KDI完了フォルダ
+    doneHtml += makeFolder('kdi','✅','完了KDI','linear-gradient(135deg,#E1F5EE,#F0FDF8)',
+      p.doneKdis||[], k => {
+        const freqOpt = FREQ_OPTIONS.find(o=>o.value===k.freq&&k.freq!=='')||null;
+        const qxtf = [k.quantity||'',k.time||'',freqOpt?freqOpt.label:''].filter(Boolean).join(' × ');
+        return itemRow('✅',k.text,qxtf,k._cycle,k._doneAt);
+      });
+    // KPI達成フォルダ
+    doneHtml += makeFolder('kpi','🎯','達成KPI','linear-gradient(135deg,var(--p3),#eeeaff)',
+      p.doneKpis||[], k => itemRow('🎯',k.kpiName||k.kpi||k.issue,`目標: ${k.target||''}${k.unit||''}`,k._cycle,k._doneAt));
+    // KDI継続型達成フォルダ
+    const doneKdisKeizoku = (p.doneItems||{}).kdis||[];
+    doneHtml += makeFolder('kdi_k','🏆','達成KDI（継続型）','linear-gradient(135deg,#E1F5EE,#E8F5E9)',
+      doneKdisKeizoku, k => {
+        const freqOpt = FREQ_OPTIONS.find(o=>o.value===k.freq&&k.freq!=='')||null;
+        const qxtf = [k.quantity||'',k.time||'',freqOpt?freqOpt.label:''].filter(Boolean).join(' × ');
+        return itemRow('🏆',k.text,qxtf,k._cycle,k._doneAt);
+      });
+    // 課題達成フォルダ
+    doneHtml += makeFolder('issues','💡','達成した課題','linear-gradient(135deg,#FFF8E1,#FFFDE7)',
+      (p.doneItems||{}).issues||[], x => itemRow('💡',x.text,`スコア: ${x.score||0}`,x._cycle,x._doneAt));
+    // 解決案達成フォルダ
+    doneHtml += makeFolder('solutions','🔑','達成した解決案','linear-gradient(135deg,#E3F2FD,#E8EAF6)',
+      (p.doneItems||{}).solutions||[], x => itemRow('🔑',x.text,`スコア: ${x.score||0}`,x._cycle,x._doneAt));
+    // DOアクション達成フォルダ
+    doneHtml += makeFolder('doActions','⚡','達成したDOアクション','linear-gradient(135deg,#FBE9E7,#FFF3E0)',
+      (p.doneItems||{}).doActions||[], x => itemRow('⚡',x.text,`スコア: ${x.score||0}`,x._cycle,x._doneAt));
+
+    doneKdiEl.innerHTML = doneHtml || '';
   }
 
   if (!history.length) {
@@ -4649,6 +4650,30 @@ function nextCycle() {
   });
   p.kpis = keptKpis;
 
+  // 達成済みIssues・Solutions・DOActions・KDI（継続型）をdoneItemsに移動
+  if (!p.doneItems) p.doneItems = { issues:[], solutions:[], doActions:[], kdis:[] };
+  const cycleTag = { _doneAt: new Date().toLocaleDateString('ja'), _cycle: p.cycle };
+
+  p.issues = (p.issues||[]).filter(x => {
+    if (x.achieved) { p.doneItems.issues.push({...x,...cycleTag}); return false; }
+    return true;
+  });
+  p.solutions = (p.solutions||[]).filter(x => {
+    if (x.achieved) { p.doneItems.solutions.push({...x,...cycleTag}); return false; }
+    return true;
+  });
+  p.doActions = (p.doActions||[]).filter(x => {
+    if (x.achieved) { p.doneItems.doActions.push({...x,...cycleTag}); return false; }
+    return true;
+  });
+  // KDIの継続型達成済みも移動（完結型はdoneKdisで管理）
+  p.kdis = (p.kdis||[]).filter(x => {
+    if (x.achieved && (x.kdiType||'継続型')==='継続型') {
+      p.doneItems.kdis.push({...x,...cycleTag}); return false;
+    }
+    return true;
+  });
+
   // TODOはサイクル完了でも削除しない
   // KGI/KPI現在値はそのまま引き継ぐ。KDI実績・振り返り内容はリセット
   const prevKgiCurrent = p.checkDraft?.kgiCurrent || '';
@@ -4663,8 +4688,9 @@ function nextCycle() {
   p.checkRecords = [];
   p.cycle++;
   p.adj = {};
-  saveDB(); renderCA(); renderMenu(); renderHome();
+  saveDB();
   alert(`第${p.cycle}サイクルを開始しました！\n前サイクルの記録はサイクル履歴から確認できます。`);
+  goHome();
 }
 
 /* ══════════════════════════════════════════
