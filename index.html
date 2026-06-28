@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="4.0.7">
+<meta name="app-version" content="4.0.8">
 
 <style>
 /* ── リセット & ベース ── */
@@ -3088,7 +3088,23 @@ function cycleTodo(id) {
 function setTodoStatus(id, status) {
   const p = curP(); if (!p) return;
   const idx = p.todos.findIndex(x => x.id === id); if (idx < 0) return;
-  p.todos[idx].status = status;
+  const t = p.todos[idx];
+
+  if (status === 'カレンダー転記完了') {
+    t.calendarTransferred = true;
+    if (!['完了','保留','中止'].includes(t.status)) t.status = '実行中';
+  } else if (status === 'ルーチンへ転記') {
+    t.routineTransferred = true;
+    if (!['完了','保留','中止'].includes(t.status)) t.status = '実行中';
+    if (!p.routineChecks) p.routineChecks = {};
+    const rkey = 'todo-'+t.id;
+    if (!p.routineChecks[rkey]) {
+      p.routineChecks[rkey] = { id: rkey, type:'todo', name:t.name, weeks:{}, fromTodo:true };
+    }
+  } else {
+    t.status = status;
+  }
+
   saveDB(); renderTodos(); renderMenu(); setTimeout(restoreFoldState,0);
 }
 
@@ -3447,7 +3463,10 @@ function renderTodos() {
               <div class="todo-card-name ${t.status==='完了'?'done-text':''}">${esc(t.name)}</div>
               <span class="tl-type-badge ${(t.todoType||'完結型')==='継続型'?'keizoku':'kanketsu'}">${t.todoType||'完結型'}</span>
             </div>
-            <div class="todo-card-meta">${metaChips||'<span class="todo-meta-chip" style="color:var(--tx3)">期日・担当者なし</span>'}</div>
+            <div class="todo-card-meta">${metaChips||'<span class="todo-meta-chip" style="color:var(--tx3)">期日・担当者なし</span>'}
+            ${t.calendarTransferred?'<span class="todo-meta-chip" style="background:#E3F2FD;color:#1565C0">📅転記済</span>':''}
+            ${t.routineTransferred?'<span class="todo-meta-chip" style="background:var(--teal2);color:var(--teal3)">🔄ルーチン</span>':''}
+          </div>
           </div>
           <button class="todo-edit-btn" onclick="toggleTodoEdit('${efid}')" title="編集">✏</button>
           <button class="todo-del-btn" onclick="delTodo('${t.id}')">削除</button>
@@ -4766,7 +4785,7 @@ function nextCycle() {
 
   // 完了済みTODO（完了・カレンダー転記完了・ルーチンへ転記・中止）をアーカイブ
   if (!p.archivedTodos) p.archivedTodos = [];
-  const DONE_STATUSES = ['カレンダー転記完了','ルーチンへ転記','中止'];
+  const DONE_STATUSES = ['中止']; // 中止のみアーカイブ。完了・転記済・未着手はすべて残す
   const activeTodos = [];
   (p.todos||[]).forEach(t => {
     if (DONE_STATUSES.includes(t.status)) {
@@ -5545,13 +5564,26 @@ function renderTodoList() {
       t.todoType==='継続型' && freqLblT ? `🔄 ${esc(freqLblT)}` :
         (t.date?`📅 ${esc(t.date)}${overdue?' ⚠️':''}`:''),
     ].filter(Boolean).map(c=>`<span class="tl-todo-chip" style="${overdue&&c.includes('📅')?'color:var(--red)':''}">${c}</span>`).join('');
-    const stBtns = TL_ST.map(s=>`
-      <button class="tl-st-btn ${t.status===s?'sel-'+(s==='カレンダー転記完了'?'カレンダー':s==='ルーチンへ転記'?'ルーチン':s):''}"
-        onclick="setTlTodoStatus('${t._pdcaId}','${t.id}','${s}')">${TL_ST_SHORT[s]}</button>`).join('');
+    // 転記フラグを反映したステータスボタン
+    const stBtns = TL_ST.map(s => {
+      let isActive = t.status === s;
+      // 転記済フラグがある場合はそのボタンもアクティブに見せる
+      if (s === 'カレンダー転記完了' && t.calendarTransferred) isActive = true;
+      if (s === 'ルーチンへ転記' && t.routineTransferred) isActive = true;
+      const selClass = isActive ? 'sel-'+(s==='カレンダー転記完了'?'カレンダー':s==='ルーチンへ転記'?'ルーチン':s) : '';
+      return `<button class="tl-st-btn ${selClass}"
+        onclick="setTlTodoStatus('${t._pdcaId}','${t.id}','${s}')">${TL_ST_SHORT[s]}</button>`;
+    }).join('');
+    // 転記バッジ
+    const transferBadges = [
+      t.calendarTransferred ? `<span style="font-size:10px;background:#E3F2FD;color:#1565C0;padding:1px 7px;border-radius:8px;font-weight:700">📅転記済</span>` : '',
+      t.routineTransferred ? `<span style="font-size:10px;background:var(--teal2);color:var(--teal3);padding:1px 7px;border-radius:8px;font-weight:700">🔄ルーチン</span>` : '',
+    ].filter(Boolean).join(' ');
     return `<div class="tl-todo-card${archived?' archived':''}" id="tlt-${t.id}">
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap">
         <span class="tl-todo-pdca-name" style="margin:0">${esc(t._pdcaTitle)}</span>
         ${typeBadge}
+        ${transferBadges}
       </div>
       <div class="tl-todo-name ${archived?'done-text':''}">${esc(t.name)}</div>
       <div class="tl-todo-meta">${chips}</div>
@@ -5619,17 +5651,32 @@ function selectTodoFormType(formId, type, btn) {
 function setTlTodoStatus(pdcaId, todoId, status) {
   const p = DB.pdcas.find(x=>x.id===pdcaId); if (!p) return;
   const t = (p.todos||[]).find(x=>x.id===todoId); if (!t) return;
-  t.status = status;
-  // ルーチンへ転記→ルーチンチェックシートに追加
-  if (status === 'ルーチンへ転記') {
+
+  // 転記済は「実行中」と共存（転記済フラグを別管理）
+  if (status === 'カレンダー転記完了') {
+    t.calendarTransferred = true;
+    // statusが未着手・完了・保留・中止でなければ実行中を維持
+    if (!['完了','保留','中止'].includes(t.status)) {
+      t.status = '実行中'; // 転記済＝実行中として扱う
+    }
+    t.calendarTransferredAt = new Date().toLocaleDateString('ja');
+  } else if (status === 'ルーチンへ転記') {
+    t.routineTransferred = true;
+    if (!['完了','保留','中止'].includes(t.status)) {
+      t.status = '実行中';
+    }
+    // ルーチンチェックシートに追加
     if (!p.routineChecks) p.routineChecks = {};
     const rkey = 'todo-'+todoId;
     if (!p.routineChecks[rkey]) {
-      p.routineChecks[rkey] = {
-        id: rkey, type:'todo', name:t.name, weeks:{}, fromTodo:true
-      };
+      p.routineChecks[rkey] = { id: rkey, type:'todo', name:t.name, weeks:{}, fromTodo:true };
     }
+  } else {
+    // 通常のステータス変更
+    t.status = status;
+    // 実行中に戻した場合も転記フラグは保持（解除は明示的に）
   }
+
   saveDB();
   renderTodoList();
 }
