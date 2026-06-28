@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="4.0.1">
+<meta name="app-version" content="4.0.2">
 
 <style>
 /* ── リセット & ベース ── */
@@ -2127,10 +2127,23 @@ function loadDB() {
           // 現在のDBより古いデータで上書きしない（nextCycle直後などの競合防止）
           let shouldUpdate = true;
           if (DB.pdcas && DB.pdcas.length > 0 && data.pdcas) {
-            // 各PDCAのサイクル数を比較し、ローカルの方が新しければスキップ
+            // ローカルの方が新しいか確認（サイクル数またはTODOステータスで判断）
             const localNewer = DB.pdcas.some(lp => {
               const fp = data.pdcas.find(x => x.id === lp.id);
-              return fp && lp.cycle > fp.cycle;
+              if (!fp) return false;
+              // サイクル数が新しい
+              if (lp.cycle > fp.cycle) return true;
+              // サイクル数が同じでもTODOが実行中/保留/完了状態ならローカル優先
+              if (lp.cycle === fp.cycle) {
+                const localHasProgress = (lp.todos||[]).some(t =>
+                  ['実行中','保留','完了','カレンダー転記完了','ルーチンへ転記','中止'].includes(t.status)
+                );
+                const remoteHasProgress = (fp.todos||[]).some(t =>
+                  ['実行中','保留','完了','カレンダー転記完了','ルーチンへ転記','中止'].includes(t.status)
+                );
+                if (localHasProgress && !remoteHasProgress) return true;
+              }
+              return false;
             });
             if (localNewer) shouldUpdate = false;
           }
@@ -5185,36 +5198,55 @@ function openTaskModal(filter) {
   if (filter === 'achieved') {
     // KGI・KPI・KDIの達成一覧
     let html = '';
+    // フォルダ形式で達成一覧を表示
+    const makeFolderHtml = (icon, title, bg, border, items, renderItem) => {
+      if (!items.length) return '';
+      return `<div style="border:1px solid ${border};border-radius:12px;margin-bottom:10px;overflow:hidden">
+        <div style="background:${bg};padding:10px 14px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px">
+          <span>${icon}</span><span>${title}</span>
+          <span style="margin-left:auto;font-size:11px;color:#888">${items.length}件</span>
+        </div>
+        <div style="padding:8px 12px">${items.map(renderItem).join('')}</div>
+      </div>`;
+    };
+    const rowHtml = (main, sub) =>
+      `<div style="padding:7px 0;border-bottom:0.5px solid #eee;font-size:13px">
+        <div style="font-weight:600">${esc(main||'')}</div>
+        ${sub?`<div style="font-size:11px;color:#888">${esc(sub)}</div>`:''}
+      </div>`;
+
     // KGI
-    if (p.plan?.kgiAchieved) {
-      html += `<div style="border:2px solid #FFB800;border-radius:12px;padding:12px 14px;margin-bottom:8px;background:#FFFBEE">
-        <div style="font-size:11px;font-weight:700;color:#FF9500;margin-bottom:4px">⭐ KGI達成</div>
+    if (p.plan?.kgiAchieved)
+      html += `<div style="border:2px solid #FFB800;border-radius:12px;padding:12px 14px;margin-bottom:10px;background:#FFFBEE">
+        <div style="font-size:11px;font-weight:700;color:#FF9500;margin-bottom:2px">⭐ KGI達成</div>
         <div style="font-size:15px;font-weight:700">${esc(p.plan.goal||'')}</div>
-        <div style="font-size:12px;color:#888">${esc(p.plan.kgiVal||'')}${esc(p.plan.kgiUnit||'')} 達成</div>
+        <div style="font-size:12px;color:#888">目標: ${esc(p.plan.kgiVal||'')}${esc(p.plan.kgiUnit||'')}</div>
       </div>`;
-    }
-    // KPI達成
-    (p.kpis||[]).filter(k=>k.achieved).forEach(k => {
-      html += `<div style="border:1px solid var(--p4);border-radius:12px;padding:12px 14px;margin-bottom:8px;background:var(--p3)">
-        <div style="font-size:11px;font-weight:700;color:var(--p);margin-bottom:4px">KPI達成</div>
-        <div style="font-size:14px;font-weight:600">${esc(k.kpiName||k.kpi||k.issue||'')}</div>
-        <div style="font-size:12px;color:#888">目標: ${esc(k.target||'')}${esc(k.unit||'')}</div>
-      </div>`;
-    });
-    // KDI達成（doneKdis）
-    (p.doneKdis||[]).forEach(k => {
-      html += `<div style="border:1px solid #9FE1CB;border-radius:12px;padding:12px 14px;margin-bottom:8px;background:#E1F5EE">
-        <div style="font-size:11px;font-weight:700;color:var(--teal3);margin-bottom:4px">✅ KDI完了 (第${k._cycle}サイクル)</div>
-        <div style="font-size:14px;font-weight:600">${esc(k.text||'')}</div>
-      </div>`;
-    });
-    // KDI achieved
-    (p.kdis||[]).filter(k=>k.achieved).forEach(k => {
-      html += `<div style="border:1px solid #9FE1CB;border-radius:12px;padding:12px 14px;margin-bottom:8px;background:#E1F5EE">
-        <div style="font-size:11px;font-weight:700;color:var(--teal3);margin-bottom:4px">✅ KDI達成</div>
-        <div style="font-size:14px;font-weight:600">${esc(k.text||'')}</div>
-      </div>`;
-    });
+    // KPI（現在達成中 + 過去達成済み）
+    const allKpi = [...(p.kpis||[]).filter(k=>k.achieved), ...(p.doneKpis||[])];
+    html += makeFolderHtml('🎯','達成KPI','#EDE7F6','#B39DDB', allKpi,
+      k => rowHtml(k.kpiName||k.kpi||k.issue, `目標: ${k.target||''}${k.unit||''}${k._cycle?' 第'+k._cycle+'サイクル':''}`));
+    // KDI完了（完結型）
+    const allKdiDone = [...(p.doneKdis||[])];
+    html += makeFolderHtml('✅','完了KDI（完結型）','#E8F5E9','#A5D6A7', allKdiDone,
+      k => rowHtml(k.text, `第${k._cycle||'?'}サイクル · ${k._doneAt||''}`));
+    // KDI達成（継続型）
+    const allKdiAch = [...(p.kdis||[]).filter(k=>k.achieved), ...((p.doneItems||{}).kdis||[])];
+    html += makeFolderHtml('🏆','達成KDI（継続型）','#E1F5EE','#80CBC4', allKdiAch,
+      k => rowHtml(k.text, k._cycle?`第${k._cycle}サイクル`:''));
+    // 課題
+    const allIssues = [...(p.issues||[]).filter(x=>x.achieved), ...((p.doneItems||{}).issues||[])];
+    html += makeFolderHtml('💡','達成した課題','#FFF8E1','#FFE082', allIssues,
+      x => rowHtml(x.text, x._cycle?`第${x._cycle}サイクル`:`スコア: ${x.score||0}`));
+    // 解決案
+    const allSolutions = [...(p.solutions||[]).filter(x=>x.achieved), ...((p.doneItems||{}).solutions||[])];
+    html += makeFolderHtml('🔑','達成した解決案','#E3F2FD','#90CAF9', allSolutions,
+      x => rowHtml(x.text, x._cycle?`第${x._cycle}サイクル`:`スコア: ${x.score||0}`));
+    // DOアクション
+    const allDo = [...(p.doActions||[]).filter(x=>x.achieved), ...((p.doneItems||{}).doActions||[])];
+    html += makeFolderHtml('⚡','達成したDOアクション','#FBE9E7','#FFAB91', allDo,
+      x => rowHtml(x.text, x._cycle?`第${x._cycle}サイクル`:`スコア: ${x.score||0}`));
+
     body.innerHTML = html || '<div style="text-align:center;padding:32px;color:var(--tx2)">達成した項目がありません</div>';
   } else {
     // TODOフィルタ
