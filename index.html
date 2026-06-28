@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="4.0.3">
+<meta name="app-version" content="4.0.4">
 
 <style>
 /* ── リセット & ベース ── */
@@ -1863,8 +1863,6 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
       <div class="hdr-title">サイクル履歴</div>
     </div>
     <div class="sheet-scroll" style="padding:16px 16px 100px">
-      <!-- 完了KDIフォルダ -->
-      <div id="done-kdi-section"></div>
       <div id="cycle-history-list"></div>
     </div>
   </div>
@@ -2429,10 +2427,31 @@ function renderMenu() {
       ${kpiList.map((k,i)=>{
         const nm = k.kpiName||k.kpi||k.issue;
         const isFirst = i===0;
-        return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:${i<kpiList.length-1?'6':'0'}px">
-          <div style="width:20px;height:20px;border-radius:50%;background:${isFirst?'linear-gradient(135deg,#FFD966,#FF9500)':'#7F77DD'};color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">${isFirst?'⭐':i+1}</div>
-          <div style="flex:1;font-size:13px;font-weight:600;color:var(--tx)">${esc(nm)}</div>
-          ${k.target?`<div style="font-size:12px;color:var(--tx2)">${esc(k.target)}${esc(k.unit||'')}</div>`:''}
+        // 現在値・達成率を計算
+        const curVal = (p.checkDraft?.kpiCurrents||{})[k.id] || k.current || '';
+        const pct = calcAchievePct(k.target, curVal, k.current);
+        const pctCapped = Math.min(Math.max(pct,0),100);
+        const color = pct>=100?'#1D9E75':pct>=50?'var(--p)':'var(--red)';
+        // 最新更新日（checkRecordsから）
+        const latestRec = (p.checkRecords||[]).find(r=>(r.kpiCurrents||{})[k.id]!==undefined);
+        const updDate = latestRec?.date || '';
+        // 期日（KPIに期日があれば、なければPLANの期日）
+        const deadline = k.deadline || p.plan?.deadline || '';
+        return `<div style="margin-bottom:${i<kpiList.length-1?'12':'0'}px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+            <div style="width:20px;height:20px;border-radius:50%;background:${isFirst?'linear-gradient(135deg,#FFD966,#FF9500)':'#7F77DD'};color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">${isFirst?'⭐':i+1}</div>
+            <div style="flex:1;font-size:13px;font-weight:600;color:var(--tx)">${esc(nm)}</div>
+            <div style="font-size:14px;font-weight:800;color:${color}">${pct}%</div>
+          </div>
+          <div style="height:4px;background:#eee;border-radius:2px;overflow:hidden;margin-bottom:4px;margin-left:28px">
+            <div style="height:100%;background:${color};width:${pctCapped}%;border-radius:2px;transition:width .3s"></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;margin-left:28px;font-size:11px;color:var(--tx3);flex-wrap:wrap">
+            ${curVal?`<span>現在値: <b style="color:var(--tx)">${esc(curVal)}${esc(k.unit||'')}</b></span>`:'<span>未入力</span>'}
+            ${k.target?`<span>/ 目標: ${esc(k.target)}${esc(k.unit||'')}</span>`:''}
+            ${deadline?`<span>📅 ${esc(deadline)}</span>`:''}
+            ${updDate?`<span>更新: ${esc(updDate)}</span>`:''}
+          </div>
         </div>`;
       }).join('')}
     </div>`;
@@ -3627,63 +3646,7 @@ function renderCycleHistory() {
   const desc = document.getElementById('menu-cycle-hist-desc');
   if (desc) desc.textContent = `${history.length}サイクル分の記録`;
 
-  // 達成フォルダをまとめて表示
-  const doneKdiEl = document.getElementById('done-kdi-section');
-  if (doneKdiEl) {
-    let doneHtml = '';
-    const makeFolder = (key, icon, title, color, items, renderFn) => {
-      if (!items.length) return '';
-      const isOpen = tlFolderState['done_'+key] !== false;
-      return `<div style="background:var(--surf);border:0.5px solid var(--bd);border-radius:14px;margin-bottom:10px;overflow:hidden">
-        <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;background:${color}" onclick="tlFolderState['done_${key}']=!tlFolderState['done_${key}'];renderCycleHistory()">
-          <span style="font-size:20px">${icon}</span>
-          <span style="flex:1;font-size:14px;font-weight:700">${title}</span>
-          <span style="font-size:12px;font-weight:600">${items.length}件</span>
-          <span style="font-size:12px;color:var(--tx3)">${isOpen?'▲':'▼'}</span>
-        </div>
-        ${isOpen?`<div style="padding:10px 14px">${items.map(renderFn).join('')}</div>`:''}
-      </div>`;
-    };
-    const itemRow = (icon, name, sub, cycle, date) =>
-      `<div style="border-bottom:0.5px solid var(--bd);padding:8px 0;display:flex;align-items:flex-start;gap:8px">
-        <span style="font-size:18px;flex-shrink:0">${icon}</span>
-        <div style="flex:1">
-          <div style="font-size:13px;font-weight:600;color:var(--tx)">${esc(name||'')}</div>
-          ${sub?`<div style="font-size:11px;color:var(--p)">${esc(sub)}</div>`:''}
-          <div style="font-size:10px;color:var(--tx3)">第${cycle}サイクル · ${esc(date||'')}</div>
-        </div>
-      </div>`;
-
-    // KDI完了フォルダ
-    doneHtml += makeFolder('kdi','✅','完了KDI','linear-gradient(135deg,#E1F5EE,#F0FDF8)',
-      p.doneKdis||[], k => {
-        const freqOpt = FREQ_OPTIONS.find(o=>o.value===k.freq&&k.freq!=='')||null;
-        const qxtf = [k.quantity||'',k.time||'',freqOpt?freqOpt.label:''].filter(Boolean).join(' × ');
-        return itemRow('✅',k.text,qxtf,k._cycle,k._doneAt);
-      });
-    // KPI達成フォルダ
-    doneHtml += makeFolder('kpi','🎯','達成KPI','linear-gradient(135deg,var(--p3),#eeeaff)',
-      p.doneKpis||[], k => itemRow('🎯',k.kpiName||k.kpi||k.issue,`目標: ${k.target||''}${k.unit||''}`,k._cycle,k._doneAt));
-    // KDI継続型達成フォルダ
-    const doneKdisKeizoku = (p.doneItems||{}).kdis||[];
-    doneHtml += makeFolder('kdi_k','🏆','達成KDI（継続型）','linear-gradient(135deg,#E1F5EE,#E8F5E9)',
-      doneKdisKeizoku, k => {
-        const freqOpt = FREQ_OPTIONS.find(o=>o.value===k.freq&&k.freq!=='')||null;
-        const qxtf = [k.quantity||'',k.time||'',freqOpt?freqOpt.label:''].filter(Boolean).join(' × ');
-        return itemRow('🏆',k.text,qxtf,k._cycle,k._doneAt);
-      });
-    // 課題達成フォルダ
-    doneHtml += makeFolder('issues','💡','達成した課題','linear-gradient(135deg,#FFF8E1,#FFFDE7)',
-      (p.doneItems||{}).issues||[], x => itemRow('💡',x.text,`スコア: ${x.score||0}`,x._cycle,x._doneAt));
-    // 解決案達成フォルダ
-    doneHtml += makeFolder('solutions','🔑','達成した解決案','linear-gradient(135deg,#E3F2FD,#E8EAF6)',
-      (p.doneItems||{}).solutions||[], x => itemRow('🔑',x.text,`スコア: ${x.score||0}`,x._cycle,x._doneAt));
-    // DOアクション達成フォルダ
-    doneHtml += makeFolder('doActions','⚡','達成したDOアクション','linear-gradient(135deg,#FBE9E7,#FFF3E0)',
-      (p.doneItems||{}).doActions||[], x => itemRow('⚡',x.text,`スコア: ${x.score||0}`,x._cycle,x._doneAt));
-
-    doneKdiEl.innerHTML = doneHtml || '';
-  }
+  // 達成フォルダは削除（達成ボタンのモーダルで確認）
 
   if (!history.length) {
     el.innerHTML = `<div style="font-size:14px;color:var(--tx2);text-align:center;padding:48px 0">
@@ -3775,10 +3738,42 @@ function renderCycleHistory() {
             <div style="font-size:16px;font-weight:800">完了: ${esc(h.completedAt||'')}</div>
           </div>
           <div style="text-align:right">
-            ${kgiPct!==null?`<div style="font-size:22px;font-weight:800">${kgiPct}%</div><div style="font-size:10px;opacity:.7">達成率</div>`:''}
+            ${kgiPct!==null?`<div style="font-size:22px;font-weight:800">${kgiPct}%</div><div style="font-size:10px;opacity:.7">KGI達成率</div>`:''}
           </div>
         </div>
-        <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">
+        <!-- KGI数値変動 -->
+        ${(()=>{
+          const firstRec = records[records.length-1];
+          const lastRec = records[0];
+          if (!lastRec?.kgiCurrent) return '';
+          const unit = pl.kgiUnit||'';
+          const firstVal = firstRec?.kgiCurrent||'';
+          const lastVal = lastRec.kgiCurrent||'';
+          const diff = firstVal && lastVal ? parseFloat(lastVal)-parseFloat(firstVal) : null;
+          return `<div style="background:rgba(255,255,255,.1);border-radius:8px;padding:8px 10px;margin-top:8px">
+            <div style="font-size:10px;opacity:.7;margin-bottom:4px">⭐ KGI変動</div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700">
+              ${firstVal?`<span>${esc(firstVal)}${esc(unit)}</span><span style="opacity:.6">→</span>`:''}
+              <span style="font-size:16px">${esc(lastVal)}${esc(unit)}</span>
+              ${diff!==null&&!isNaN(diff)?`<span style="font-size:12px;color:${diff>=0?'#80FFB8':'#FF8A80'}">${diff>=0?'+':''}${diff}${esc(unit)}</span>`:''}
+              <span style="margin-left:auto;font-size:11px;opacity:.7">目標:${esc(pl.kgiVal||'?')}${esc(unit)}</span>
+            </div>
+          </div>`;
+        })()}
+        <!-- KPI変動 -->
+        ${(()=>{
+          const kpiChanges = (h.kpiSnapshot||[]);
+          if (!kpiChanges.length) return '';
+          return `<div style="background:rgba(255,255,255,.08);border-radius:8px;padding:8px 10px;margin-top:6px">
+            <div style="font-size:10px;opacity:.7;margin-bottom:4px">🎯 KPI</div>
+            ${kpiChanges.map(k=>`<div style="font-size:12px;display:flex;gap:6px;margin-bottom:2px">
+              <span style="opacity:.8">${esc(k.name||'')}</span>
+              <span style="font-weight:700">${esc(k.val||'?')}${esc(k.unit||'')}</span>
+              <span style="opacity:.6;font-size:10px">/ 目標:${esc(k.target||'?')}${esc(k.unit||'')}</span>
+            </div>`).join('')}
+          </div>`;
+        })()}
+        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
           <div style="background:rgba(255,255,255,.12);border-radius:8px;padding:5px 10px;font-size:12px">
             📊 振り返り ${records.length}回
           </div>
@@ -3796,6 +3791,57 @@ function renderCycleHistory() {
           <div style="font-size:11px;font-weight:700;color:var(--tx3);letter-spacing:.8px;margin-bottom:10px">振り返り記録</div>
           ${checkCards}
         `:`<div style="font-size:13px;color:var(--tx3)">振り返り記録なし</div>`}
+        <!-- KDI行動履歴サマリー -->
+        ${(()=>{
+          const kdiSummary = [];
+          records.forEach(r => {
+            (p.kdis||[]).forEach((k,ki) => {
+              const res = (r.kdiResults||{})[k.id];
+              if (!res) return;
+              const isKeepOn = (k.kdiType||'継続型')==='継続型';
+              if (isKeepOn) {
+                const act = parseFloat(res.actual)||0;
+                if (act > 0) {
+                  const existing = kdiSummary.find(s=>s.id===k.id);
+                  if (existing) existing.total += act;
+                  else kdiSummary.push({id:k.id, name:k.text, total:act, num:ki+1});
+                }
+              }
+            });
+          });
+          if (!kdiSummary.length) return '';
+          return `<div style="border-top:0.5px solid var(--bd);padding-top:10px;margin-top:8px">
+            <div style="font-size:11px;font-weight:700;color:var(--teal3);letter-spacing:.8px;margin-bottom:6px">💪 KDI行動履歴</div>
+            ${kdiSummary.map(s=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+              <span style="font-size:11px;color:var(--tx2);flex:1">${esc(s.name)}</span>
+              <span style="font-size:13px;font-weight:700;color:var(--teal3)">${s.total}回</span>
+            </div>`).join('')}
+          </div>`;
+        })()}
+        <!-- このサイクルで達成した項目 -->
+        ${(()=>{
+          const thisCycle = h.cycle;
+          const achieved = [];
+          // KDI完了（このサイクル）
+          (p.doneKdis||[]).filter(k=>k._cycle===thisCycle).forEach(k=>achieved.push({icon:'✅',name:k.text,cat:'KDI完了'}));
+          // KPI達成（このサイクル）
+          (p.doneKpis||[]).filter(k=>k._cycle===thisCycle).forEach(k=>achieved.push({icon:'🎯',name:k.kpiName||k.kpi||k.issue,cat:'KPI達成'}));
+          // doneItems（このサイクル）
+          const di = p.doneItems||{};
+          (di.kdis||[]).filter(k=>k._cycle===thisCycle).forEach(k=>achieved.push({icon:'🏆',name:k.text,cat:'KDI達成'}));
+          (di.issues||[]).filter(x=>x._cycle===thisCycle).forEach(x=>achieved.push({icon:'💡',name:x.text,cat:'課題達成'}));
+          (di.solutions||[]).filter(x=>x._cycle===thisCycle).forEach(x=>achieved.push({icon:'🔑',name:x.text,cat:'解決案達成'}));
+          (di.doActions||[]).filter(x=>x._cycle===thisCycle).forEach(x=>achieved.push({icon:'⚡',name:x.text,cat:'DOアクション達成'}));
+          if (!achieved.length) return '';
+          return `<div style="border-top:0.5px solid var(--bd);padding-top:10px;margin-top:8px">
+            <div style="font-size:11px;font-weight:700;color:#FF9500;letter-spacing:.8px;margin-bottom:6px">🏆 このサイクルの達成項目</div>
+            ${achieved.map(a=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+              <span>${a.icon}</span>
+              <span style="font-size:11px;background:#FFF8E1;color:#FF9500;padding:1px 6px;border-radius:6px;flex-shrink:0">${a.cat}</span>
+              <span style="font-size:12px;color:var(--tx)">${esc(a.name)}</span>
+            </div>`).join('')}
+          </div>`;
+        })()}
         ${adj.mainJudge?`
           <div style="border-top:0.5px solid var(--bd);padding-top:10px;margin-top:4px">
             <div style="font-size:11px;font-weight:700;color:var(--tx3);letter-spacing:.8px;margin-bottom:6px">ADJUST判断</div>
