@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="4.0.6">
+<meta name="app-version" content="4.0.7">
 
 <style>
 /* ── リセット & ベース ── */
@@ -4766,7 +4766,7 @@ function nextCycle() {
 
   // 完了済みTODO（完了・カレンダー転記完了・ルーチンへ転記・中止）をアーカイブ
   if (!p.archivedTodos) p.archivedTodos = [];
-  const DONE_STATUSES = ['完了','カレンダー転記完了','ルーチンへ転記','中止'];
+  const DONE_STATUSES = ['カレンダー転記完了','ルーチンへ転記','中止'];
   const activeTodos = [];
   (p.todos||[]).forEach(t => {
     if (DONE_STATUSES.includes(t.status)) {
