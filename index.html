@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="3.9.9">
+<meta name="app-version" content="4.0.0">
 
 <style>
 /* ── リセット & ベース ── */
@@ -1939,8 +1939,7 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
         <button class="save-btn" id="ca-save-btn" onclick="saveCheckRecord()">振り返りを保存</button>
       </div>
 
-      <!-- 振り返り履歴はサイクル履歴に移動したため非表示 -->
-      <div id="ca-hist-card" style="display:none"><div id="ca-hist"></div></div>
+      <!-- 振り返り履歴はサイクル履歴で確認 -->
 
       <!-- ADJUST -->
       <div class="ca-divider">
@@ -3730,16 +3729,39 @@ function renderCycleHistory() {
           return `<span style="font-size:11px;background:var(--p3);color:var(--p);padding:1px 7px;border-radius:8px;margin:2px">KDI${ki+1} ✓</span>`;
         }
       }).filter(Boolean).join('');
-      return `<div style="border-left:3px solid var(--bd2);padding:8px 0 8px 12px;margin-bottom:10px">
+      const cycleIdx = p.cycleHistory.indexOf(h);
+      return `<div style="border-left:3px solid var(--bd2);padding:8px 0 8px 12px;margin-bottom:10px;position:relative">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
           <span style="font-size:11px;color:var(--tx3)">${esc(r.date||'日付なし')}</span>
           ${'★'.repeat(r.star||0)?`<span style="font-size:11px;color:#FF9500">${'★'.repeat(r.star||0)}</span>`:''}
           ${r.kgiCurrent?`<span style="font-size:12px;font-weight:700;color:var(--p)">${esc(r.kgiCurrent)}${esc(pl.kgiUnit||'')}</span>`:''}
+          ${r._auto?'<span style="font-size:10px;background:#eee;color:#888;padding:1px 5px;border-radius:4px">自動保存</span>':''}
+          <button onclick="editCycleRecord(${cycleIdx},${ri})" style="margin-left:auto;font-size:10px;padding:2px 8px;border:1px solid var(--bd2);border-radius:6px;background:none;cursor:pointer;color:var(--p)">✏ 編集</button>
+        </div>
+        <div id="cycle-edit-${cycleIdx}-${ri}" style="display:none;background:var(--surf2);border-radius:8px;padding:10px;margin-bottom:6px">
+          <label style="font-size:11px;color:var(--tx2)">検証日</label>
+          <input type="date" value="${esc(r.date||'')}" style="width:100%;font-size:13px;margin-bottom:6px" oninput="updateCycleRecord(${cycleIdx},${ri},'date',this.value)">
+          <label style="font-size:11px;color:var(--tx2)">✅ うまくいったこと</label>
+          <textarea style="width:100%;font-size:12px;min-height:44px;margin-bottom:6px" oninput="updateCycleRecord(${cycleIdx},${ri},'good',this.value)">${esc(r.good||'')}</textarea>
+          <label style="font-size:11px;color:var(--tx2)">❌ できなかったこと</label>
+          <textarea style="width:100%;font-size:12px;min-height:44px;margin-bottom:6px" oninput="updateCycleRecord(${cycleIdx},${ri},'bad',this.value)">${esc(r.bad||'')}</textarea>
+          <label style="font-size:11px;color:var(--tx2)">💡 理解したこと・気づき</label>
+          <textarea style="width:100%;font-size:12px;min-height:44px;margin-bottom:6px" oninput="updateCycleRecord(${cycleIdx},${ri},'insight',this.value)">${esc(r.insight||'')}</textarea>
+          <label style="font-size:11px;color:var(--tx2)">🚀 次回行動や変化につなげること</label>
+          <textarea style="width:100%;font-size:12px;min-height:44px;margin-bottom:6px" oninput="updateCycleRecord(${cycleIdx},${ri},'next',this.value)">${esc(r.next||'')}</textarea>
+          <label style="font-size:11px;color:var(--tx2)">📚 インプット・アウトプット</label>
+          <textarea style="width:100%;font-size:12px;min-height:44px;margin-bottom:6px" oninput="updateCycleRecord(${cycleIdx},${ri},'io',this.value)">${esc(r.io||'')}</textarea>
+          <div style="display:flex;gap:8px;margin-top:6px">
+            <button onclick="document.getElementById('cycle-edit-${cycleIdx}-${ri}').style.display='none'" style="flex:1;padding:6px;border:1px solid var(--bd2);border-radius:8px;background:var(--surf);cursor:pointer;font-size:12px">閉じる</button>
+            <button onclick="saveCycleRecord(${cycleIdx},${ri})" style="flex:1;padding:6px;background:var(--p);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700">保存</button>
+          </div>
         </div>
         ${kdiDoneList?`<div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:6px">${kdiDoneList}</div>`:''}
         ${r.good?`<div style="font-size:12px;color:var(--tx2)">✅ ${esc(r.good)}</div>`:''}
+        ${r.bad?`<div style="font-size:12px;color:var(--tx2)">❌ ${esc(r.bad)}</div>`:''}
         ${r.insight?`<div style="font-size:12px;color:var(--tx2)">💡 ${esc(r.insight)}</div>`:''}
         ${r.next?`<div style="font-size:12px;color:var(--p)">🚀 ${esc(r.next)}</div>`:''}
+        ${r.io?`<div style="font-size:12px;color:var(--tx2)">📚 ${esc(r.io)}</div>`:''}
       </div>`;
     }).join('');
 
@@ -4270,9 +4292,11 @@ function deleteCheckRecord(id) {
 }
 
 function renderCheckHist() {
+  // 振り返り履歴はサイクル履歴で確認するため、CHECK画面には表示しない
+  return;
+  // 以下は参照用に残す
   const p = curP(); if (!p) return;
-  if (!p.checkRecords.length) { document.getElementById('ca-hist-card').style.display='none'; return; }
-  document.getElementById('ca-hist-card').style.display = 'block';
+  if (!p.checkRecords.length) { return; }
   document.getElementById('ca-hist').innerHTML = p.checkRecords.slice(0,10).map((r,idx) => {
     const pl = p.plan;
     const prevR = p.checkRecords[idx+1];
@@ -4408,6 +4432,26 @@ function showAchievementBanner(icon, title, sub) {
     </div>`;
   document.body.appendChild(overlay);
   setTimeout(() => overlay.remove(), 5000);
+}
+
+function editCycleRecord(cycleIdx, recIdx) {
+  const editDiv = document.getElementById('cycle-edit-'+cycleIdx+'-'+recIdx);
+  if (editDiv) editDiv.style.display = editDiv.style.display==='none' ? '' : 'none';
+}
+
+function updateCycleRecord(cycleIdx, recIdx, field, val) {
+  const p = curP(); if (!p) return;
+  const h = (p.cycleHistory||[])[cycleIdx]; if (!h) return;
+  const r = (h.checkRecords||[])[recIdx]; if (!r) return;
+  r[field] = val;
+  saveDB();
+}
+
+function saveCycleRecord(cycleIdx, recIdx) {
+  const editDiv = document.getElementById('cycle-edit-'+cycleIdx+'-'+recIdx);
+  if (editDiv) editDiv.style.display = 'none';
+  // 画面を再描画して最新内容を反映
+  renderCycleHistory();
 }
 
 function saveAdj() {
@@ -4548,6 +4592,14 @@ function completePDCA() {
 function nextCycle() {
   const p = curP(); if (!p) return;
   if (!confirm(`第${p.cycle}サイクルを完了して、第${p.cycle+1}サイクルへ進みますか？`)) return;
+  // 未保存の振り返りを自動保存（入力値があれば）
+  const d = p.checkDraft;
+  const hasInput = d.good||d.bad||d.insight||d.next||d.io||d.kgiCurrent||d.star;
+  if (hasInput) {
+    const autoRec = { ...d, id: Date.now()+'', _auto: true };
+    if (!p.checkRecords) p.checkRecords = [];
+    p.checkRecords.unshift(autoRec);
+  }
   // サイクル履歴に振り返り記録を自動保存
   if (!p.cycleHistory) p.cycleHistory = [];
   p.cycleHistory.unshift({
@@ -4598,7 +4650,17 @@ function nextCycle() {
   p.kpis = keptKpis;
 
   // TODOはサイクル完了でも削除しない
-  // checkRecords・checkDraftもそのまま引き継ぐ（前回値として使用）
+  // KGI/KPI現在値はそのまま引き継ぐ。KDI実績・振り返り内容はリセット
+  const prevKgiCurrent = p.checkDraft?.kgiCurrent || '';
+  const prevKpiCurrents = p.checkDraft?.kpiCurrents || {};
+  p.checkDraft = {
+    date:'', good:'', bad:'', insight:'', next:'', io:'', star:0,
+    kgiCurrent: prevKgiCurrent,  // KGI現在値は引き継ぐ
+    kpiCurrents: prevKpiCurrents, // KPI現在値は引き継ぐ
+    kdiResults: {}  // KDI実績はリセット
+  };
+  // 振り返り記録はサイクル履歴に移動済みなので削除
+  p.checkRecords = [];
   p.cycle++;
   p.adj = {};
   saveDB(); renderCA(); renderMenu(); renderHome();
