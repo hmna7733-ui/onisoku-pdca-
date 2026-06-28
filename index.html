@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="3.8.6">
+<meta name="app-version" content="3.8.7">
 
 <style>
 /* ── リセット & ベース ── */
@@ -2132,7 +2132,14 @@ function goHome() {
 
 function goScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
+  const target = document.getElementById(id);
+  if (target) {
+    target.classList.add('active');
+    // 画面切り替え時にスクロールをトップへ
+    const scrollEl = target.querySelector('.sheet-scroll');
+    if (scrollEl) scrollEl.scrollTop = 0;
+    target.scrollTop = 0;
+  }
   if (id === 's-menu') renderMenu();
   if (id === 's-plan') { renderPlan(); }
   if (id === 's-do') { renderDo(); }
