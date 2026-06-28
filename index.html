@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="3.9.4">
+<meta name="app-version" content="3.9.5">
 
 <style>
 /* ── リセット & ベース ── */
@@ -3861,12 +3861,12 @@ function renderCA() {
               </div>
             </div>
           </div>`;
-        inner += k.achieved
-          ? `<div style="background:var(--p);color:#fff;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;margin-top:8px;text-align:center">🏆 KPI達成済！</div>`
-          : `<button onclick="achieveKpi('${k.id}')" style="width:100%;margin-top:8px;padding:7px;background:var(--surf2);color:var(--tx2);border:1px solid var(--bd2);border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">🏆 KPI達成にする</button>`;
+        const kpiAchievePart = k.achieved
+          ? '<div style="background:var(--p);color:#fff;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;margin-top:8px;text-align:center">🏆 KPI達成済！</div>'
+          : '<button class="kpi-achieve-btn" data-kpiid="'+k.id+'" style="width:100%;margin-top:8px;padding:7px;background:var(--surf2);color:var(--tx2);border:1px solid var(--bd2);border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">🏆 KPI達成にする</button>';
         return isFirst
-          ? `<div class="kpi-top-card" data-kpi-id="${k.id}">${inner}</div>`
-          : `<div class="kpi-normal-card" data-kpi-id="${k.id}">${inner}</div>`;
+          ? `<div class="kpi-top-card" data-kpi-id="${k.id}">${inner}${kpiAchievePart}</div>`
+          : `<div class="kpi-normal-card" data-kpi-id="${k.id}">${inner}${kpiAchievePart}</div>`;
       }).join('')
     : '<div style="font-size:13px;color:var(--tx2)">PLANでKPIを設定してください</div>';
 
@@ -4322,6 +4322,15 @@ function achieveKpi(kpiId) {
   saveDB(); renderCA(); renderMenu();
   showAchievementBanner('🎯 KPI達成！', k.kpiName||k.kpi||k.issue||'KPI', 'KPIを達成しました！');
 }
+
+// KPI達成ボタンのイベント委任
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('.kpi-achieve-btn');
+  if (btn) {
+    const kpiId = btn.dataset.kpiid;
+    if (kpiId) achieveKpi(kpiId);
+  }
+});
 
 function achieveKdi(kdiId) {
   const p = curP(); if (!p) return;
