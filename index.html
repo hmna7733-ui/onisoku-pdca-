@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="3.9.5">
+<meta name="app-version" content="3.9.6">
 
 <style>
 /* ── リセット & ベース ── */
@@ -2125,10 +2125,22 @@ function loadDB() {
       if (doc.exists) {
         const data = doc.data();
         if (data && data.pdcas) {
-          Object.assign(DB, data);
-          try { localStorage.setItem(STORE_KEY, JSON.stringify(DB)); } catch(e) {}
-          ensureCategories();
-          renderHome();
+          // 現在のDBより古いデータで上書きしない（nextCycle直後などの競合防止）
+          let shouldUpdate = true;
+          if (DB.pdcas && DB.pdcas.length > 0 && data.pdcas) {
+            // 各PDCAのサイクル数を比較し、ローカルの方が新しければスキップ
+            const localNewer = DB.pdcas.some(lp => {
+              const fp = data.pdcas.find(x => x.id === lp.id);
+              return fp && lp.cycle > fp.cycle;
+            });
+            if (localNewer) shouldUpdate = false;
+          }
+          if (shouldUpdate) {
+            Object.assign(DB, data);
+            try { localStorage.setItem(STORE_KEY, JSON.stringify(DB)); } catch(e) {}
+            ensureCategories();
+            renderHome();
+          }
         }
       }
     }).catch(e => console.error('Firestore load:', e));
