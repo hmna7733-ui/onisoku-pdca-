@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="4.0.9">
+<meta name="app-version" content="4.1.1">
 
 <style>
 /* ── リセット & ベース ── */
@@ -1934,7 +1934,8 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
           <span class="star" onclick="setStar(4)">★</span>
           <span class="star" onclick="setStar(5)">★</span>
         </div>
-        <button class="save-btn" id="ca-save-btn" onclick="saveCheckRecord()">振り返りを保存</button>
+        <!-- 振り返りを保存ボタン削除：サイクル完了時に自動保存 -->
+        <div id="ca-save-btn" style="display:none"></div>
       </div>
 
       <!-- 振り返り履歴はサイクル履歴で確認 -->
@@ -3091,15 +3092,27 @@ function setTodoStatus(id, status) {
   const t = p.todos[idx];
 
   if (status === 'カレンダー転記完了') {
-    t.calendarTransferred = true;
-    if (!['完了','保留','中止'].includes(t.status)) t.status = '実行中';
+    if (t.calendarTransferred) {
+      t.calendarTransferred = false;
+      delete t.calendarTransferredAt;
+      if (!t.routineTransferred && t.status === '実行中') t.status = '未着手';
+    } else {
+      t.calendarTransferred = true;
+      t.calendarTransferredAt = new Date().toLocaleDateString('ja');
+      if (!['完了','保留','中止'].includes(t.status)) t.status = '実行中';
+    }
   } else if (status === 'ルーチンへ転記') {
-    t.routineTransferred = true;
-    if (!['完了','保留','中止'].includes(t.status)) t.status = '実行中';
-    if (!p.routineChecks) p.routineChecks = {};
-    const rkey = 'todo-'+t.id;
-    if (!p.routineChecks[rkey]) {
-      p.routineChecks[rkey] = { id: rkey, type:'todo', name:t.name, weeks:{}, fromTodo:true };
+    if (t.routineTransferred) {
+      t.routineTransferred = false;
+      if (!t.calendarTransferred && t.status === '実行中') t.status = '未着手';
+    } else {
+      t.routineTransferred = true;
+      if (!['完了','保留','中止'].includes(t.status)) t.status = '実行中';
+      if (!p.routineChecks) p.routineChecks = {};
+      const rkey = 'todo-'+t.id;
+      if (!p.routineChecks[rkey]) {
+        p.routineChecks[rkey] = { id: rkey, type:'todo', name:t.name, weeks:{}, fromTodo:true };
+      }
     }
   } else {
     t.status = status;
@@ -4056,8 +4069,7 @@ function renderCA() {
   renderKdiChecks();
   renderCheckHist();
   // 編集モード判定
-  const saveBtn = document.getElementById('ca-save-btn');
-  if (saveBtn) saveBtn.textContent = d._editingId ? '振り返りを更新' : '振り返りを保存';
+  // 振り返り保存ボタンは非表示のため更新不要
 
   const commentEl = document.getElementById('ca-comment');
   if (commentEl) commentEl.value = (p.adj||{}).comment||'';
@@ -5539,13 +5551,17 @@ function renderTodoList() {
   }
 
   // ステータスでグループ分け
-  const ARCHIVED_ST = ['完了','カレンダー転記完了','ルーチンへ転記'];
-  const active  = allTodos.filter(t=>!ARCHIVED_ST.includes(t.status)&&t.status!=='保留'&&t.status!=='中止');
+  // フォルダ分けはstatusではなく転記フラグとstatusの組み合わせで判断
   const done    = allTodos.filter(t=>t.status==='完了');
-  const calendar= allTodos.filter(t=>t.status==='カレンダー転記完了');
-  const routine = allTodos.filter(t=>t.status==='ルーチンへ転記');
-  const hold    = allTodos.filter(t=>t.status==='保留');
+  const calendar= allTodos.filter(t=>t.calendarTransferred);
+  const routine = allTodos.filter(t=>t.routineTransferred && !t.calendarTransferred);
+  const hold    = allTodos.filter(t=>t.status==='保留' && !t.calendarTransferred && !t.routineTransferred);
   const stop    = allTodos.filter(t=>t.status==='中止');
+  // アクティブ：完了・保留・中止・転記済以外
+  const active  = allTodos.filter(t=>
+    t.status!=='完了' && t.status!=='保留' && t.status!=='中止'
+    && !t.calendarTransferred && !t.routineTransferred
+  );
 
   // 期日順ソート
   const sortByDate = arr => [...arr].sort((a,b)=>{
@@ -5615,11 +5631,11 @@ function renderTodoList() {
       if (!active.length) html += '<div style="font-size:13px;color:var(--tx3);text-align:center;padding:16px 0">アクティブなタスクはありません</div>';
     }
     // フォルダ
-    if (done.length)     html += makeFolder('done',    '✅','完了',              done,    true);
-    if (calendar.length) html += makeFolder('calendar','📅','カレンダー転記済', calendar,true);
-    if (routine.length)  html += makeFolder('routine', '🔄','ルーティンチェック転記済', routine, true);
-    if (hold.length)     html += makeFolder('hold',    '⏸','保留',              hold,    true);
-    if (stop.length)     html += makeFolder('stop',    '🚫','中止',              stop,    true);
+    if (done.length)     html += makeFolder('done',    '✅','完了',                done,    false);
+    if (calendar.length) html += makeFolder('calendar','📅','カレンダー転記済',     calendar,false);
+    if (routine.length)  html += makeFolder('routine', '🔄','ルーティンチェック転記済', routine, false);
+    if (hold.length)     html += makeFolder('hold',    '⏸','保留',                hold,    false);
+    if (stop.length)     html += makeFolder('stop',    '🚫','中止',                stop,    true);
   }
   panel.innerHTML = html;
 }
@@ -5654,27 +5670,33 @@ function setTlTodoStatus(pdcaId, todoId, status) {
 
   // 転記済は「実行中」と共存（転記済フラグを別管理）
   if (status === 'カレンダー転記完了') {
-    t.calendarTransferred = true;
-    // statusが未着手・完了・保留・中止でなければ実行中を維持
-    if (!['完了','保留','中止'].includes(t.status)) {
-      t.status = '実行中'; // 転記済＝実行中として扱う
+    if (t.calendarTransferred) {
+      // 既に転記済 → 解除
+      t.calendarTransferred = false;
+      delete t.calendarTransferredAt;
+      // statusを実行中→未着手に戻す（ルーチンも解除済みなら）
+      if (!t.routineTransferred && t.status === '実行中') t.status = '未着手';
+    } else {
+      t.calendarTransferred = true;
+      t.calendarTransferredAt = new Date().toLocaleDateString('ja');
+      if (!['完了','保留','中止'].includes(t.status)) t.status = '実行中';
     }
-    t.calendarTransferredAt = new Date().toLocaleDateString('ja');
   } else if (status === 'ルーチンへ転記') {
-    t.routineTransferred = true;
-    if (!['完了','保留','中止'].includes(t.status)) {
-      t.status = '実行中';
-    }
-    // ルーチンチェックシートに追加
-    if (!p.routineChecks) p.routineChecks = {};
-    const rkey = 'todo-'+todoId;
-    if (!p.routineChecks[rkey]) {
-      p.routineChecks[rkey] = { id: rkey, type:'todo', name:t.name, weeks:{}, fromTodo:true };
+    if (t.routineTransferred) {
+      // 既に転記済 → 解除
+      t.routineTransferred = false;
+      if (!t.calendarTransferred && t.status === '実行中') t.status = '未着手';
+    } else {
+      t.routineTransferred = true;
+      if (!['完了','保留','中止'].includes(t.status)) t.status = '実行中';
+      if (!p.routineChecks) p.routineChecks = {};
+      const rkey = 'todo-'+todoId;
+      if (!p.routineChecks[rkey]) {
+        p.routineChecks[rkey] = { id: rkey, type:'todo', name:t.name, weeks:{}, fromTodo:true };
+      }
     }
   } else {
-    // 通常のステータス変更
     t.status = status;
-    // 実行中に戻した場合も転記フラグは保持（解除は明示的に）
   }
 
   saveDB();
