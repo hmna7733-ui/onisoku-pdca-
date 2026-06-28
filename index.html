@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="4.0.2">
+<meta name="app-version" content="4.0.3">
 
 <style>
 /* ── リセット & ベース ── */
@@ -2125,28 +2125,10 @@ function loadDB() {
         const data = doc.data();
         if (data && data.pdcas) {
           // 現在のDBより古いデータで上書きしない（nextCycle直後などの競合防止）
-          let shouldUpdate = true;
-          if (DB.pdcas && DB.pdcas.length > 0 && data.pdcas) {
-            // ローカルの方が新しいか確認（サイクル数またはTODOステータスで判断）
-            const localNewer = DB.pdcas.some(lp => {
-              const fp = data.pdcas.find(x => x.id === lp.id);
-              if (!fp) return false;
-              // サイクル数が新しい
-              if (lp.cycle > fp.cycle) return true;
-              // サイクル数が同じでもTODOが実行中/保留/完了状態ならローカル優先
-              if (lp.cycle === fp.cycle) {
-                const localHasProgress = (lp.todos||[]).some(t =>
-                  ['実行中','保留','完了','カレンダー転記完了','ルーチンへ転記','中止'].includes(t.status)
-                );
-                const remoteHasProgress = (fp.todos||[]).some(t =>
-                  ['実行中','保留','完了','カレンダー転記完了','ルーチンへ転記','中止'].includes(t.status)
-                );
-                if (localHasProgress && !remoteHasProgress) return true;
-              }
-              return false;
-            });
-            if (localNewer) shouldUpdate = false;
-          }
+          // タイムスタンプで新旧を判定（ローカルの方が新しければFirestoreデータを無視）
+          const localTs = DB._savedAt || 0;
+          const remoteTs = data._savedAt || 0;
+          const shouldUpdate = remoteTs >= localTs;
           if (shouldUpdate) {
             Object.assign(DB, data);
             try { localStorage.setItem(STORE_KEY, JSON.stringify(DB)); } catch(e) {}
@@ -2159,6 +2141,7 @@ function loadDB() {
   }
 }
 function saveDB() {
+  DB._savedAt = Date.now(); // 保存タイムスタンプ
   try { localStorage.setItem(STORE_KEY, JSON.stringify(DB)); } catch(e) {}
   // Firestoreにも保存
   if (currentUser && db_fs) {
@@ -2383,10 +2366,14 @@ function renderMenu() {
   document.getElementById('ms-doing').textContent = p.todos.filter(x => x.status === '実行中').length;
   // 達成数（KGI/KPI/KDI達成済みの合計）
   const achKgi = p.plan?.kgiAchieved ? 1 : 0;
-  const achKpi = (p.kpis||[]).filter(k=>k.achieved).length;
-  const achKdi = (p.kdis||[]).filter(k=>k.achieved).length + (p.doneKdis||[]).length;
+  const achKpi = (p.kpis||[]).filter(k=>k.achieved).length + (p.doneKpis||[]).length;
+  const achKdi = (p.kdis||[]).filter(k=>k.achieved).length + (p.doneKdis||[]).length
+    + ((p.doneItems||{}).kdis||[]).length;
+  const achIssues = (p.issues||[]).filter(x=>x.achieved).length + ((p.doneItems||{}).issues||[]).length;
+  const achSolutions = (p.solutions||[]).filter(x=>x.achieved).length + ((p.doneItems||{}).solutions||[]).length;
+  const achDo = (p.doActions||[]).filter(x=>x.achieved).length + ((p.doneItems||{}).doActions||[]).length;
   const achEl = document.getElementById('ms-achieved');
-  if (achEl) achEl.textContent = achKgi + achKpi + achKdi;
+  if (achEl) achEl.textContent = achKgi + achKpi + achKdi + achIssues + achSolutions + achDo;
   document.getElementById('pause-toggle-btn').textContent = p.paused ? '再開する' : '一時停止';
 
   // ── ゴール大型ヒーローカード ──
@@ -4687,7 +4674,18 @@ function nextCycle() {
     return true;
   });
 
-  // TODOはサイクル完了でも削除しない
+  // 完了済みTODO（完了・カレンダー転記完了・ルーチンへ転記・中止）をアーカイブ
+  if (!p.archivedTodos) p.archivedTodos = [];
+  const DONE_STATUSES = ['完了','カレンダー転記完了','ルーチンへ転記','中止'];
+  const activeTodos = [];
+  (p.todos||[]).forEach(t => {
+    if (DONE_STATUSES.includes(t.status)) {
+      p.archivedTodos.push({...t, _archivedCycle: p.cycle});
+    } else {
+      activeTodos.push(t); // 未着手・実行中・保留はそのまま引き継ぐ
+    }
+  });
+  p.todos = activeTodos;
   // KGI/KPI現在値はそのまま引き継ぐ。KDI実績・振り返り内容はリセット
   const prevKgiCurrent = p.checkDraft?.kgiCurrent || '';
   const prevKpiCurrents = p.checkDraft?.kpiCurrents || {};
