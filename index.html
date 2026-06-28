@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="3.8.8">
+<meta name="app-version" content="3.9.4">
 
 <style>
 /* ── リセット & ベース ── */
@@ -488,6 +488,37 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
   padding:2px 8px;border-radius:20px;
 }
 
+/* ── タスク一覧モーダル ── */
+.task-modal-wrap{
+  position:fixed;inset:0;background:rgba(10,8,25,.6);
+  z-index:250;display:none;align-items:flex-end;justify-content:center;
+  backdrop-filter:blur(4px);
+}
+.task-modal-wrap.open{display:flex}
+.task-modal{
+  background:#fff;border-radius:28px 28px 0 0;
+  padding:0 0 48px;width:100%;max-width:430px;
+  max-height:80vh;overflow-y:auto;
+}
+.task-modal-handle{width:40px;height:5px;border-radius:3px;background:#e0ddf0;margin:14px auto 0}
+.task-modal-head{padding:14px 20px 12px;border-bottom:0.5px solid #eee;position:sticky;top:0;background:#fff;z-index:1}
+.task-modal-title{font-size:17px;font-weight:800;color:#1a1a2e}
+.task-modal-body{padding:12px 16px 0}
+/* 達成祝いバナー */
+.achievement-banner{
+  background:linear-gradient(135deg,#FFB800,#FF7A00);
+  border-radius:16px;padding:20px;margin:12px 0;
+  color:#fff;text-align:center;
+  animation:celebrate .4s ease;
+}
+@keyframes celebrate{
+  0%{transform:scale(.8);opacity:0}
+  60%{transform:scale(1.05)}
+  100%{transform:scale(1);opacity:1}
+}
+.achievement-banner-icon{font-size:48px;margin-bottom:8px}
+.achievement-banner-title{font-size:22px;font-weight:800;margin-bottom:4px}
+.achievement-banner-sub{font-size:13px;opacity:.85}
 /* ── TODOフォルダ ── */
 .tl-folder{
   background:var(--surf);border:0.5px solid var(--bd);
@@ -1430,6 +1461,17 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
   </div>
 </div>
 
+<!-- ════════ タスク一覧モーダル ════════ -->
+<div class="task-modal-wrap" id="task-modal" onclick="closeTaskModal(event)">
+  <div class="task-modal">
+    <div class="task-modal-handle"></div>
+    <div class="task-modal-head">
+      <div class="task-modal-title" id="task-modal-title">タスク一覧</div>
+    </div>
+    <div class="task-modal-body" id="task-modal-body"></div>
+  </div>
+</div>
+
 <!-- ════════ ドラム式頻度ピッカー ════════ -->
 <div class="drum-picker-overlay" id="drum-picker" onclick="drumPickerOutside(event)">
   <div class="drum-picker-sheet">
@@ -1534,10 +1576,11 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
       <div id="menu-goal-hero" style="padding:0 16px;margin-bottom:8px"></div>
       <!-- KGI/KPI/KDIサマリー（PLANの上に表示） -->
       <div id="menu-summary-cards" style="padding:0 16px;margin-bottom:8px"></div>
-      <div class="menu-stats">
-        <div class="menu-stat"><div class="menu-stat-val" id="ms-total">0</div><div class="menu-stat-lbl">タスク総数</div></div>
-        <div class="menu-stat"><div class="menu-stat-val" id="ms-done">0</div><div class="menu-stat-lbl">完了</div></div>
-        <div class="menu-stat"><div class="menu-stat-val" id="ms-doing">0</div><div class="menu-stat-lbl">実行中</div></div>
+      <div class="menu-stats" style="grid-template-columns:repeat(4,1fr)">
+        <div class="menu-stat" onclick="openTaskModal('all')" style="cursor:pointer"><div class="menu-stat-val" id="ms-total">0</div><div class="menu-stat-lbl">総数</div></div>
+        <div class="menu-stat" onclick="openTaskModal('done')" style="cursor:pointer"><div class="menu-stat-val" id="ms-done" style="color:var(--p)">0</div><div class="menu-stat-lbl">完了</div></div>
+        <div class="menu-stat" onclick="openTaskModal('doing')" style="cursor:pointer"><div class="menu-stat-val" id="ms-doing" style="color:var(--teal3)">0</div><div class="menu-stat-lbl">実行中</div></div>
+        <div class="menu-stat" onclick="openTaskModal('achieved')" style="cursor:pointer"><div class="menu-stat-val" id="ms-achieved" style="color:#FF9500">0</div><div class="menu-stat-lbl">達成</div></div>
       </div>
       <div class="menu-btns">
         <button class="menu-btn" onclick="goScreen('s-plan')">
@@ -2314,6 +2357,12 @@ function renderMenu() {
   document.getElementById('ms-total').textContent = p.todos.length;
   document.getElementById('ms-done').textContent = p.todos.filter(x => x.status === '完了').length;
   document.getElementById('ms-doing').textContent = p.todos.filter(x => x.status === '実行中').length;
+  // 達成数（KGI/KPI/KDI達成済みの合計）
+  const achKgi = p.plan?.kgiAchieved ? 1 : 0;
+  const achKpi = (p.kpis||[]).filter(k=>k.achieved).length;
+  const achKdi = (p.kdis||[]).filter(k=>k.achieved).length + (p.doneKdis||[]).length;
+  const achEl = document.getElementById('ms-achieved');
+  if (achEl) achEl.textContent = achKgi + achKpi + achKdi;
   document.getElementById('pause-toggle-btn').textContent = p.paused ? '再開する' : '一時停止';
 
   // ── ゴール大型ヒーローカード ──
@@ -3734,7 +3783,9 @@ function renderCA() {
           </div>
         </div>
         <div class="kgi-prog-bar"><div class="kgi-prog-fill" style="width:${pctCapped}%"></div></div>
+        ${!p.plan.kgiAchieved?`<button onclick="achieveKgi()" style="width:100%;margin-top:8px;padding:8px;background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:10px;font-size:12px;font-weight:700;cursor:pointer">🏆 KGI達成にする</button>`:''}
         <div class="kgi-input-area">
+          ${p.plan.kgiAchieved?'<div style="background:#FFB800;color:#fff;border-radius:8px;padding:6px 12px;font-size:13px;font-weight:700;margin-bottom:8px;text-align:center">🏆 KGI達成済！</div>':''}
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start">
             ${prevKgiVal !== null ? `<div>
               <div class="kgi-input-label" style="color:#888">前回の現在値</div>
@@ -3791,7 +3842,7 @@ function renderCA() {
             </div>
           </div>
           <div style="height:4px;background:#eee;border-radius:2px;overflow:hidden;margin-bottom:12px">
-            <div style="height:100%;background:${color};width:${pctCapped}%;border-radius:2px"></div>
+            <div class="kpi-rate-bar-fill" style="height:100%;background:${color};width:${pctCapped}%;border-radius:2px"></div>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
             ${prevKpiVal !== null ? `<div>
@@ -3810,6 +3861,9 @@ function renderCA() {
               </div>
             </div>
           </div>`;
+        inner += k.achieved
+          ? `<div style="background:var(--p);color:#fff;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;margin-top:8px;text-align:center">🏆 KPI達成済！</div>`
+          : `<button onclick="achieveKpi('${k.id}')" style="width:100%;margin-top:8px;padding:7px;background:var(--surf2);color:var(--tx2);border:1px solid var(--bd2);border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">🏆 KPI達成にする</button>`;
         return isFirst
           ? `<div class="kpi-top-card" data-kpi-id="${k.id}">${inner}</div>`
           : `<div class="kpi-normal-card" data-kpi-id="${k.id}">${inner}</div>`;
@@ -3985,6 +4039,9 @@ function renderKdiChecks() {
 
         if (!isKeepOn) {
           const isDone = res.done === true, isUndone = res.done === false;
+          const achievedBadge = k.achieved
+            ? '<div style="background:var(--teal2);color:var(--teal3);border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;margin-bottom:8px;text-align:center">🏆 KDI達成済！</div>'
+            : '<button class="kdi-achieve-btn" data-id="'+k.id+'" style="width:100%;margin-top:6px;padding:7px;background:var(--surf2);color:var(--tx2);border:1px solid var(--bd2);border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">🏆 KDI達成にする</button>';
           return `<div class="kdi-check-card">
             ${headerHtml}
             <div class="kdi-complete-row">
@@ -3995,6 +4052,7 @@ function renderKdiChecks() {
             </div>
             ${res.done!==undefined?`<textarea placeholder="コメント（任意）" style="width:100%;font-size:12px;padding:6px;min-height:44px;margin-top:8px"
               oninput="setKdiResult('${k.id}','comment',this.value)">${esc(res.comment||'')}</textarea>`:''}
+            ${achievedBadge}
           </div>`;
         }
 
@@ -4057,6 +4115,8 @@ function renderKdiChecks() {
           `:''}
           <textarea placeholder="コメント（任意）" style="width:100%;font-size:12px;padding:6px;min-height:44px;margin-top:8px"
             oninput="setKdiResult('${k.id}','comment',this.value)">${esc(res.comment||'')}</textarea>
+          ${k.achieved?'<div style="background:var(--teal2);color:var(--teal3);border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;margin-top:6px;text-align:center">🏆 KDI達成済！</div>':
+          `<button onclick="achieveKdi('${k.id}')" style="width:100%;margin-top:6px;padding:7px;background:var(--surf2);color:var(--tx2);border:1px solid var(--bd2);border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">🏆 KDI達成にする</button>`}
         </div>`;
       }).join('')}
     </div>`;
@@ -4246,6 +4306,58 @@ function setAdjJudge(id, val) {
   p.adjJudge[id] = val; saveDB();
 }
 
+function achieveKgi() {
+  const p = curP(); if (!p) return;
+  if (!confirm('KGIを達成にマークしますか？')) return;
+  p.plan.kgiAchieved = true;
+  saveDB(); renderCA(); renderMenu();
+  showAchievementBanner('🏆 KGI達成！', p.plan.goal || 'ゴール', 'おめでとうございます！目標を達成しました！');
+}
+
+function achieveKpi(kpiId) {
+  const p = curP(); if (!p) return;
+  const k = (p.kpis||[]).find(x=>x.id===kpiId); if (!k) return;
+  if (!confirm(`「${k.kpiName||k.kpi||k.issue}」を達成にマークしますか？`)) return;
+  k.achieved = true;
+  saveDB(); renderCA(); renderMenu();
+  showAchievementBanner('🎯 KPI達成！', k.kpiName||k.kpi||k.issue||'KPI', 'KPIを達成しました！');
+}
+
+function achieveKdi(kdiId) {
+  const p = curP(); if (!p) return;
+  const k = (p.kdis||[]).find(x=>x.id===kdiId); if (!k) return;
+  if (!confirm(`「${k.text}」を達成にマークしますか？`)) return;
+  k.achieved = true;
+  saveDB(); renderKdiChecks(); renderMenu();
+  showAchievementBanner('✅ KDI達成！', k.text||'KDI', 'この行動目標を達成しました！');
+}
+
+// data属性を使った達成ボタンのクリックイベント（イベント委任）
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('.kdi-achieve-btn');
+  if (btn) {
+    const kdiId = btn.dataset.id;
+    if (kdiId) achieveKdi(kdiId);
+  }
+});
+
+function showAchievementBanner(icon, title, sub) {
+  // 既存バナーを削除
+  document.querySelectorAll('.achievement-banner-overlay').forEach(el => el.remove());
+  const overlay = document.createElement('div');
+  overlay.className = 'achievement-banner-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:400;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.5);backdrop-filter:blur(4px)';
+  overlay.innerHTML = `
+    <div class="achievement-banner" style="max-width:320px;margin:20px">
+      <div class="achievement-banner-icon">${icon}</div>
+      <div class="achievement-banner-title">${esc(title)}</div>
+      <div class="achievement-banner-sub">${esc(sub)}</div>
+      <button onclick="this.closest('.achievement-banner-overlay').remove()" style="margin-top:16px;background:rgba(255,255,255,.3);color:#fff;border:none;border-radius:10px;padding:8px 24px;font-size:14px;font-weight:700;cursor:pointer">閉じる</button>
+    </div>`;
+  document.body.appendChild(overlay);
+  setTimeout(() => overlay.remove(), 5000);
+}
+
 function saveAdj() {
   const p = curP(); if (!p) return;
   if (!p.adj) p.adj = {};
@@ -4369,7 +4481,10 @@ function saveAdjStopReason(val) {
 
 function completePDCA() {
   const p = curP(); if (!p) return;
+  // 1段階目の確認
   if (!confirm(`「${p.title}」を達成・完了としてマークしますか？\n\n完了後も閲覧・編集は引き続き可能です。`)) return;
+  // 2段階目の確認（誤操作防止）
+  if (!confirm(`本当に達成・完了にしますか？\n\nこのPDCAはホーム画面の「達成・完了」エリアに移動します。`)) return;
   p.completed = true;
   p.completedAt = new Date().toLocaleDateString('ja');
   p.paused = false;
@@ -4902,6 +5017,86 @@ function importData(event) {
 /* ══════════════════════════════════════════
    TODOリスト / ルーティンチェック
 ══════════════════════════════════════════ */
+
+/* ══════════════════════════════════════════
+   タスク一覧モーダル
+══════════════════════════════════════════ */
+function openTaskModal(filter) {
+  const p = curP(); if (!p) return;
+  const modal = document.getElementById('task-modal');
+  const title = document.getElementById('task-modal-title');
+  const body = document.getElementById('task-modal-body');
+
+  const labels = {all:'タスク総数', done:'完了タスク', doing:'実行中タスク', achieved:'達成一覧'};
+  title.textContent = labels[filter] || 'タスク一覧';
+
+  if (filter === 'achieved') {
+    // KGI・KPI・KDIの達成一覧
+    let html = '';
+    // KGI
+    if (p.plan?.kgiAchieved) {
+      html += `<div style="border:2px solid #FFB800;border-radius:12px;padding:12px 14px;margin-bottom:8px;background:#FFFBEE">
+        <div style="font-size:11px;font-weight:700;color:#FF9500;margin-bottom:4px">⭐ KGI達成</div>
+        <div style="font-size:15px;font-weight:700">${esc(p.plan.goal||'')}</div>
+        <div style="font-size:12px;color:#888">${esc(p.plan.kgiVal||'')}${esc(p.plan.kgiUnit||'')} 達成</div>
+      </div>`;
+    }
+    // KPI達成
+    (p.kpis||[]).filter(k=>k.achieved).forEach(k => {
+      html += `<div style="border:1px solid var(--p4);border-radius:12px;padding:12px 14px;margin-bottom:8px;background:var(--p3)">
+        <div style="font-size:11px;font-weight:700;color:var(--p);margin-bottom:4px">KPI達成</div>
+        <div style="font-size:14px;font-weight:600">${esc(k.kpiName||k.kpi||k.issue||'')}</div>
+        <div style="font-size:12px;color:#888">目標: ${esc(k.target||'')}${esc(k.unit||'')}</div>
+      </div>`;
+    });
+    // KDI達成（doneKdis）
+    (p.doneKdis||[]).forEach(k => {
+      html += `<div style="border:1px solid #9FE1CB;border-radius:12px;padding:12px 14px;margin-bottom:8px;background:#E1F5EE">
+        <div style="font-size:11px;font-weight:700;color:var(--teal3);margin-bottom:4px">✅ KDI完了 (第${k._cycle}サイクル)</div>
+        <div style="font-size:14px;font-weight:600">${esc(k.text||'')}</div>
+      </div>`;
+    });
+    // KDI achieved
+    (p.kdis||[]).filter(k=>k.achieved).forEach(k => {
+      html += `<div style="border:1px solid #9FE1CB;border-radius:12px;padding:12px 14px;margin-bottom:8px;background:#E1F5EE">
+        <div style="font-size:11px;font-weight:700;color:var(--teal3);margin-bottom:4px">✅ KDI達成</div>
+        <div style="font-size:14px;font-weight:600">${esc(k.text||'')}</div>
+      </div>`;
+    });
+    body.innerHTML = html || '<div style="text-align:center;padding:32px;color:var(--tx2)">達成した項目がありません</div>';
+  } else {
+    // TODOフィルタ
+    const todos = (p.todos||[]).filter(t => {
+      if (filter === 'all') return true;
+      if (filter === 'done') return t.status === '完了';
+      if (filter === 'doing') return t.status === '実行中';
+      return true;
+    });
+    const kdiMap = {};
+    (p.kdis||[]).forEach(k => { kdiMap[k.id] = k.text; });
+    body.innerHTML = todos.length ? todos.map(t => `
+      <div style="border:0.5px solid var(--bd);border-radius:12px;padding:12px 14px;margin-bottom:8px">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+          <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;background:${t.todoType==='継続型'?'var(--teal2)':'var(--amber2)'};color:${t.todoType==='継続型'?'var(--teal3)':'var(--amber3)'}">${t.todoType||'完結型'}</span>
+          <span class="st-badge sel-${t.status||'未着手'}" style="font-size:10px;padding:2px 7px">${t.status||'未着手'}</span>
+        </div>
+        <div style="font-size:14px;font-weight:600;color:var(--tx);${t.status==='完了'?'text-decoration:line-through;color:var(--tx2)':''}">${esc(t.name)}</div>
+        <div style="font-size:11px;color:var(--tx3);margin-top:4px">
+          ${kdiMap[t.kdiRef]?`🎯 ${esc(kdiMap[t.kdiRef])}　`:''}
+          ${t.person?`👤 ${esc(t.person)}　`:''}
+          ${t.date?`📅 ${esc(t.date)}`:''}
+        </div>
+      </div>`) .join('')
+    : '<div style="text-align:center;padding:32px;color:var(--tx2)">該当タスクがありません</div>';
+  }
+
+  modal.classList.add('open');
+}
+
+function closeTaskModal(e) {
+  if (e.target === document.getElementById('task-modal'))
+    document.getElementById('task-modal').classList.remove('open');
+}
 
 let tlCurrentTab = 'todo';
 let rcWeekOffset = 0; // 0=今サイクル, -1=前サイクル, 1=次サイクル
