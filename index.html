@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="3.8.2">
+<meta name="app-version" content="3.8.4">
 
 <style>
 /* ── リセット & ベース ── */
@@ -3735,7 +3735,7 @@ function renderCA() {
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
             <div style="font-size:14px;font-weight:700;color:${isFirst?'#1a1a2e':'var(--tx)'}">${esc(k.kpiName||k.kpi||k.issue||'KPI'+(i+1))}</div>
             <div style="text-align:right">
-              <div style="font-size:22px;font-weight:800;color:${color}">${pct}%</div>
+              <div class="kpi-pct-val" style="font-size:22px;font-weight:800;color:${color}">${pct}%</div>
               <div style="font-size:10px;color:#888">目標: ${esc(k.target||'—')}${esc(unit)}</div>
             </div>
           </div>
@@ -3760,8 +3760,8 @@ function renderCA() {
             </div>
           </div>`;
         return isFirst
-          ? `<div class="kpi-top-card">${inner}</div>`
-          : `<div class="kpi-normal-card">${inner}</div>`;
+          ? `<div class="kpi-top-card" data-kpi-id="${k.id}">${inner}</div>`
+          : `<div class="kpi-normal-card" data-kpi-id="${k.id}">${inner}</div>`;
       }).join('')
     : '<div style="font-size:13px;color:var(--tx2)">PLANでKPIを設定してください</div>';
 
@@ -4056,6 +4056,20 @@ function saveKpiCurrent(kpiId, val) {
   if (!p.checkDraft.kpiCurrents) p.checkDraft.kpiCurrents = {};
   p.checkDraft.kpiCurrents[kpiId] = val;
   saveDB();
+  // KPIカードの達成率・バーをリアルタイム更新
+  const k = (p.kpis||[]).find(kpi => kpi.id === kpiId);
+  if (!k) return;
+  const pct = calcAchievePct(k.target, val, k.current);
+  const pctCapped = Math.min(Math.max(pct,0),100);
+  const color = pct>=100?'#1D9E75':pct>=50?'var(--p)':'var(--red)';
+  // KPIカード内のpct表示とバーを更新
+  // カードはdocument.querySelectorAllで特定する
+  document.querySelectorAll('[data-kpi-id="'+kpiId+'"]').forEach(card => {
+    const pctEl = card.querySelector('.kpi-pct-val');
+    if (pctEl) { pctEl.textContent = pct+'%'; pctEl.style.color = color; }
+    const barEl = card.querySelector('.kpi-rate-bar-fill');
+    if (barEl) { barEl.style.width = pctCapped+'%'; barEl.style.background = color; }
+  });
 }
 
 function setStar(n) {
@@ -4325,9 +4339,8 @@ function nextCycle() {
     adj: JSON.parse(JSON.stringify(p.adj||{})),
   });
   // TODOはサイクル完了でも削除しない
+  // checkRecords・checkDraftもそのまま引き継ぐ（前回値として使用）
   p.cycle++;
-  p.checkRecords = [];
-  p.checkDraft = { date:'', good:'', bad:'', insight:'', next:'', io:'', star:0, kgiCurrent:'', kpiCurrents:{}, kdiResults:{} };
   p.adj = {};
   saveDB(); renderCA(); renderMenu(); renderHome();
   alert(`第${p.cycle}サイクルを開始しました！\n前サイクルの記録はサイクル履歴から確認できます。`);
