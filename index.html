@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="3.8.4">
+<meta name="app-version" content="3.8.6">
 
 <style>
 /* ── リセット & ベース ── */
@@ -1820,6 +1820,8 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
       <div class="hdr-title">サイクル履歴</div>
     </div>
     <div class="sheet-scroll" style="padding:16px 16px 100px">
+      <!-- 完了KDIフォルダ -->
+      <div id="done-kdi-section"></div>
       <div id="cycle-history-list"></div>
     </div>
   </div>
@@ -3542,6 +3544,40 @@ function renderCycleHistory() {
   const desc = document.getElementById('menu-cycle-hist-desc');
   if (desc) desc.textContent = `${history.length}サイクル分の記録`;
 
+  // 完了KDIフォルダ
+  const doneKdiEl = document.getElementById('done-kdi-section');
+  if (doneKdiEl) {
+    const doneKdis = p.doneKdis || [];
+    if (doneKdis.length) {
+      const [dkOpen, setDkOpen] = [tlFolderState['doneKdi']!==false, v=>{ tlFolderState['doneKdi']=v; renderCycleHistory(); }];
+      doneKdiEl.innerHTML = `
+        <div style="background:var(--surf);border:0.5px solid var(--bd);border-radius:14px;margin-bottom:14px;overflow:hidden">
+          <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;background:linear-gradient(135deg,#E1F5EE,#F0FDF8)" onclick="tlFolderState['doneKdi']=!tlFolderState['doneKdi'];renderCycleHistory()">
+            <span style="font-size:20px">✅</span>
+            <span style="flex:1;font-size:14px;font-weight:700;color:#085041">完了KDI（次サイクルから除外）</span>
+            <span style="font-size:12px;color:var(--teal3);font-weight:600">${doneKdis.length}件</span>
+            <span style="font-size:12px;color:var(--tx3)">${dkOpen?'▲':'▼'}</span>
+          </div>
+          ${dkOpen?`<div style="padding:10px 14px">
+            ${doneKdis.map(k=>{
+              const freqOpt = FREQ_OPTIONS.find(o=>o.value===k.freq&&k.freq!=='')||null;
+              const qxtf = [k.quantity||'',k.time||'',freqOpt?freqOpt.label:''].filter(Boolean).join(' × ');
+              return `<div style="border-bottom:0.5px solid var(--bd);padding:8px 0;display:flex;align-items:center;gap:8px">
+                <span style="font-size:20px">✅</span>
+                <div style="flex:1">
+                  <div style="font-size:13px;font-weight:600;color:var(--tx)">${esc(k.text||'')}</div>
+                  ${qxtf?`<div style="font-size:11px;color:var(--p)">${esc(qxtf)}</div>`:''}
+                  <div style="font-size:10px;color:var(--tx3)">第${k._cycle}サイクル完了 · ${esc(k._doneAt||'')}</div>
+                </div>
+              </div>`;
+            }).join('')}
+          </div>`:''}
+        </div>`;
+    } else {
+      doneKdiEl.innerHTML = '';
+    }
+  }
+
   if (!history.length) {
     el.innerHTML = `<div style="font-size:14px;color:var(--tx2);text-align:center;padding:48px 0">
       <div style="font-size:32px;margin-bottom:12px">📋</div>
@@ -4338,6 +4374,35 @@ function nextCycle() {
     checkRecords: JSON.parse(JSON.stringify(p.checkRecords||[])),
     adj: JSON.parse(JSON.stringify(p.adj||{})),
   });
+  // 完結型KDIで「完了」が選択されたものをdoneKdisに移動
+  if (!p.doneKdis) p.doneKdis = [];
+  const lastDraft = p.checkDraft || {};
+  const kdiResults = lastDraft.kdiResults || {};
+  // 最新checkRecordsのkdiResultsも確認
+  const latestRecord = (p.checkRecords||[])[0];
+  const latestKdiResults = latestRecord?.kdiResults || {};
+
+  const keptKdis = [];
+  (p.kdis||[]).forEach((k, i) => {
+    const isKanketsu = (k.kdiType||'継続型') === '完結型';
+    if (!isKanketsu) { keptKdis.push(k); return; }
+    // 完結型でdraftまたは最新記録で「完了」が選択された場合
+    const resDraft = kdiResults[k.id];
+    const resRecord = latestKdiResults[k.id];
+    const isDone = resDraft?.done === true || resRecord?.done === true;
+    if (isDone) {
+      // 完了フォルダへ移動
+      p.doneKdis.push({
+        ...k,
+        _doneAt: new Date().toLocaleDateString('ja'),
+        _cycle: p.cycle
+      });
+    } else {
+      keptKdis.push(k);
+    }
+  });
+  p.kdis = keptKdis;
+
   // TODOはサイクル完了でも削除しない
   // checkRecords・checkDraftもそのまま引き継ぐ（前回値として使用）
   p.cycle++;
@@ -4948,14 +5013,15 @@ function renderTodoList() {
   const panel = document.getElementById('tl-todo-panel');
   if (!panel) return;
 
-  // 全PDCAのTODOを収集
+  // 現在のPDCAのTODOのみ表示（PDCAごとに独立）
+  const p = curP();
   const allTodos = [];
-  DB.pdcas.forEach(p => {
+  if (p) {
     (p.todos||[]).forEach(t => {
       const kdi = (p.kdis||[]).find(k=>k.id===t.kdiRef);
       allTodos.push({ ...t, _pdcaId:p.id, _pdcaTitle:p.title, _kdiName:kdi?kdi.text:'' });
     });
-  });
+  }
 
   // ステータスでグループ分け
   const ARCHIVED_ST = ['完了','カレンダー転記完了','ルーチンへ転記'];
