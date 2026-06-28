@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="3.8.7">
+<meta name="app-version" content="3.8.8">
 
 <style>
 /* ── リセット & ベース ── */
@@ -2125,31 +2125,39 @@ function calcPct(p) {
 ══════════════════════════════════════════ */
 function goHome() {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById('s-home').classList.add('active');
+  const homeEl = document.getElementById('s-home');
+  homeEl.classList.add('active');
   CUR = null;
   renderHome();
+  // ホームのスクロールをトップへ
+  const hEl = homeEl.querySelector('.home-scroll');
+  if (hEl) hEl.scrollTop = 0;
+  window.scrollTo(0, 0);
 }
 
-function goScreen(id) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  const target = document.getElementById(id);
-  if (target) {
-    target.classList.add('active');
-    // 画面切り替え時にスクロールをトップへ
-    const scrollEl = target.querySelector('.sheet-scroll');
-    if (scrollEl) scrollEl.scrollTop = 0;
-    target.scrollTop = 0;
-  }
-  if (id === 's-menu') renderMenu();
-  if (id === 's-plan') { renderPlan(); }
-  if (id === 's-do') { renderDo(); }
-  if (id === 's-ca') { renderCA(); }
-  if (id === 's-cycle-history') { renderCycleHistory(); }
-  if (id === 's-todolist') { renderTodoList(); }
-  if (id === 's-settings') renderSettings();
-  // 画面遷移後に折りたたみ状態を復元
-  setTimeout(restoreFoldState, 50);
-}
+ function goScreen(id) {
+   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+   const target = document.getElementById(id);
+   if (target) {
+     target.classList.add('active');
+     // 画面ごとにスクロール要素が異なるため全パターン対応
+     const SCROLL_CLASSES = ['.sheet-scroll','.home-scroll','.menu-scroll','.settings-scroll','.tl-screen'];
+     SCROLL_CLASSES.forEach(cls => {
+       const el = target.querySelector(cls);
+       if (el) el.scrollTop = 0;
+     });
+     target.scrollTop = 0;
+     window.scrollTo(0, 0);
+   }
+   if (id === 's-menu') renderMenu();
+   if (id === 's-plan') { renderPlan(); }
+   if (id === 's-do') { renderDo(); }
+   if (id === 's-ca') { renderCA(); }
+   if (id === 's-cycle-history') { renderCycleHistory(); }
+   if (id === 's-todolist') { renderTodoList(); }
+   if (id === 's-settings') renderSettings();
+   setTimeout(restoreFoldState, 50);
+ }
 
 /* ══════════════════════════════════════════
    ホーム
