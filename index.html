@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="4.0.5">
+<meta name="app-version" content="4.0.6">
 
 <style>
 /* ── リセット & ベース ── */
@@ -2151,14 +2151,25 @@ function saveDB() {
 function esc(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+
+// KGI現在値を取得する統一関数（checkRecords → checkDraft → pl.curVal の順）
+function getKgiCurrent(p) {
+  const latestRec = (p.checkRecords||[])[0];
+  return latestRec?.kgiCurrent
+    || p.checkDraft?.kgiCurrent
+    || p.plan?.curVal
+    || '';
+}
+function getKgiUpdDate(p) {
+  const latestRec = (p.checkRecords||[])[0];
+  return latestRec?.date || '';
+}
 function curP() { return DB.pdcas.find(p => p.id === CUR) || null; }
 function calcPct(p) {
   // KGI達成率を優先。なければTODO完了率
   const pl = p.plan;
   if (pl && pl.kgiVal) {
-    // 最新CHECKレコードのkgiCurrentを使用
-    const latestCheck = (p.checkRecords||[])[0];
-    const curVal = latestCheck?.kgiCurrent || pl.curVal || '';
+    const curVal = getKgiCurrent(p);
     if (curVal !== '') {
       const pct = calcAchievePct(pl.kgiVal, curVal, pl.curVal);
       return Math.max(0, Math.min(pct, 100));
@@ -2243,10 +2254,9 @@ function renderHome() {
           ${(()=>{
             const pl = p.plan||{};
             if (!pl.kgiVal) return `<span style="font-size:13px;color:var(--tx3)">KGI未設定</span>`;
-            const latestRec = (p.checkRecords||[])[0];
-            const curVal = latestRec?.kgiCurrent || p.checkDraft?.kgiCurrent || '';
+            const curVal = getKgiCurrent(p);
             const unit = pl.kgiUnit||'';
-            const updDate = latestRec?.date || '';
+            const updDate = getKgiUpdDate(p);
             return `<span style="font-size:15px;font-weight:800;color:var(--p)">${esc(curVal||pl.kgiVal)}${esc(unit)}</span>`
               + (curVal && curVal!==pl.kgiVal ? `<span style="font-size:10px;color:var(--tx3)">/ 目標${esc(pl.kgiVal)}${esc(unit)}</span>` : '')
               + (updDate ? `<span style="font-size:10px;color:var(--tx3)">更新:${esc(updDate)}</span>` : '');
@@ -2387,8 +2397,7 @@ function renderMenu() {
   // ── ゴール大型ヒーローカード ──
   const goalHeroEl = document.getElementById('menu-goal-hero');
   if (goalHeroEl && (pl.goal || pl.kgiVal)) {
-    const latestCheck = p.checkRecords && p.checkRecords[0];
-    const curVal = latestCheck?.kgiCurrent || pl.curVal || '';
+    const curVal = getKgiCurrent(p);
     const kgiPct = curVal ? calcAchievePct(pl.kgiVal, curVal, pl.curVal) : 0;
     const pctCapped = Math.min(Math.max(kgiPct,0),100);
     const unit = pl.kgiUnit||pl.curUnit||'';
@@ -3769,26 +3778,30 @@ function renderCycleHistory() {
           const kgiRecs = records.filter(r=>r.kgiCurrent!==undefined&&r.kgiCurrent!=='');
           if (!kgiRecs.length) return '';
           const unit = pl.kgiUnit||pl.curUnit||'';
-          // このサイクルの最初と最後のKGI値
-          const firstVal = kgiRecs[kgiRecs.length-1]?.kgiCurrent||'';
           const lastVal = kgiRecs[0]?.kgiCurrent||'';
+          const firstVal = kgiRecs[kgiRecs.length-1]?.kgiCurrent||'';
           const lastDate = kgiRecs[0]?.date||'';
-          // 前サイクルの最後のKGI値（前サイクルの履歴から）
+          // 前サイクルの最後のKGI値
           const cycleIdx = p.cycleHistory.indexOf(h);
           const prevHistory = p.cycleHistory[cycleIdx+1];
           const prevRecs = (prevHistory?.checkRecords||[]).filter(r=>r.kgiCurrent!==undefined&&r.kgiCurrent!=='');
           const prevLastVal = prevRecs[0]?.kgiCurrent||'';
-          const diffFromPrev = prevLastVal && lastVal ? parseFloat(lastVal)-parseFloat(prevLastVal) : null;
-          const diffInCycle = firstVal && lastVal && firstVal!==lastVal ? parseFloat(lastVal)-parseFloat(firstVal) : null;
+          // 差分計算
+          const diffFromPrev = prevLastVal&&lastVal ? parseFloat(lastVal)-parseFloat(prevLastVal) : null;
+          const diffInCycle = firstVal&&lastVal&&firstVal!==lastVal ? parseFloat(lastVal)-parseFloat(firstVal) : null;
+          const fmtDiff = (d,u) => `<span style="font-size:12px;padding:1px 7px;border-radius:8px;background:rgba(255,255,255,.15);color:${d>=0?'#80FFB8':'#FF8A80'}">${d>=0?'+':''}${d}${esc(u)}</span>`;
           return `<div style="background:rgba(255,255,255,.1);border-radius:8px;padding:8px 10px;margin-top:8px">
-            <div style="font-size:10px;opacity:.7;margin-bottom:4px">⭐ KGI変動</div>
-            <div style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;flex-wrap:wrap">
-              ${prevLastVal?`<span style="opacity:.7;font-size:12px">前サイクル: ${esc(prevLastVal)}${esc(unit)}</span><span style="opacity:.5">→</span>`:''}
-              <span style="font-size:16px">${esc(lastVal)}${esc(unit)}</span>
-              ${diffFromPrev!==null&&!isNaN(diffFromPrev)?`<span style="font-size:12px;padding:1px 7px;border-radius:8px;background:rgba(255,255,255,.15);color:${diffFromPrev>=0?'#80FFB8':'#FF8A80'}">${diffFromPrev>=0?'+':''}${diffFromPrev}${esc(unit)}</span>`:''}
-              <span style="margin-left:auto;font-size:11px;opacity:.6">目標:${esc(pl.kgiVal||'?')}${esc(unit)}</span>
+            <div style="font-size:10px;opacity:.7;margin-bottom:6px">⭐ KGI変動</div>
+            <div style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;flex-wrap:wrap;margin-bottom:4px">
+              ${prevLastVal?`<span style="opacity:.7;font-size:12px">前: ${esc(prevLastVal)}${esc(unit)}</span><span style="opacity:.4">→</span>`:''}
+              <span style="font-size:17px">${esc(lastVal)}${esc(unit)}</span>
+              <span style="margin-left:auto;font-size:11px;opacity:.6">目標: ${esc(pl.kgiVal||'?')}${esc(unit)}</span>
             </div>
-            ${lastDate?`<div style="font-size:10px;opacity:.6;margin-top:3px">更新: ${esc(lastDate)}</div>`:''}
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              ${diffFromPrev!==null&&!isNaN(diffFromPrev)?`<div style="font-size:11px;opacity:.8">前サイクルとの差 ${fmtDiff(diffFromPrev,unit)}</div>`:''}
+              ${diffInCycle!==null&&!isNaN(diffInCycle)?`<div style="font-size:11px;opacity:.8">サイクル内変動 ${fmtDiff(diffInCycle,unit)}</div>`:''}
+            </div>
+            ${lastDate?`<div style="font-size:10px;opacity:.5;margin-top:3px">最終更新: ${esc(lastDate)}</div>`:''}
           </div>`;
         })()}
         <!-- KPI変動 -->
