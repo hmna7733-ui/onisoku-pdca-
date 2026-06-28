@@ -13,7 +13,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="4.0.4">
+<meta name="app-version" content="4.0.5">
 
 <style>
 /* ── リセット & ベース ── */
@@ -2240,7 +2240,17 @@ function renderHome() {
       <div onclick="openPDCA('${p.id}')" style="cursor:pointer;margin-bottom:4px">
         ${p.plan&&p.plan.goal ? `<div style="font-size:13px;color:var(--tx2);margin-bottom:2px">${esc(p.plan.goal)}</div>` : ''}
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-          ${p.plan&&p.plan.kgiVal ? `<span style="font-size:14px;font-weight:700;color:var(--p)">${esc(p.plan.kgiVal)}${esc(p.plan.kgiUnit||'')}</span>` : `<span style="font-size:13px;color:var(--tx3)">KGI未設定</span>`}
+          ${(()=>{
+            const pl = p.plan||{};
+            if (!pl.kgiVal) return `<span style="font-size:13px;color:var(--tx3)">KGI未設定</span>`;
+            const latestRec = (p.checkRecords||[])[0];
+            const curVal = latestRec?.kgiCurrent || p.checkDraft?.kgiCurrent || '';
+            const unit = pl.kgiUnit||'';
+            const updDate = latestRec?.date || '';
+            return `<span style="font-size:15px;font-weight:800;color:var(--p)">${esc(curVal||pl.kgiVal)}${esc(unit)}</span>`
+              + (curVal && curVal!==pl.kgiVal ? `<span style="font-size:10px;color:var(--tx3)">/ 目標${esc(pl.kgiVal)}${esc(unit)}</span>` : '')
+              + (updDate ? `<span style="font-size:10px;color:var(--tx3)">更新:${esc(updDate)}</span>` : '');
+          })()}
           ${p.plan&&p.plan.deadline ? `<span style="font-size:11px;color:var(--tx2)">📅 ${esc(p.plan.deadline)}</span>` : ''}
         </div>
       </div>
@@ -3365,9 +3375,16 @@ function renderTodos() {
   const p = curP(); if (!p) return;
   const kdis = (p.kdis||[]);
 
+  // KDIが0件でも既存TODOは表示する
   if (!kdis.length) {
-    document.getElementById('d-todos').innerHTML =
-      '<div style="font-size:13px;color:var(--tx2);padding:8px 0">KDIを入力するとTODOを追加できます</div>';
+    const orphanTodos = (p.todos||[]).filter(t => !['完了','カレンダー転記完了','ルーチンへ転記','中止'].includes(t.status));
+    if (!orphanTodos.length) {
+      document.getElementById('d-todos').innerHTML =
+        '<div style="font-size:13px;color:var(--tx2);padding:8px 0">KDIを入力するとTODOを追加できます</div>';
+      return;
+    }
+    // KDIなしでTODOだけある場合、まとめて表示
+    document.getElementById('d-todos').innerHTML = renderOrphanTodos(orphanTodos, p);
     return;
   }
 
@@ -3379,11 +3396,16 @@ function renderTodos() {
     const gid = 'kdig-' + k.id;
     const isExpanded = foldState[gid] !== false;
     // このKDIに紐づくTODO（kdiRefで管理）
-    // kdiRefがないTODO（旧データ）も最初のKDIグループに表示
+    // kdiRefなしまたは存在しないKDIに紐づくTODOも最初のグループに表示
+    const allKdiIds = kdis.map(kk=>kk.id);
     const myTodos = p.todos.filter(t => {
-      if (t.kdiRef) return t.kdiRef === k.id;
-      // kdiRefなし旧データ: doRef番号と一致するKDI、またはKDIが1件目に全部表示
-      return i === 0 && !t.kdiRef;
+      if (t.kdiRef) {
+        if (t.kdiRef === k.id) return true;
+        // 参照先KDIが存在しない（doneKdisに移動済み等）→ 最初のグループに
+        if (i === 0 && !allKdiIds.includes(t.kdiRef)) return true;
+        return false;
+      }
+      return i === 0; // kdiRefなしは最初のグループ
     });
     const doneCount = myTodos.filter(t => t.status === '完了').length;
     const doingCount = myTodos.filter(t => t.status === '実行中').length;
@@ -3743,21 +3765,30 @@ function renderCycleHistory() {
         </div>
         <!-- KGI数値変動 -->
         ${(()=>{
-          const firstRec = records[records.length-1];
-          const lastRec = records[0];
-          if (!lastRec?.kgiCurrent) return '';
-          const unit = pl.kgiUnit||'';
-          const firstVal = firstRec?.kgiCurrent||'';
-          const lastVal = lastRec.kgiCurrent||'';
-          const diff = firstVal && lastVal ? parseFloat(lastVal)-parseFloat(firstVal) : null;
+          // 記録は最新順（unshift）なので records[0]が最新、records[最後]が最初
+          const kgiRecs = records.filter(r=>r.kgiCurrent!==undefined&&r.kgiCurrent!=='');
+          if (!kgiRecs.length) return '';
+          const unit = pl.kgiUnit||pl.curUnit||'';
+          // このサイクルの最初と最後のKGI値
+          const firstVal = kgiRecs[kgiRecs.length-1]?.kgiCurrent||'';
+          const lastVal = kgiRecs[0]?.kgiCurrent||'';
+          const lastDate = kgiRecs[0]?.date||'';
+          // 前サイクルの最後のKGI値（前サイクルの履歴から）
+          const cycleIdx = p.cycleHistory.indexOf(h);
+          const prevHistory = p.cycleHistory[cycleIdx+1];
+          const prevRecs = (prevHistory?.checkRecords||[]).filter(r=>r.kgiCurrent!==undefined&&r.kgiCurrent!=='');
+          const prevLastVal = prevRecs[0]?.kgiCurrent||'';
+          const diffFromPrev = prevLastVal && lastVal ? parseFloat(lastVal)-parseFloat(prevLastVal) : null;
+          const diffInCycle = firstVal && lastVal && firstVal!==lastVal ? parseFloat(lastVal)-parseFloat(firstVal) : null;
           return `<div style="background:rgba(255,255,255,.1);border-radius:8px;padding:8px 10px;margin-top:8px">
             <div style="font-size:10px;opacity:.7;margin-bottom:4px">⭐ KGI変動</div>
-            <div style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700">
-              ${firstVal?`<span>${esc(firstVal)}${esc(unit)}</span><span style="opacity:.6">→</span>`:''}
+            <div style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;flex-wrap:wrap">
+              ${prevLastVal?`<span style="opacity:.7;font-size:12px">前サイクル: ${esc(prevLastVal)}${esc(unit)}</span><span style="opacity:.5">→</span>`:''}
               <span style="font-size:16px">${esc(lastVal)}${esc(unit)}</span>
-              ${diff!==null&&!isNaN(diff)?`<span style="font-size:12px;color:${diff>=0?'#80FFB8':'#FF8A80'}">${diff>=0?'+':''}${diff}${esc(unit)}</span>`:''}
-              <span style="margin-left:auto;font-size:11px;opacity:.7">目標:${esc(pl.kgiVal||'?')}${esc(unit)}</span>
+              ${diffFromPrev!==null&&!isNaN(diffFromPrev)?`<span style="font-size:12px;padding:1px 7px;border-radius:8px;background:rgba(255,255,255,.15);color:${diffFromPrev>=0?'#80FFB8':'#FF8A80'}">${diffFromPrev>=0?'+':''}${diffFromPrev}${esc(unit)}</span>`:''}
+              <span style="margin-left:auto;font-size:11px;opacity:.6">目標:${esc(pl.kgiVal||'?')}${esc(unit)}</span>
             </div>
+            ${lastDate?`<div style="font-size:10px;opacity:.6;margin-top:3px">更新: ${esc(lastDate)}</div>`:''}
           </div>`;
         })()}
         <!-- KPI変動 -->
@@ -5324,6 +5355,20 @@ function openTaskModal(filter) {
 function closeTaskModal(e) {
   if (e.target === document.getElementById('task-modal'))
     document.getElementById('task-modal').classList.remove('open');
+}
+
+function renderOrphanTodos(todos, p) {
+  // KDIなし状態でTODOだけ残っている場合の表示
+  const STATUS_OPTS = ['未着手','実行中','完了','保留','中止'];
+  return todos.map(t => {
+    const stBtns = STATUS_OPTS.map(s =>
+      `<button class="todo-status-btn ${t.status===s?'active':''}" onclick="setTodoStatus('${t.id}','${s}')" style="font-size:10px;padding:4px 8px;border-radius:8px;border:1px solid var(--bd);background:${t.status===s?'var(--p)':'var(--surf2)'};color:${t.status===s?'#fff':'var(--tx2)'};cursor:pointer;margin-right:4px">${s}</button>`
+    ).join('');
+    return `<div class="todo-card" style="opacity:${t.status==='完了'?'.5':'1'}">
+      <div class="todo-card-name">${esc(t.name||'')}</div>
+      <div style="margin-top:6px">${stBtns}</div>
+    </div>`;
+  }).join('');
 }
 
 let tlCurrentTab = 'todo';
