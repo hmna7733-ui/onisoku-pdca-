@@ -14,7 +14,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="4.1.6">
+<meta name="app-version" content="4.1.7">
 
 <style>
 /* ── リセット & ベース ── */
@@ -4123,6 +4123,8 @@ const FREQ_OPTIONS = [
   { value:'m1', label:'月1', per3days:0, group:'monthly' },
   { value:'m2', label:'月2', per3days:0, group:'monthly' },
   { value:'w1', label:'週1', per3days:0, group:'weekly_low' },
+  { value:'d3day', label:'3日毎', per3days:1, group:'weekly_low' },
+  { value:'d2day', label:'2日毎', per3days:1, group:'weekly_low' },
   { value:'w2', label:'週2', per3days:1, group:'weekly_high' },
   { value:'w3', label:'週3', per3days:1, group:'weekly_high' },
   { value:'w4', label:'週4', per3days:2, group:'weekly_high' },
