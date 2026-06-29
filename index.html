@@ -14,7 +14,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="4.1.4">
+<meta name="app-version" content="4.1.5">
 
 <style>
 /* ── リセット & ベース ── */
@@ -3926,15 +3926,39 @@ function renderCycleHistory() {
           <!-- 通常表示 -->
           <div id="cycle-adj-view-${cycleIdx}">
             ${adj.mainJudge?`<div style="font-size:13px;font-weight:700;color:${judgeColor}">${judgeIcon} ${adj.mainJudge}</div>`:'<div style="font-size:12px;color:var(--tx3)">未設定</div>'}
+            ${(adj.mainJudge==='改善'||adj.mainJudge==='伸長')&&(adj.adjItems||[]).length?`
+              <div style="margin-top:6px">${(adj.adjItems||[]).map(item=>`
+                <div style="font-size:11px;color:var(--tx2);margin-bottom:4px">
+                  <span style="font-weight:700;color:var(--p)">${esc(item.target)}</span>
+                  ${item.plan?` — ${esc(item.plan)}`:''}
+                  ${item.reason?`<div style="font-size:10px;color:var(--tx3)">理由: ${esc(item.reason)}</div>`:''}
+                </div>`).join('')}
+              </div>`:''}
+            ${adj.mainJudge==='中止'&&adj.stopReason?`<div style="font-size:12px;color:var(--red);margin-top:4px">理由: ${esc(adj.stopReason)}</div>`:''}
             ${adj.comment?`<div style="font-size:12px;color:var(--tx2);margin-top:4px">${esc(adj.comment)}</div>`:''}
           </div>
           <!-- 編集フォーム -->
           <div id="cycle-adj-edit-${cycleIdx}" style="display:none;background:var(--surf2);border-radius:8px;padding:10px;margin-top:6px">
-            <label style="font-size:11px;color:var(--tx2)">判断</label>
+            <label style="font-size:11px;color:var(--tx2);font-weight:700">判断</label>
             <div style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 10px">
               ${['継続','改善','伸長','中止'].map(j=>`<button onclick="setCycleAdjJudge(${cycleIdx},'${j}')" id="cycle-adj-judge-${cycleIdx}-${j}" style="padding:5px 12px;border-radius:8px;border:1.5px solid ${adj.mainJudge===j?'var(--p)':'var(--bd)'};background:${adj.mainJudge===j?'var(--p)':'var(--surf)'};color:${adj.mainJudge===j?'#fff':'var(--tx2)'};font-size:12px;font-weight:700;cursor:pointer">${j}</button>`).join('')}
             </div>
-            <label style="font-size:11px;color:var(--tx2)">コメント</label>
+            <!-- 改善・伸長の場合: adjItems -->
+            <div id="cycle-adj-items-${cycleIdx}">
+              ${(adj.mainJudge==='改善'||adj.mainJudge==='伸長')?(adj.adjItems||[]).map((item,ii)=>`
+                <div style="border:0.5px solid var(--bd);border-radius:8px;padding:8px;margin-bottom:8px;background:var(--surf)">
+                  <div style="font-size:11px;font-weight:700;color:var(--p);margin-bottom:6px">${esc(item.target||'')}の${adj.mainJudge||''}</div>
+                  <label style="font-size:10px;color:var(--tx2)">具体的な${adj.mainJudge||''}案</label>
+                  <textarea style="width:100%;font-size:12px;min-height:48px;padding:5px;border-radius:6px;border:1px solid var(--bd);margin-bottom:6px" oninput="updateCycleAdjItem(${cycleIdx},${ii},'plan',this.value)">${esc(item.plan||'')}</textarea>
+                  <label style="font-size:10px;color:var(--tx2)">理由</label>
+                  <textarea style="width:100%;font-size:12px;min-height:40px;padding:5px;border-radius:6px;border:1px solid var(--bd)" oninput="updateCycleAdjItem(${cycleIdx},${ii},'reason',this.value)">${esc(item.reason||'')}</textarea>
+                </div>`).join('')||`<div style="font-size:11px;color:var(--tx3);margin-bottom:8px">改善・伸長項目なし</div>`:''}
+            </div>
+            <!-- 中止の場合: stopReason -->
+            ${adj.mainJudge==='中止'?`
+            <label style="font-size:11px;color:var(--tx2);font-weight:700">中止理由</label>
+            <textarea style="width:100%;font-size:12px;min-height:56px;margin-top:4px;padding:6px;border-radius:6px;border:1px solid var(--bd);margin-bottom:8px" oninput="updateCycleAdj(${cycleIdx},'stopReason',this.value)">${esc(adj.stopReason||'')}</textarea>`:''}
+            <label style="font-size:11px;color:var(--tx2);font-weight:700">総合コメント</label>
             <textarea id="cycle-adj-comment-${cycleIdx}" style="width:100%;font-size:12px;min-height:56px;margin-top:4px;padding:6px;border-radius:6px;border:1px solid var(--bd)" oninput="updateCycleAdj(${cycleIdx},'comment',this.value)">${esc(adj.comment||'')}</textarea>
             <div style="display:flex;gap:8px;margin-top:8px">
               <button onclick="closeCycleAdjEdit(${cycleIdx})" style="flex:1;padding:6px;border:1px solid var(--bd2);border-radius:8px;background:var(--surf);cursor:pointer;font-size:12px">閉じる</button>
@@ -4595,15 +4619,19 @@ function setCycleAdjJudge(cycleIdx, judge) {
   if (!h.adj) h.adj = {};
   h.adj.mainJudge = judge;
   saveDB();
-  // ボタンのスタイル更新
-  ['継続','改善','伸長','中止'].forEach(j => {
-    const btn = document.getElementById('cycle-adj-judge-'+cycleIdx+'-'+j);
-    if (!btn) return;
-    const sel = j === judge;
-    btn.style.background = sel ? 'var(--p)' : 'var(--surf)';
-    btn.style.color = sel ? '#fff' : 'var(--tx2)';
-    btn.style.borderColor = sel ? 'var(--p)' : 'var(--bd)';
-  });
+  // 判断変更時はフォームを再描画
+  saveCycleAdjEdit(cycleIdx);
+  setTimeout(() => editCycleAdj(cycleIdx), 50);
+}
+
+function updateCycleAdjItem(cycleIdx, itemIdx, field, val) {
+  const p = curP(); if (!p) return;
+  const h = (p.cycleHistory||[])[cycleIdx]; if (!h) return;
+  if (!h.adj) h.adj = {};
+  if (!h.adj.adjItems) h.adj.adjItems = [];
+  if (!h.adj.adjItems[itemIdx]) return;
+  h.adj.adjItems[itemIdx][field] = val;
+  saveDB();
 }
 
 function updateCycleAdj(cycleIdx, field, val) {
