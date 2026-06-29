@@ -14,7 +14,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="4.1.2">
+<meta name="app-version" content="4.1.3">
 
 <style>
 /* ── リセット & ベース ── */
@@ -3919,13 +3919,30 @@ function renderCycleHistory() {
             </div>`).join('')}
           </div>`;
         })()}
-        ${adj.mainJudge?`
-          <div style="border-top:0.5px solid var(--bd);padding-top:10px;margin-top:4px">
-            <div style="font-size:11px;font-weight:700;color:var(--tx3);letter-spacing:.8px;margin-bottom:6px">ADJUST判断</div>
-            <div style="font-size:13px;font-weight:700;color:${judgeColor}">${judgeIcon} ${adj.mainJudge}</div>
+        <div style="border-top:0.5px solid var(--bd);padding-top:10px;margin-top:8px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+            <div style="font-size:11px;font-weight:700;color:var(--tx3);letter-spacing:.8px">ADJUST判断</div>
+            <button onclick="editCycleAdj(${cycleIdx})" style="margin-left:auto;font-size:10px;padding:2px 8px;border:1px solid var(--bd2);border-radius:6px;background:none;cursor:pointer;color:var(--p)">✏ 編集</button>
+          </div>
+          <!-- 通常表示 -->
+          <div id="cycle-adj-view-${cycleIdx}">
+            ${adj.mainJudge?`<div style="font-size:13px;font-weight:700;color:${judgeColor}">${judgeIcon} ${adj.mainJudge}</div>`:'<div style="font-size:12px;color:var(--tx3)">未設定</div>'}
             ${adj.comment?`<div style="font-size:12px;color:var(--tx2);margin-top:4px">${esc(adj.comment)}</div>`:''}
           </div>
-        `:''}
+          <!-- 編集フォーム -->
+          <div id="cycle-adj-edit-${cycleIdx}" style="display:none;background:var(--surf2);border-radius:8px;padding:10px;margin-top:6px">
+            <label style="font-size:11px;color:var(--tx2)">判断</label>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 10px">
+              ${['継続','改善','伸長','中止'].map(j=>`<button onclick="setCycleAdjJudge(${cycleIdx},'${j}')" id="cycle-adj-judge-${cycleIdx}-${j}" style="padding:5px 12px;border-radius:8px;border:1.5px solid ${adj.mainJudge===j?'var(--p)':'var(--bd)'};background:${adj.mainJudge===j?'var(--p)':'var(--surf)'};color:${adj.mainJudge===j?'#fff':'var(--tx2)'};font-size:12px;font-weight:700;cursor:pointer">${j}</button>`).join('')}
+            </div>
+            <label style="font-size:11px;color:var(--tx2)">コメント</label>
+            <textarea id="cycle-adj-comment-${cycleIdx}" style="width:100%;font-size:12px;min-height:56px;margin-top:4px;padding:6px;border-radius:6px;border:1px solid var(--bd)" oninput="updateCycleAdj(${cycleIdx},'comment',this.value)">${esc(adj.comment||'')}</textarea>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <button onclick="closeCycleAdjEdit(${cycleIdx})" style="flex:1;padding:6px;border:1px solid var(--bd2);border-radius:8px;background:var(--surf);cursor:pointer;font-size:12px">閉じる</button>
+              <button onclick="saveCycleAdjEdit(${cycleIdx})" style="flex:1;padding:6px;background:var(--p);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700">保存</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>`;
   }).join('');
@@ -4555,6 +4572,52 @@ function showAchievementBanner(icon, title, sub) {
     </div>`;
   document.body.appendChild(overlay);
   setTimeout(() => overlay.remove(), 5000);
+}
+
+function editCycleAdj(cycleIdx) {
+  const view = document.getElementById('cycle-adj-view-'+cycleIdx);
+  const edit = document.getElementById('cycle-adj-edit-'+cycleIdx);
+  if (!view||!edit) return;
+  view.style.display = 'none';
+  edit.style.display = '';
+}
+
+function closeCycleAdjEdit(cycleIdx) {
+  const view = document.getElementById('cycle-adj-view-'+cycleIdx);
+  const edit = document.getElementById('cycle-adj-edit-'+cycleIdx);
+  if (!view||!edit) return;
+  view.style.display = '';
+  edit.style.display = 'none';
+}
+
+function setCycleAdjJudge(cycleIdx, judge) {
+  const p = curP(); if (!p) return;
+  const h = (p.cycleHistory||[])[cycleIdx]; if (!h) return;
+  if (!h.adj) h.adj = {};
+  h.adj.mainJudge = judge;
+  saveDB();
+  // ボタンのスタイル更新
+  ['継続','改善','伸長','中止'].forEach(j => {
+    const btn = document.getElementById('cycle-adj-judge-'+cycleIdx+'-'+j);
+    if (!btn) return;
+    const sel = j === judge;
+    btn.style.background = sel ? 'var(--p)' : 'var(--surf)';
+    btn.style.color = sel ? '#fff' : 'var(--tx2)';
+    btn.style.borderColor = sel ? 'var(--p)' : 'var(--bd)';
+  });
+}
+
+function updateCycleAdj(cycleIdx, field, val) {
+  const p = curP(); if (!p) return;
+  const h = (p.cycleHistory||[])[cycleIdx]; if (!h) return;
+  if (!h.adj) h.adj = {};
+  h.adj[field] = val;
+  saveDB();
+}
+
+function saveCycleAdjEdit(cycleIdx) {
+  closeCycleAdjEdit(cycleIdx);
+  renderCycleHistory();
 }
 
 function editCycleRecord(cycleIdx, recIdx) {
