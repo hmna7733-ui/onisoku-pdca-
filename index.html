@@ -14,7 +14,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="4.1.3">
+<meta name="app-version" content="4.1.4">
 
 <style>
 /* ── リセット & ベース ── */
@@ -3720,7 +3720,7 @@ function renderCycleHistory() {
     return;
   }
 
-  el.innerHTML = history.map(h => {
+  el.innerHTML = history.map((h, cycleIdx) => {
     const records = h.checkRecords || [];
     const adj = h.adj || {};
     const judgeColor = {'継続':'var(--teal3)','改善':'var(--amber3)','伸長':'var(--p)','中止':'var(--red)'}[adj.mainJudge]||'var(--tx2)';
@@ -3757,7 +3757,6 @@ function renderCycleHistory() {
           return `<span style="font-size:11px;background:var(--p3);color:var(--p);padding:1px 7px;border-radius:8px;margin:2px">KDI${ki+1} ✓</span>`;
         }
       }).filter(Boolean).join('');
-      const cycleIdx = p.cycleHistory.indexOf(h);
       return `<div style="border-left:3px solid var(--bd2);padding:8px 0 8px 12px;margin-bottom:10px;position:relative">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
           <span style="font-size:11px;color:var(--tx3)">${esc(r.date||'日付なし')}</span>

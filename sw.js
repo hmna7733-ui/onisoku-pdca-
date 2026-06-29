@@ -1,4 +1,4 @@
-const CACHE_NAME = 'onisoku-pdca-v4.1.3';
+const CACHE_NAME = 'onisoku-pdca-v4.1.4';
 const ASSETS = [
   './',
   './index.html',
