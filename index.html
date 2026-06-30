@@ -14,7 +14,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="4.2.0">
+<meta name="app-version" content="4.2.1">
 
 <style>
 /* ── リセット & ベース ── */
@@ -3705,23 +3705,37 @@ function calcCycleDiff(currentSnap, prevSnap) {
   if (!currentSnap) return result;
   const prev = prevSnap || { issues:[],kpis:[],solutions:[],doActions:[],kdis:[],todos:[] };
 
-  // テキスト系（issues, solutions, doActions, kdis, todos）
-  const textCats = [
-    ['issues','text'], ['solutions','text'], ['doActions','text'], ['kdis','text'], ['todos','name']
-  ];
-  textCats.forEach(([cat, field]) => {
+  // テキスト＋スコア/量/時間/頻度の変更を検出する汎用処理
+  const checkFields = {
+    issues:     { text:'text', extra:[['score','スコア']] },
+    solutions:  { text:'text', extra:[['score','スコア']] },
+    doActions:  { text:'text', extra:[['score','スコア']] },
+    kdis:       { text:'text', extra:[['quantity','量'],['time','時間'],['freq','頻度']] },
+    todos:      { text:'name', extra:[['person','担当者'],['date','期日']] },
+  };
+
+  Object.keys(checkFields).forEach(cat => {
+    const { text: field, extra } = checkFields[cat];
     const curItems = currentSnap[cat]||[];
     const prevItems = prev[cat]||[];
     curItems.forEach(item => {
       if (!item.id) return;
       const prevItem = prevItems.find(p=>p.id===item.id);
       if (!prevItem) {
-        // 新規追加
         result[cat].push({ type:'new', item });
-      } else if (prevItem[field] !== item[field] && item[field]) {
-        // テキスト変更
+        return;
+      }
+      // テキスト変更
+      if (prevItem[field] !== item[field] && item[field]) {
         result[cat].push({ type:'changed', item, oldText: prevItem[field], newText: item[field] });
       }
+      // 追加フィールド（スコア・量・時間・頻度など）の変更
+      extra.forEach(([f, label]) => {
+        const oldV = prevItem[f], newV = item[f];
+        if (oldV !== newV && (newV!==undefined && newV!=='')) {
+          result[cat].push({ type:'field_changed', item, fieldLabel:label, oldText:oldV, newText:newV });
+        }
+      });
     });
   });
 
@@ -3752,7 +3766,7 @@ function renderCycleHistory() {
   const p = curP(); if (!p) return;
   const el = document.getElementById('cycle-history-list');
   if (!el) return;
-  const pl = p.plan;
+  const pl = p.plan; // メニュー画面用（最新値）
   const history = (p.cycleHistory||[]);
 
   // メニューの説明文も更新
@@ -3772,13 +3786,15 @@ function renderCycleHistory() {
   el.innerHTML = history.map((h, cycleIdx) => {
     const records = h.checkRecords || [];
     const adj = h.adj || {};
+    // このサイクル時点のPLAN設定を使う（最新のp.planではなく）
+    const cyclePl = (h.snapshot && h.snapshot.plan) ? h.snapshot.plan : pl;
     const judgeColor = {'継続':'var(--teal3)','改善':'var(--amber3)','伸長':'var(--p)','中止':'var(--red)'}[adj.mainJudge]||'var(--tx2)';
     const judgeIcon = {'継続':'⏸','改善':'🔧','伸長':'📈','中止':'⏹'}[adj.mainJudge]||'';
 
     // KGI最終値（最後のcheck recordから）
     const lastRec = records[0];
     const kgiVal = lastRec?.kgiCurrent || '';
-    const kgiPct = kgiVal ? calcAchievePct(pl.kgiVal, kgiVal, pl.curVal) : null;
+    const kgiPct = kgiVal ? calcAchievePct(cyclePl.kgiVal, kgiVal, cyclePl.curVal) : null;
 
     // 総行動数集計
     let totalActions = 0;
@@ -3810,7 +3826,7 @@ function renderCycleHistory() {
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
           <span style="font-size:11px;color:var(--tx3)">${esc(r.date||'日付なし')}</span>
           ${'★'.repeat(r.star||0)?`<span style="font-size:11px;color:#FF9500">${'★'.repeat(r.star||0)}</span>`:''}
-          ${r.kgiCurrent?`<span style="font-size:12px;font-weight:700;color:var(--p)">${esc(r.kgiCurrent)}${esc(pl.kgiUnit||'')}</span>`:''}
+          ${r.kgiCurrent?`<span style="font-size:12px;font-weight:700;color:var(--p)">${esc(r.kgiCurrent)}${esc(cyclePl.kgiUnit||'')}</span>`:''}
           ${r._auto?'<span style="font-size:10px;background:#eee;color:#888;padding:1px 5px;border-radius:4px">自動保存</span>':''}
           <button onclick="editCycleRecord(${cycleIdx},${ri})" style="margin-left:auto;font-size:10px;padding:2px 8px;border:1px solid var(--bd2);border-radius:6px;background:none;cursor:pointer;color:var(--p)">✏ 編集</button>
         </div>
@@ -3858,7 +3874,7 @@ function renderCycleHistory() {
           // 記録は最新順（unshift）なので records[0]が最新、records[最後]が最初
           const kgiRecs = records.filter(r=>r.kgiCurrent!==undefined&&r.kgiCurrent!=='');
           if (!kgiRecs.length) return '';
-          const unit = pl.kgiUnit||pl.curUnit||'';
+          const unit = cyclePl.kgiUnit||cyclePl.curUnit||'';
           const lastVal = kgiRecs[0]?.kgiCurrent||'';
           const firstVal = kgiRecs[kgiRecs.length-1]?.kgiCurrent||'';
           const lastDate = kgiRecs[0]?.date||'';
@@ -3876,7 +3892,7 @@ function renderCycleHistory() {
             <div style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;flex-wrap:wrap;margin-bottom:4px">
               ${prevLastVal?`<span style="opacity:.7;font-size:12px">前: ${esc(prevLastVal)}${esc(unit)}</span><span style="opacity:.4">→</span>`:''}
               <span style="font-size:17px">${esc(lastVal)}${esc(unit)}</span>
-              <span style="margin-left:auto;font-size:11px;opacity:.6">目標: ${esc(pl.kgiVal||'?')}${esc(unit)}</span>
+              <span style="margin-left:auto;font-size:11px;opacity:.6">目標: ${esc(cyclePl.kgiVal||'?')}${esc(unit)}</span>
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
               ${diffFromPrev!==null&&!isNaN(diffFromPrev)?`<div style="font-size:11px;opacity:.8">前サイクルとの差 ${fmtDiff(diffFromPrev,unit)}</div>`:''}
@@ -3975,6 +3991,13 @@ function renderCycleHistory() {
                   <span style="opacity:.5">→</span>
                   <span style="font-size:12px;color:#333;font-weight:600">${esc(d.newText||'')}${esc(d.unit||'')}</span>
                 </div>`;
+              } else if (d.type === 'field_changed') {
+                return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;flex-wrap:wrap">
+                  <span style="font-size:10px;background:#fff;color:#888;padding:1px 6px;border-radius:6px;flex-shrink:0">${CAT_ICONS[cat]} ${esc(text)}</span>
+                  <span style="font-size:11px;color:#aaa">${esc(d.fieldLabel)}: ${esc(d.oldText||'未設定')}</span>
+                  <span style="opacity:.5">→</span>
+                  <span style="font-size:12px;color:#333;font-weight:600">${esc(d.newText||'')}</span>
+                </div>`;
               }
               return '';
             }).join('');
@@ -4068,34 +4091,34 @@ function renderCA() {
 
   // ── KGI単独ヒーローカード ──
   const kgiWrap = document.getElementById('ca-kgi-wrap');
-  if (pl.goal || pl.kgiVal) {
+  if (cyclePl.goal || cyclePl.kgiVal) {
     const prevRecord = (p.checkRecords||[])[0];
     const prevKgiVal = prevRecord?.kgiCurrent ?? null;
     // 今回値: draftに入力済み→その値, 未入力で前回記録あり→前回値をデフォルト
     const draftKgiVal = p.checkDraft.kgiCurrent;
     const defaultKgiVal = draftKgiVal !== undefined && draftKgiVal !== ''
       ? draftKgiVal
-      : (prevKgiVal !== null ? prevKgiVal : (pl.curVal||''));
+      : (prevKgiVal !== null ? prevKgiVal : (cyclePl.curVal||''));
     const curKgiVal = defaultKgiVal;
     // draftに初期値をセット（初回のみ）
     if ((p.checkDraft.kgiCurrent === undefined || p.checkDraft.kgiCurrent === '') && prevKgiVal !== null) {
       p.checkDraft.kgiCurrent = prevKgiVal;
     }
-    const pct = calcAchievePct(pl.kgiVal, curKgiVal, pl.curVal);
+    const pct = calcAchievePct(cyclePl.kgiVal, curKgiVal, cyclePl.curVal);
     const pctCapped = Math.min(Math.max(pct,0), 100);
     const prevDiff = prevKgiVal !== null && curKgiVal !== ''
       ? (parseFloat(curKgiVal) - parseFloat(prevKgiVal)) : null;
     const diffStr = prevDiff !== null && !isNaN(prevDiff)
-      ? `${prevDiff>=0?'+':''}${prevDiff}${pl.kgiUnit||''}` : '';
-    const unit = pl.kgiUnit||pl.curUnit||'';
+      ? `${prevDiff>=0?'+':''}${prevDiff}${cyclePl.kgiUnit||''}` : '';
+    const unit = cyclePl.kgiUnit||cyclePl.curUnit||'';
     kgiWrap.innerHTML = `
       <div class="kgi-hero-card">
         <div class="kgi-hero-label">⭐ KGI — 最重要ゴール</div>
-        <div class="kgi-hero-name">${esc(pl.goal||'ゴール未設定')}</div>
+        <div class="kgi-hero-name">${esc(cyclePl.goal||'ゴール未設定')}</div>
         <div class="kgi-hero-row">
           <div>
             <div class="kgi-hero-num">${esc(curKgiVal||'—')}<span class="kgi-hero-unit">${esc(unit)}</span></div>
-            <div class="kgi-hero-target">目標: ${esc(pl.kgiVal||'—')}${esc(unit)}</div>
+            <div class="kgi-hero-target">目標: ${esc(cyclePl.kgiVal||'—')}${esc(unit)}</div>
           </div>
           <div class="kgi-hero-pct">
             <div class="kgi-hero-pct-num">${pct}%</div>
@@ -4470,9 +4493,9 @@ function saveCheck() {
   saveDB();
   // KGIヒーローカードをリアルタイム更新
   const pl = p.plan;
-  if (pl.kgiVal) {
-    const cur = p.checkDraft.kgiCurrent||pl.curVal||'';
-    const pct = calcAchievePct(pl.kgiVal, cur, pl.curVal);
+  if (cyclePl.kgiVal) {
+    const cur = p.checkDraft.kgiCurrent||cyclePl.curVal||'';
+    const pct = calcAchievePct(cyclePl.kgiVal, cur, cyclePl.curVal);
     const pctCapped = Math.min(pct, 100);
     const pctEl = document.querySelector('.kgi-hero-pct-num');
     if (pctEl) pctEl.textContent = pct+'%';
@@ -4559,14 +4582,14 @@ function renderCheckHist() {
     const kgiDiff = r.kgiCurrent && prevR?.kgiCurrent
       ? (parseFloat(r.kgiCurrent)-parseFloat(prevR.kgiCurrent)) : null;
     const diffStr = kgiDiff !== null && !isNaN(kgiDiff)
-      ? `${kgiDiff>=0?'+':''}${kgiDiff}${pl.kgiUnit||''}` : '';
-    const kgiPct = r.kgiCurrent ? calcAchievePct(pl.kgiVal, r.kgiCurrent, pl.curVal) : null;
+      ? `${kgiDiff>=0?'+':''}${kgiDiff}${cyclePl.kgiUnit||''}` : '';
+    const kgiPct = r.kgiCurrent ? calcAchievePct(cyclePl.kgiVal, r.kgiCurrent, cyclePl.curVal) : null;
     return `<div class="hist-item">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px">
         <div>
           <div style="font-size:12px;color:var(--tx2);margin-bottom:4px">${esc(r.date||'日付なし')}　${'★'.repeat(r.star||0)}</div>
           ${r.kgiCurrent?`<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-            <span style="font-size:14px;font-weight:800;color:var(--p)">${esc(r.kgiCurrent)}${esc(pl.kgiUnit||'')}</span>
+            <span style="font-size:14px;font-weight:800;color:var(--p)">${esc(r.kgiCurrent)}${esc(cyclePl.kgiUnit||'')}</span>
             ${diffStr?`<span style="font-size:12px;font-weight:700;color:${kgiDiff>=0?'#1D9E75':'#A32D2D'}">${diffStr}</span>`:''}
             ${kgiPct!==null?`<span style="font-size:11px;background:var(--p3);color:var(--p);padding:1px 7px;border-radius:10px;font-weight:700">${kgiPct}%</span>`:''}
           </div>`:''}
@@ -4909,6 +4932,7 @@ function nextCycle() {
   // サイクル履歴に振り返り記録を自動保存（現在の全項目スナップショットも保存）
   if (!p.cycleHistory) p.cycleHistory = [];
   const snapshot = {
+    plan: JSON.parse(JSON.stringify(p.plan||{})),
     issues: JSON.parse(JSON.stringify(p.issues||[])),
     kpis: JSON.parse(JSON.stringify(p.kpis||[])),
     solutions: JSON.parse(JSON.stringify(p.solutions||[])),
