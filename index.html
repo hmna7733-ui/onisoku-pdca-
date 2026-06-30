@@ -14,7 +14,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="4.1.8">
+<meta name="app-version" content="4.2.0">
 
 <style>
 /* ── リセット & ベース ── */
@@ -3699,6 +3699,55 @@ function calcAchievePct(target, current, baseVal) {
   return Math.round(c / t * 100);
 }
 
+// 前回スナップショットと比較して新規・変更項目を検出
+function calcCycleDiff(currentSnap, prevSnap) {
+  const result = { issues:[], kpis:[], solutions:[], doActions:[], kdis:[], todos:[] };
+  if (!currentSnap) return result;
+  const prev = prevSnap || { issues:[],kpis:[],solutions:[],doActions:[],kdis:[],todos:[] };
+
+  // テキスト系（issues, solutions, doActions, kdis, todos）
+  const textCats = [
+    ['issues','text'], ['solutions','text'], ['doActions','text'], ['kdis','text'], ['todos','name']
+  ];
+  textCats.forEach(([cat, field]) => {
+    const curItems = currentSnap[cat]||[];
+    const prevItems = prev[cat]||[];
+    curItems.forEach(item => {
+      if (!item.id) return;
+      const prevItem = prevItems.find(p=>p.id===item.id);
+      if (!prevItem) {
+        // 新規追加
+        result[cat].push({ type:'new', item });
+      } else if (prevItem[field] !== item[field] && item[field]) {
+        // テキスト変更
+        result[cat].push({ type:'changed', item, oldText: prevItem[field], newText: item[field] });
+      }
+    });
+  });
+
+  // KPI（数値変化も検出）
+  const curKpis = currentSnap.kpis||[];
+  const prevKpis = prev.kpis||[];
+  curKpis.forEach(k => {
+    if (!k.id) return;
+    const prevK = prevKpis.find(p=>p.id===k.id);
+    const nm = k.kpiName||k.kpi||k.issue;
+    if (!prevK) {
+      result.kpis.push({ type:'new', item:k, name:nm });
+    } else {
+      const prevNm = prevK.kpiName||prevK.kpi||prevK.issue;
+      if (prevNm !== nm && nm) {
+        result.kpis.push({ type:'changed', item:k, name:nm, oldText:prevNm, newText:nm });
+      }
+      if (prevK.target !== k.target && k.target) {
+        result.kpis.push({ type:'target_changed', item:k, name:nm, oldText:prevK.target, newText:k.target, unit:k.unit });
+      }
+    }
+  });
+
+  return result;
+}
+
 function renderCycleHistory() {
   const p = curP(); if (!p) return;
   const el = document.getElementById('cycle-history-list');
@@ -3892,6 +3941,48 @@ function renderCycleHistory() {
               <span style="font-size:11px;color:var(--tx2);flex:1">${esc(s.name)}</span>
               <span style="font-size:13px;font-weight:700;color:var(--teal3)">${s.total}回</span>
             </div>`).join('')}
+          </div>`;
+        })()}
+        <!-- 前回サイクルからの変更・追加項目 -->
+        ${(()=>{
+          const prevH = p.cycleHistory[cycleIdx+1];
+          const diff = calcCycleDiff(h.snapshot, prevH?.snapshot);
+          const CAT_LABELS = { issues:'課題', kpis:'KPI', solutions:'解決案', doActions:'DOアクション', kdis:'KDI', todos:'TODO' };
+          const CAT_ICONS = { issues:'💡', kpis:'🎯', solutions:'🔑', doActions:'⚡', kdis:'🎬', todos:'📋' };
+          let diffHtml = '';
+          Object.keys(diff).forEach(cat => {
+            const items = diff[cat];
+            if (!items.length) return;
+            diffHtml += items.map(d => {
+              const text = d.item.text || d.item.name || d.name || '';
+              if (d.type === 'new') {
+                return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+                  <span style="font-size:10px;background:#E1F5EE;color:var(--teal3);padding:1px 6px;border-radius:6px;font-weight:700;flex-shrink:0">NEW</span>
+                  <span style="font-size:10px;background:#fff;color:#888;padding:1px 6px;border-radius:6px;flex-shrink:0">${CAT_ICONS[cat]} ${CAT_LABELS[cat]}</span>
+                  <span style="font-size:12px;color:#333">${esc(text)}</span>
+                </div>`;
+              } else if (d.type === 'changed') {
+                return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;flex-wrap:wrap">
+                  <span style="font-size:10px;background:#fff;color:#888;padding:1px 6px;border-radius:6px;flex-shrink:0">${CAT_ICONS[cat]} ${CAT_LABELS[cat]}</span>
+                  <span style="font-size:11px;color:#aaa;text-decoration:line-through">${esc(d.oldText||'')}</span>
+                  <span style="opacity:.5">→</span>
+                  <span style="font-size:12px;color:#333;font-weight:600">${esc(d.newText||'')}</span>
+                </div>`;
+              } else if (d.type === 'target_changed') {
+                return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;flex-wrap:wrap">
+                  <span style="font-size:10px;background:#fff;color:#888;padding:1px 6px;border-radius:6px;flex-shrink:0">${CAT_ICONS[cat]} ${esc(text)}</span>
+                  <span style="font-size:11px;color:#aaa">目標: ${esc(d.oldText||'')}${esc(d.unit||'')}</span>
+                  <span style="opacity:.5">→</span>
+                  <span style="font-size:12px;color:#333;font-weight:600">${esc(d.newText||'')}${esc(d.unit||'')}</span>
+                </div>`;
+              }
+              return '';
+            }).join('');
+          });
+          if (!diffHtml) return '';
+          return `<div style="background:#FFF3E0;border-radius:8px;padding:8px 10px;margin-top:8px;border-top:0.5px solid var(--bd)">
+            <div style="font-size:10px;font-weight:700;color:#E65100;letter-spacing:.5px;margin-bottom:6px">🆕 前回サイクルからの変更</div>
+            ${diffHtml}
           </div>`;
         })()}
         <!-- このサイクルで達成した項目 -->
@@ -4815,13 +4906,22 @@ function nextCycle() {
     if (!p.checkRecords) p.checkRecords = [];
     p.checkRecords.unshift(autoRec);
   }
-  // サイクル履歴に振り返り記録を自動保存
+  // サイクル履歴に振り返り記録を自動保存（現在の全項目スナップショットも保存）
   if (!p.cycleHistory) p.cycleHistory = [];
+  const snapshot = {
+    issues: JSON.parse(JSON.stringify(p.issues||[])),
+    kpis: JSON.parse(JSON.stringify(p.kpis||[])),
+    solutions: JSON.parse(JSON.stringify(p.solutions||[])),
+    doActions: JSON.parse(JSON.stringify(p.doActions||[])),
+    kdis: JSON.parse(JSON.stringify(p.kdis||[])),
+    todos: JSON.parse(JSON.stringify(p.todos||[])),
+  };
   p.cycleHistory.unshift({
     cycle: p.cycle,
     completedAt: new Date().toLocaleDateString('ja'),
     checkRecords: JSON.parse(JSON.stringify(p.checkRecords||[])),
     adj: JSON.parse(JSON.stringify(p.adj||{})),
+    snapshot: snapshot,
   });
   // 完結型KDIで「完了」が選択されたものをdoneKdisに移動
   if (!p.doneKdis) p.doneKdis = [];
