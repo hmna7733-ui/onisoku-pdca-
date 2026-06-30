@@ -14,7 +14,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="4.1.7">
+<meta name="app-version" content="4.1.8">
 
 <style>
 /* ── リセット & ベース ── */
@@ -5647,11 +5647,12 @@ function renderTodoList() {
 
   // ステータスでグループ分け
   // フォルダ分けはstatusではなく転記フラグとstatusの組み合わせで判断
+  // 完了・中止が最優先（転記フラグがあっても完了・中止フォルダへ）
   const done    = allTodos.filter(t=>t.status==='完了');
-  const calendar= allTodos.filter(t=>t.calendarTransferred);
-  const routine = allTodos.filter(t=>t.routineTransferred && !t.calendarTransferred);
-  const hold    = allTodos.filter(t=>t.status==='保留' && !t.calendarTransferred && !t.routineTransferred);
   const stop    = allTodos.filter(t=>t.status==='中止');
+  const calendar= allTodos.filter(t=>t.calendarTransferred && t.status!=='完了' && t.status!=='中止');
+  const routine = allTodos.filter(t=>t.routineTransferred && !t.calendarTransferred && t.status!=='完了' && t.status!=='中止');
+  const hold    = allTodos.filter(t=>t.status==='保留' && !t.calendarTransferred && !t.routineTransferred);
   // アクティブ：完了・保留・中止・転記済以外
   const active  = allTodos.filter(t=>
     t.status!=='完了' && t.status!=='保留' && t.status!=='中止'
