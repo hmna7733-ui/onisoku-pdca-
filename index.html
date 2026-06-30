@@ -14,7 +14,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="4.2.2">
+<meta name="app-version" content="4.2.3">
 
 <style>
 /* ── リセット & ベース ── */
@@ -3707,9 +3707,9 @@ function calcCycleDiff(currentSnap, prevSnap) {
 
   // テキスト＋スコア/量/時間/頻度の変更を検出する汎用処理
   const checkFields = {
-    issues:     { text:'text', extra:[['score','スコア']] },
-    solutions:  { text:'text', extra:[['score','スコア']] },
-    doActions:  { text:'text', extra:[['score','スコア']] },
+    issues:     { text:'text', extra:[['impact','インパクト'],['ease','気軽さ']] },
+    solutions:  { text:'text', extra:[['impact','インパクト'],['ease','気軽さ'],['feas','実現性']] },
+    doActions:  { text:'text', extra:[['impact','インパクト'],['ease','気軽さ']] },
     kdis:       { text:'text', extra:[['quantity','量'],['time','時間'],['freq','頻度']] },
     todos:      { text:'name', extra:[['person','担当者'],['date','期日']] },
   };
@@ -3729,13 +3729,19 @@ function calcCycleDiff(currentSnap, prevSnap) {
       if (prevItem[field] !== item[field] && item[field]) {
         result[cat].push({ type:'changed', item, oldText: prevItem[field], newText: item[field] });
       }
-      // 追加フィールド（スコア・量・時間・頻度など）の変更
+      // 追加フィールド（インパクト・気軽さ・量・時間・頻度など）の変更
+      let scoreChanged = false;
       extra.forEach(([f, label]) => {
         const oldV = prevItem[f], newV = item[f];
         if (oldV !== newV && (newV!==undefined && newV!=='')) {
           result[cat].push({ type:'field_changed', item, fieldLabel:label, oldText:oldV, newText:newV });
+          scoreChanged = true;
         }
       });
+      // スコア自体の変化も表示（インパクト/気軽さ変更の結果として）
+      if (scoreChanged && prevItem.score !== item.score) {
+        result[cat].push({ type:'field_changed', item, fieldLabel:'スコア', oldText:prevItem.score, newText:item.score });
+      }
     });
   });
 
@@ -4091,34 +4097,34 @@ function renderCA() {
 
   // ── KGI単独ヒーローカード ──
   const kgiWrap = document.getElementById('ca-kgi-wrap');
-  if (cyclePl.goal || cyclePl.kgiVal) {
+  if (pl.goal || pl.kgiVal) {
     const prevRecord = (p.checkRecords||[])[0];
     const prevKgiVal = prevRecord?.kgiCurrent ?? null;
     // 今回値: draftに入力済み→その値, 未入力で前回記録あり→前回値をデフォルト
     const draftKgiVal = p.checkDraft.kgiCurrent;
     const defaultKgiVal = draftKgiVal !== undefined && draftKgiVal !== ''
       ? draftKgiVal
-      : (prevKgiVal !== null ? prevKgiVal : (cyclePl.curVal||''));
+      : (prevKgiVal !== null ? prevKgiVal : (pl.curVal||''));
     const curKgiVal = defaultKgiVal;
     // draftに初期値をセット（初回のみ）
     if ((p.checkDraft.kgiCurrent === undefined || p.checkDraft.kgiCurrent === '') && prevKgiVal !== null) {
       p.checkDraft.kgiCurrent = prevKgiVal;
     }
-    const pct = calcAchievePct(cyclePl.kgiVal, curKgiVal, cyclePl.curVal);
+    const pct = calcAchievePct(pl.kgiVal, curKgiVal, pl.curVal);
     const pctCapped = Math.min(Math.max(pct,0), 100);
     const prevDiff = prevKgiVal !== null && curKgiVal !== ''
       ? (parseFloat(curKgiVal) - parseFloat(prevKgiVal)) : null;
     const diffStr = prevDiff !== null && !isNaN(prevDiff)
-      ? `${prevDiff>=0?'+':''}${prevDiff}${cyclePl.kgiUnit||''}` : '';
-    const unit = cyclePl.kgiUnit||cyclePl.curUnit||'';
+      ? `${prevDiff>=0?'+':''}${prevDiff}${pl.kgiUnit||''}` : '';
+    const unit = pl.kgiUnit||pl.curUnit||'';
     kgiWrap.innerHTML = `
       <div class="kgi-hero-card">
         <div class="kgi-hero-label">⭐ KGI — 最重要ゴール</div>
-        <div class="kgi-hero-name">${esc(cyclePl.goal||'ゴール未設定')}</div>
+        <div class="kgi-hero-name">${esc(pl.goal||'ゴール未設定')}</div>
         <div class="kgi-hero-row">
           <div>
             <div class="kgi-hero-num">${esc(curKgiVal||'—')}<span class="kgi-hero-unit">${esc(unit)}</span></div>
-            <div class="kgi-hero-target">目標: ${esc(cyclePl.kgiVal||'—')}${esc(unit)}</div>
+            <div class="kgi-hero-target">目標: ${esc(pl.kgiVal||'—')}${esc(unit)}</div>
           </div>
           <div class="kgi-hero-pct">
             <div class="kgi-hero-pct-num">${pct}%</div>
@@ -4493,9 +4499,9 @@ function saveCheck() {
   saveDB();
   // KGIヒーローカードをリアルタイム更新
   const pl = p.plan;
-  if (cyclePl.kgiVal) {
-    const cur = p.checkDraft.kgiCurrent||cyclePl.curVal||'';
-    const pct = calcAchievePct(cyclePl.kgiVal, cur, cyclePl.curVal);
+  if (pl.kgiVal) {
+    const cur = p.checkDraft.kgiCurrent||pl.curVal||'';
+    const pct = calcAchievePct(pl.kgiVal, cur, pl.curVal);
     const pctCapped = Math.min(pct, 100);
     const pctEl = document.querySelector('.kgi-hero-pct-num');
     if (pctEl) pctEl.textContent = pct+'%';
@@ -4582,14 +4588,14 @@ function renderCheckHist() {
     const kgiDiff = r.kgiCurrent && prevR?.kgiCurrent
       ? (parseFloat(r.kgiCurrent)-parseFloat(prevR.kgiCurrent)) : null;
     const diffStr = kgiDiff !== null && !isNaN(kgiDiff)
-      ? `${kgiDiff>=0?'+':''}${kgiDiff}${cyclePl.kgiUnit||''}` : '';
-    const kgiPct = r.kgiCurrent ? calcAchievePct(cyclePl.kgiVal, r.kgiCurrent, cyclePl.curVal) : null;
+      ? `${kgiDiff>=0?'+':''}${kgiDiff}${pl.kgiUnit||''}` : '';
+    const kgiPct = r.kgiCurrent ? calcAchievePct(pl.kgiVal, r.kgiCurrent, pl.curVal) : null;
     return `<div class="hist-item">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px">
         <div>
           <div style="font-size:12px;color:var(--tx2);margin-bottom:4px">${esc(r.date||'日付なし')}　${'★'.repeat(r.star||0)}</div>
           ${r.kgiCurrent?`<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-            <span style="font-size:14px;font-weight:800;color:var(--p)">${esc(r.kgiCurrent)}${esc(cyclePl.kgiUnit||'')}</span>
+            <span style="font-size:14px;font-weight:800;color:var(--p)">${esc(r.kgiCurrent)}${esc(pl.kgiUnit||'')}</span>
             ${diffStr?`<span style="font-size:12px;font-weight:700;color:${kgiDiff>=0?'#1D9E75':'#A32D2D'}">${diffStr}</span>`:''}
             ${kgiPct!==null?`<span style="font-size:11px;background:var(--p3);color:var(--p);padding:1px 7px;border-radius:10px;font-weight:700">${kgiPct}%</span>`:''}
           </div>`:''}
