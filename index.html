@@ -2248,32 +2248,33 @@ async function manualRefresh() {
   }, 800);
 }
 
-// 起動時 & 30秒ごとに自動チェック（即時反映のため短縮）
+// 起動時 & 30秒ごとに自動チェック
 checkForUpdate();
 setInterval(checkForUpdate, 30 * 1000);
 
-// PWA: Service Worker（即時更新対応）
+// PWA: Service Worker
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').then(reg => {
-    // 新しいSWが待機中になったら即座に有効化
+    // 新しいSWが見つかったら即座にskipWaiting→自動リロード
     reg.addEventListener('updatefound', () => {
       const newWorker = reg.installing;
       if (!newWorker) return;
       newWorker.addEventListener('statechange', () => {
-        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-          // 新バージョンのSWが準備完了 → 即リロード
-          newWorker.postMessage({ type: 'SKIP_WAITING' });
+        if (newWorker.state === 'installed') {
+          newWorker.postMessage('skipWaiting');
         }
       });
     });
-    // 定期的にSW更新をチェック（30秒ごと）
+    // 30秒ごとにSW自体の更新を確認
     setInterval(() => reg.update(), 30 * 1000);
   }).catch(() => {});
 
-  // SWが切り替わったら自動リロード
-  let refreshing = false;
+  // SWが切り替わったら即リロード
+  let _swRefreshing = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (!refreshing) { refreshing = true; location.reload(); }
+    if (_swRefreshing) return;
+    _swRefreshing = true;
+    location.reload();
   });
 }
 
