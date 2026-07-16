@@ -171,11 +171,12 @@ body{
 .new-pdca-btn:active{background:linear-gradient(135deg,rgba(127,119,221,.7),rgba(83,74,183,.8));transform:scale(0.98)}
 
 /* ── 格言 ── */
-.home-quotes{margin-top:10px;min-height:22px}
+.home-quotes{margin-top:10px;min-height:20px}
 .home-quote{
   display:none;font-size:11px;font-weight:500;
-  color:rgba(175,169,236,.75);letter-spacing:.5px;
-  line-height:1.5;font-style:italic;
+  color:rgba(175,169,236,.75);letter-spacing:.3px;
+  line-height:1.4;font-style:italic;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 .home-quote.active{display:block}
 
@@ -200,7 +201,7 @@ body{
 /* カードリスト */
 .home-cards-area{
   background:#0f0c1e;
-  padding:16px 16px 40px;
+  padding:24px 16px 40px;
   min-height:300px;
 }
 .home-cards-inner{
@@ -1554,6 +1555,8 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
               <div class="home-quote active">〜 行動からしか何も生まれない 〜</div>
               <div class="home-quote">〜 自分の人生を自分で前進させていく楽しさ 〜</div>
               <div class="home-quote">〜 継続は最強の力なり 〜</div>
+              <div class="home-quote">〜 逃げ続けた先に残るものなど何もない 〜</div>
+              <div class="home-quote">〜 失敗は悪い事じゃない。失敗を恐れて無行動の方が恥ずかしい 〜</div>
             </div>
           </div>
           <!-- 右上ボタン群: アカウント → 📦 → ⚙ -->
@@ -1569,7 +1572,7 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
           </div>
         </div>
         <!-- ＋新規PDCAボタン（大きめ・独立行） -->
-        <div style="position:relative;z-index:1;margin-top:20px;margin-bottom:4px">
+        <div style="position:relative;z-index:1;margin-top:20px;margin-bottom:16px">
           <button class="new-pdca-btn" onclick="showNewModal()">＋ 新規PDCA</button>
         </div>
         <div class="home-stats-bar">
