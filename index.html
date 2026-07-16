@@ -14,7 +14,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="4.2.3">
+<meta name="app-version" content="4.3.0">
 
 <style>
 /* ── リセット & ベース ── */
@@ -158,6 +158,26 @@ body{
   white-space:nowrap;
 }
 .new-btn:active{background:rgba(255,255,255,.2)}
+
+/* ── 新規PDCAボタン（大） ── */
+.new-pdca-btn{
+  width:100%;padding:14px 20px;
+  background:linear-gradient(135deg,rgba(127,119,221,.5),rgba(83,74,183,.6));
+  backdrop-filter:blur(8px);
+  color:#fff;border:1px solid rgba(255,255,255,.25);
+  border-radius:16px;font-size:17px;font-weight:700;
+  cursor:pointer;transition:all .15s;letter-spacing:.5px;
+}
+.new-pdca-btn:active{background:linear-gradient(135deg,rgba(127,119,221,.7),rgba(83,74,183,.8));transform:scale(0.98)}
+
+/* ── 格言 ── */
+.home-quotes{margin-top:10px;min-height:22px}
+.home-quote{
+  display:none;font-size:11px;font-weight:500;
+  color:rgba(175,169,236,.75);letter-spacing:.5px;
+  line-height:1.5;font-style:italic;
+}
+.home-quote.active{display:block}
 
 /* ホーム統計バー */
 .home-stats-bar{
@@ -1526,19 +1546,31 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
           <div class="home-hero-circle2"></div>
         </div>
         <div class="home-hero-top">
-          <div class="home-logo-wrap">
+          <div class="home-logo-wrap" style="position:relative;z-index:1">
             <div class="home-logo-sub">PDCA PLANNER</div>
             <div class="home-logo">鬼速<em>PDCA</em></div>
-          </div>
-          <div style="display:flex;gap:8px;align-items:center;position:relative;z-index:1">
-            <button class="settings-btn" onclick="showTransferModal()" title="データ転送" style="font-size:20px">📦</button>
-            <button class="settings-btn" onclick="goScreen('s-settings')" title="設定">⚙</button>
-            <div class="account-badge" id="account-badge" onclick="onAccountBadgeClick()" style="display:none">
-              <div class="account-sync-dot" id="sync-dot"></div>
-              <div class="account-name" id="account-name-label">--</div>
+            <!-- 格言エリア -->
+            <div class="home-quotes" id="home-quotes">
+              <div class="home-quote active">〜 行動からしか何も生まれない 〜</div>
+              <div class="home-quote">〜 自分の人生を自分で前進させていく楽しさ 〜</div>
+              <div class="home-quote">〜 継続は最強の力なり 〜</div>
             </div>
-            <button class="new-btn" onclick="showNewModal()">＋ 新規</button>
           </div>
+          <!-- 右上ボタン群: アカウント → 📦 → ⚙ -->
+          <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end;position:relative;z-index:1">
+            <div style="display:flex;gap:8px;align-items:center">
+              <div class="account-badge" id="account-badge" onclick="onAccountBadgeClick()" style="display:none">
+                <div class="account-sync-dot" id="sync-dot"></div>
+                <div class="account-name" id="account-name-label">--</div>
+              </div>
+              <button class="settings-btn" onclick="showTransferModal()" title="データ転送" style="font-size:20px">📦</button>
+              <button class="settings-btn" onclick="goScreen('s-settings')" title="設定">⚙</button>
+            </div>
+          </div>
+        </div>
+        <!-- ＋新規PDCAボタン（大きめ・独立行） -->
+        <div style="position:relative;z-index:1;margin-top:20px;margin-bottom:4px">
+          <button class="new-pdca-btn" onclick="showNewModal()">＋ 新規PDCA</button>
         </div>
         <div class="home-stats-bar">
           <div class="home-stat-item">
@@ -2126,6 +2158,20 @@ const CURRENT_VERSION = document.querySelector('meta[name="app-version"]').conte
 const VERSION_URL = location.origin + location.pathname.replace(/index\.html$/, '') + 'version.json';
 let updateAvailable = false;
 
+// ── 格言ローテーション ──────────────────────────────────
+let _quoteTimer = null;
+function startQuoteRotation() {
+  if (_quoteTimer) return;
+  const quotes = document.querySelectorAll('.home-quote');
+  if (!quotes.length) return;
+  let idx = 0;
+  _quoteTimer = setInterval(() => {
+    quotes.forEach(q => q.classList.remove('active'));
+    idx = (idx + 1) % quotes.length;
+    quotes[idx].classList.add('active');
+  }, 4000);
+}
+
 async function checkForUpdate() {
   try {
     const res = await fetch(VERSION_URL + '?t=' + Date.now(), { cache: 'no-store' });
@@ -2179,13 +2225,33 @@ async function manualRefresh() {
   }, 800);
 }
 
-// 起動時 & 5分ごとに自動チェック
+// 起動時 & 30秒ごとに自動チェック（即時反映のため短縮）
 checkForUpdate();
-setInterval(checkForUpdate, 5 * 60 * 1000);
+setInterval(checkForUpdate, 30 * 1000);
 
-// PWA: Service Worker
+// PWA: Service Worker（即時更新対応）
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
+  navigator.serviceWorker.register('sw.js').then(reg => {
+    // 新しいSWが待機中になったら即座に有効化
+    reg.addEventListener('updatefound', () => {
+      const newWorker = reg.installing;
+      if (!newWorker) return;
+      newWorker.addEventListener('statechange', () => {
+        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+          // 新バージョンのSWが準備完了 → 即リロード
+          newWorker.postMessage({ type: 'SKIP_WAITING' });
+        }
+      });
+    });
+    // 定期的にSW更新をチェック（30秒ごと）
+    setInterval(() => reg.update(), 30 * 1000);
+  }).catch(() => {});
+
+  // SWが切り替わったら自動リロード
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!refreshing) { refreshing = true; location.reload(); }
+  });
 }
 
 /* ══════════════════════════════════════════
@@ -2342,6 +2408,7 @@ function renderHome() {
     }
   }
   updateSyncDot('synced'); // 初期状態は同期済み
+  startQuoteRotation(); // 格言ローテーション開始
   ensureCategories();
   const active = DB.pdcas.filter(p => !p.paused && !p.completed);
   const paused = DB.pdcas.filter(p => p.paused && !p.completed);
