@@ -2115,39 +2115,47 @@ let DB = {
 };
 let CUR = null;
 
+let _unsubscribeFirestore = null; // リアルタイム監視の解除用
+let _isSaving = false; // 自分のsave中はonSnapshotを無視するフラグ
+
 function loadDB() {
   try { const d = localStorage.getItem(STORE_KEY); if (d) DB = JSON.parse(d); } catch(e) {}
   ensureCategories();
-  // Firestoreからも読み込み（ログイン中の場合）
+  // Firestoreをリアルタイム監視（onSnapshot）
   if (currentUser && db_fs) {
-    db_fs.collection('users').doc(currentUser.uid).get().then(doc => {
-      if (doc.exists) {
-        const data = doc.data();
-        if (data && data.pdcas) {
-          // 現在のDBより古いデータで上書きしない（nextCycle直後などの競合防止）
-          // タイムスタンプで新旧を判定（ローカルの方が新しければFirestoreデータを無視）
-          const localTs = DB._savedAt || 0;
-          const remoteTs = data._savedAt || 0;
-          const shouldUpdate = remoteTs >= localTs;
-          if (shouldUpdate) {
-            Object.assign(DB, data);
-            try { localStorage.setItem(STORE_KEY, JSON.stringify(DB)); } catch(e) {}
-            ensureCategories();
-            renderHome();
+    // 既存の監視を解除
+    if (_unsubscribeFirestore) { _unsubscribeFirestore(); _unsubscribeFirestore = null; }
+    _unsubscribeFirestore = db_fs.collection('users').doc(currentUser.uid)
+      .onSnapshot(doc => {
+        // 自分がsave中の場合はスキップ（自分の書き込みによるトリガーを無視）
+        if (_isSaving) return;
+        if (doc.exists) {
+          const data = doc.data();
+          if (data && data.pdcas) {
+            const localTs = DB._savedAt || 0;
+            const remoteTs = data._savedAt || 0;
+            // リモートの方が新しい場合のみ反映
+            if (remoteTs > localTs) {
+              Object.assign(DB, data);
+              try { localStorage.setItem(STORE_KEY, JSON.stringify(DB)); } catch(e) {}
+              ensureCategories();
+              renderHome();
+            }
           }
         }
-      }
-    }).catch(e => console.error('Firestore load:', e));
+      }, e => console.error('Firestore onSnapshot:', e));
   }
 }
 function saveDB() {
   DB._savedAt = Date.now(); // 保存タイムスタンプ
   try { localStorage.setItem(STORE_KEY, JSON.stringify(DB)); } catch(e) {}
-  // Firestoreにも保存
+  // Firestoreにも保存（_isSavingフラグで自分のonSnapshotを無視）
   if (currentUser && db_fs) {
+    _isSaving = true;
     db_fs.collection('users').doc(currentUser.uid)
       .set(JSON.parse(JSON.stringify(DB)))
-      .catch(e => console.error('Firestore save:', e));
+      .then(() => { setTimeout(() => { _isSaving = false; }, 1000); })
+      .catch(e => { console.error('Firestore save:', e); _isSaving = false; });
   }
 }
 function esc(s) {
@@ -5224,12 +5232,13 @@ function deleteCategory(catId) {
    Firebase 設定・認証
 ══════════════════════════════════════════ */
 const firebaseConfig = {
-  apiKey: "AIzaSyDBYjxsUoIQ8hQxJu2IyWHLHwLKzv9h5K0",
-  authDomain: "onisoku-pdca.firebaseapp.com",
-  projectId: "onisoku-pdca",
-  storageBucket: "onisoku-pdca.firebasestorage.app",
-  messagingSenderId: "301353442887",
-  appId: "1:301353442887:web:197072a17363e2bf285b62"
+  apiKey: "AIzaSyAv35i4MSksru9csqLBbtZvHEJbWfaVQGs",
+  authDomain: "boat-d715f.firebaseapp.com",
+  projectId: "boat-d715f",
+  storageBucket: "boat-d715f.firebasestorage.app",
+  messagingSenderId: "143618120714",
+  appId: "1:143618120714:web:8fe8f3548ada361d5053f3",
+  measurementId: "G-JPB6Y4GNP0"
 };
 
 let firebaseApp, auth, db_fs, currentUser = null;
@@ -5388,6 +5397,8 @@ function restoreSavedAuth() {
 
 function signOut() {
   skipLoginMode = false;
+  // Firestoreリアルタイム監視を解除
+  if (_unsubscribeFirestore) { _unsubscribeFirestore(); _unsubscribeFirestore = null; }
   if (auth) {
     auth.signOut().then(() => {
       const ls = document.getElementById('login-screen');
