@@ -171,14 +171,27 @@ body{
 .new-pdca-btn:active{background:linear-gradient(135deg,rgba(127,119,221,.7),rgba(83,74,183,.8));transform:scale(0.98)}
 
 /* ── 格言 ── */
-.home-quotes{margin-top:10px;min-height:20px}
-.home-quote{
-  display:none;font-size:11px;font-weight:500;
-  color:rgba(175,169,236,.75);letter-spacing:.3px;
-  line-height:1.4;font-style:italic;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+.home-quotes{
+  margin-top:12px;
+  height:16px;
+  position:relative;
 }
-.home-quote.active{display:block}
+.home-quote{
+  position:absolute;top:0;left:0;
+  /* 全幅使用（ロゴ+ボタンエリアをまたいで全幅） */
+  width:100%;
+  font-size:9.5px;font-weight:500;
+  color:rgba(175,169,236,.72);letter-spacing:.15px;
+  line-height:1.6;font-style:italic;
+  white-space:nowrap;
+  opacity:0;
+  transition:opacity .8s ease;
+  pointer-events:none;
+}
+.home-quote.active{
+  opacity:1;
+  pointer-events:auto;
+}
 
 /* ホーム統計バー */
 .home-stats-bar{
@@ -1550,14 +1563,6 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
           <div class="home-logo-wrap" style="position:relative;z-index:1">
             <div class="home-logo-sub">PDCA PLANNER</div>
             <div class="home-logo">鬼速<em>PDCA</em></div>
-            <!-- 格言エリア -->
-            <div class="home-quotes" id="home-quotes">
-              <div class="home-quote active">〜 行動からしか何も生まれない 〜</div>
-              <div class="home-quote">〜 自分の人生を自分で前進させていく楽しさ 〜</div>
-              <div class="home-quote">〜 継続は最強の力なり 〜</div>
-              <div class="home-quote">〜 逃げ続けた先に残るものなど何もない 〜</div>
-              <div class="home-quote">〜 失敗は悪い事じゃない。失敗を恐れて無行動の方が恥ずかしい 〜</div>
-            </div>
           </div>
           <!-- 右上ボタン群: アカウント → 📦 → ⚙ -->
           <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end;position:relative;z-index:1">
@@ -1571,8 +1576,16 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
             </div>
           </div>
         </div>
+        <!-- 格言エリア：ヒーロー全幅で表示 -->
+        <div class="home-quotes" id="home-quotes" style="position:relative;z-index:1">
+          <div class="home-quote active">〜 行動からしか何も生まれない 〜</div>
+          <div class="home-quote">〜 自分の人生を自分で前進させていく楽しさ 〜</div>
+          <div class="home-quote">〜 継続は最強の力なり 〜</div>
+          <div class="home-quote">〜 逃げ続けた先に残るものなど何もない 〜</div>
+          <div class="home-quote">〜 失敗は悪い事じゃない。失敗を恐れて無行動の方が恥ずかしい 〜</div>
+        </div>
         <!-- ＋新規PDCAボタン（大きめ・独立行） -->
-        <div style="position:relative;z-index:1;margin-top:20px;margin-bottom:16px">
+        <div style="position:relative;z-index:1;margin-top:16px;margin-bottom:16px">
           <button class="new-pdca-btn" onclick="showNewModal()">＋ 新規PDCA</button>
         </div>
         <div class="home-stats-bar">
@@ -2161,18 +2174,25 @@ const CURRENT_VERSION = document.querySelector('meta[name="app-version"]').conte
 const VERSION_URL = location.origin + location.pathname.replace(/index\.html$/, '') + 'version.json';
 let updateAvailable = false;
 
-// ── 格言ローテーション ──────────────────────────────────
+// ── 格言ローテーション（フェード） ─────────────────────
 let _quoteTimer = null;
 function startQuoteRotation() {
   if (_quoteTimer) return;
   const quotes = document.querySelectorAll('.home-quote');
   if (!quotes.length) return;
   let idx = 0;
+  // 最初の1枚をすでに表示（CSSのactiveで表示済み）
   _quoteTimer = setInterval(() => {
-    quotes.forEach(q => q.classList.remove('active'));
+    const current = quotes[idx];
+    // フェードアウト
+    current.classList.remove('active');
+    // 次のインデックス
     idx = (idx + 1) % quotes.length;
-    quotes[idx].classList.add('active');
-  }, 4000);
+    // 少し待ってからフェードイン（クロスフェード感）
+    setTimeout(() => {
+      quotes[idx].classList.add('active');
+    }, 400);
+  }, 6000); // 6秒表示
 }
 
 async function checkForUpdate() {
