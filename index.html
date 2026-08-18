@@ -2130,8 +2130,6 @@ function loadDB() {
 
     _unsubscribeFirestore = db_fs.collection('users').doc(currentUser.uid)
       .onSnapshot({ includeMetadataChanges: false }, doc => {
-        // 自分のsave直後は無視（自己ループ防止）
-        if (_isSaving) return;
         if (!doc.exists) return;
         const data = doc.data();
         if (!data || !data.pdcas) return;
@@ -2139,47 +2137,97 @@ function loadDB() {
         const localTs = DB._savedAt || 0;
         const remoteTs = data._savedAt || 0;
 
-        // デバイス間の時刻ズレ(最大2秒)を考慮してリモートが新しい場合に反映
-        // remoteTs が localTs より2秒以上古い場合のみスキップ
-        if (remoteTs >= localTs - 2000) {
+        // 自分のsave中（_isSaving）かつタイムスタンプが一致→自己ループなのでスキップ
+        if (_isSaving && remoteTs === localTs) return;
+
+        // リモートが新しい場合（デバイス時刻ズレ2秒を許容）
+        if (remoteTs >= localTs - 2000 && remoteTs !== localTs) {
           Object.assign(DB, data);
           try { localStorage.setItem(STORE_KEY, JSON.stringify(DB)); } catch(e) {}
           ensureCategories();
-          // 現在開いている画面に応じて再描画
           _rerenderCurrentScreen();
         }
       }, e => console.error('onSnapshot error:', e));
   }
 }
 
-// 現在表示中の画面を再描画（画面IDはclasslist.active で判定）
+// 現在表示中の画面を再描画（画面IDはclassList.active で判定）
 function _rerenderCurrentScreen() {
   try {
-    // 実際の画面IDと対応するrender関数のマップ
+    const activeEl = document.querySelector('.screen.active');
+    if (!activeEl) { renderHome(); return; }
+    const activeId = activeEl.id;
+
+    if (activeId === 's-ca') {
+      // CHECK/ADJUST画面はフォーカス中フィールドを壊さない軽量更新
+      _softUpdateCA();
+      return;
+    }
+
     const screenMap = {
       's-home':          () => renderHome(),
       's-menu':          () => renderMenu(),
       's-plan':          () => renderPlan(),
       's-do':            () => renderDo(),
-      's-ca':            () => renderCA(),        // CHECK & ADJUST
       's-todolist':      () => renderTodoList(),
       's-cycle-history': () => renderCycleHistory(),
       's-settings':      () => renderSettings(),
     };
-    // activeクラスがついている画面を探す
-    const activeEl = document.querySelector('.screen.active');
-    if (!activeEl) { renderHome(); return; }
-    const activeId = activeEl.id;
     const renderFn = screenMap[activeId];
-    if (renderFn) {
-      renderFn();
-    } else {
-      renderHome();
-    }
+    if (renderFn) renderFn();
+    else renderHome();
   } catch(e) {
     console.error('_rerenderCurrentScreen error:', e);
     try { renderHome(); } catch(e2) {}
   }
+}
+
+// CHECK/ADJUST画面の軽量更新
+// フォーカス中のフィールドはスキップし、それ以外だけ更新する
+function _softUpdateCA() {
+  const p = curP();
+  if (!p) return;
+  const focused = document.activeElement;
+  const d = p.checkDraft || {};
+
+  // テキストフィールドを安全に更新（フォーカス中はスキップ）
+  const fields = [
+    { id: 'ca-date',    val: d.date    || '' },
+    { id: 'ca-good',    val: d.good    || '' },
+    { id: 'ca-bad',     val: d.bad     || '' },
+    { id: 'ca-insight', val: d.insight || '' },
+    { id: 'ca-next',    val: d.next    || '' },
+    { id: 'ca-io',      val: d.io      || '' },
+  ];
+  fields.forEach(({ id, val }) => {
+    const el = document.getElementById(id);
+    if (el && el !== focused) el.value = val;
+  });
+
+  // KGI入力欄
+  const kgiEl = document.getElementById('ca-kgi-current');
+  if (kgiEl && kgiEl !== focused) {
+    kgiEl.value = d.kgiCurrent || '';
+  }
+
+  // KPI入力欄（data-kpi-id属性で特定）
+  const kpiCurrents = d.kpiCurrents || {};
+  document.querySelectorAll('[data-kpi-input]').forEach(el => {
+    if (el === focused) return;
+    const kpiId = el.getAttribute('data-kpi-input');
+    if (kpiId && kpiCurrents[kpiId] !== undefined) {
+      el.value = kpiCurrents[kpiId];
+    }
+  });
+
+  // ADJUSTコメント欄
+  const commentEl = document.getElementById('ca-comment');
+  if (commentEl && commentEl !== focused) {
+    commentEl.value = (p.adj || {}).comment || '';
+  }
+
+  // スターと履歴は常に更新（入力フィールドではないので安全）
+  renderStars(d.star || 0);
 }
 
 function saveDB() {
@@ -4261,6 +4309,7 @@ function renderCA() {
               <div style="display:flex;align-items:center;gap:4px">
                 <input type="number" value="${esc(curKpiVal||'')}"
                   placeholder="入力"
+                  data-kpi-input="${k.id}"
                   oninput="saveKpiCurrent('${k.id}',this.value)"
                   style="font-size:18px;font-weight:700;width:80px">
                 <span style="font-size:12px;color:#666">${esc(unit)}</span>
