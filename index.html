@@ -2121,34 +2121,53 @@ let _isSaving = false;            // 自分のsave中フラグ
 let _saveDebounceTimer = null;    // 連続入力のデバウンス用
 
 function loadDB() {
+  // まずlocalStorageから読む
   try { const d = localStorage.getItem(STORE_KEY); if (d) DB = JSON.parse(d); } catch(e) {}
   ensureCategories();
+  renderHome(); // ローカルデータで即描画
 
-  if (currentUser && db_fs) {
-    // 既存の監視を解除してから再登録
-    if (_unsubscribeFirestore) { _unsubscribeFirestore(); _unsubscribeFirestore = null; }
+  if (!currentUser || !db_fs) return;
 
-    _unsubscribeFirestore = db_fs.collection('users').doc(currentUser.uid)
-      .onSnapshot({ includeMetadataChanges: false }, doc => {
-        if (!doc.exists) return;
-        const data = doc.data();
-        if (!data || !data.pdcas) return;
+  // 既存の監視を解除
+  if (_unsubscribeFirestore) { _unsubscribeFirestore(); _unsubscribeFirestore = null; }
 
-        const localTs = DB._savedAt || 0;
-        const remoteTs = data._savedAt || 0;
+  // ── Step1: まず .get() で最新データを即時取得（初回ロード・復帰時対策）──
+  db_fs.collection('users').doc(currentUser.uid).get().then(doc => {
+    if (!doc.exists) return;
+    const data = doc.data();
+    if (!data || !data.pdcas) return;
+    const remoteTs = data._savedAt || 0;
+    const localTs  = DB._savedAt  || 0;
+    // リモートの方が新しければ反映（初回は localTs=0 なので必ず反映）
+    if (remoteTs >= localTs) {
+      Object.assign(DB, data);
+      try { localStorage.setItem(STORE_KEY, JSON.stringify(DB)); } catch(e) {}
+      ensureCategories();
+      renderHome();
+    }
+  }).catch(e => console.error('Firestore get error:', e));
 
-        // 自分のsave中（_isSaving）かつタイムスタンプが一致→自己ループなのでスキップ
-        if (_isSaving && remoteTs === localTs) return;
+  // ── Step2: onSnapshot でリアルタイム監視（他デバイスの変更を即時反映）──
+  _unsubscribeFirestore = db_fs.collection('users').doc(currentUser.uid)
+    .onSnapshot({ includeMetadataChanges: false }, doc => {
+      if (!doc.exists) return;
+      const data = doc.data();
+      if (!data || !data.pdcas) return;
 
-        // リモートが新しい場合（デバイス時刻ズレ2秒を許容）
-        if (remoteTs >= localTs - 2000 && remoteTs !== localTs) {
-          Object.assign(DB, data);
-          try { localStorage.setItem(STORE_KEY, JSON.stringify(DB)); } catch(e) {}
-          ensureCategories();
-          _rerenderCurrentScreen();
-        }
-      }, e => console.error('onSnapshot error:', e));
-  }
+      const remoteTs = data._savedAt || 0;
+      const localTs  = DB._savedAt  || 0;
+
+      // 自分が保存中で同じTSなら自己ループ→スキップ
+      if (_isSaving && remoteTs === localTs) return;
+
+      // リモートが新しければ反映（デバイス時刻ズレ2秒許容）
+      if (remoteTs > localTs - 2000 && remoteTs !== localTs) {
+        Object.assign(DB, data);
+        try { localStorage.setItem(STORE_KEY, JSON.stringify(DB)); } catch(e) {}
+        ensureCategories();
+        _rerenderCurrentScreen();
+      }
+    }, e => console.error('onSnapshot error:', e));
 }
 
 // 現在表示中の画面を再描画（画面IDはclassList.active で判定）
