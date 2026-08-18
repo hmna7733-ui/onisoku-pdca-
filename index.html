@@ -2298,22 +2298,17 @@ function saveDB() {
 
   if (!currentUser || !db_fs) return;
 
-  // デバウンス：100ms後にまとめて保存（即時性とFirestore負荷のバランス）
   if (_saveDebounceTimer) clearTimeout(_saveDebounceTimer);
   _saveDebounceTimer = setTimeout(() => {
     _isSaving = true;
-    updateSyncDot('syncing');
     db_fs.collection('users').doc(currentUser.uid)
       .set(JSON.parse(JSON.stringify(DB)))
       .then(() => {
-        updateSyncDot('synced');
-        // 500ms後にフラグ解除（短縮して受信感度を上げる）
         setTimeout(() => { _isSaving = false; }, 500);
       })
       .catch(e => {
         console.error('Firestore save error:', e);
         _isSaving = false;
-        updateSyncDot('offline');
       });
   }, 300);
 }
@@ -5558,6 +5553,8 @@ function restoreSavedAuth() {
 }
 
 function signOut() {
+  if (!confirm('ログアウトしますか？')) return;
+  if (_unsubscribeFirestore) { _unsubscribeFirestore(); _unsubscribeFirestore = null; }
   skipLoginMode = false;
   if (auth) {
     auth.signOut().then(() => {
