@@ -2226,8 +2226,51 @@ function _softUpdateCA() {
     commentEl.value = (p.adj || {}).comment || '';
   }
 
+  // KDI入力欄（data-kdi-input属性で特定）
+  const kdiResults = d.kdiResults || {};
+  document.querySelectorAll('[data-kdi-input]').forEach(el => {
+    if (el === focused) return; // フォーカス中はスキップ
+    const kdiId = el.getAttribute('data-kdi-input');
+    const field  = el.getAttribute('data-kdi-field');
+    if (!kdiId || !field) return;
+    const res = kdiResults[kdiId] || {};
+    const val = res[field];
+    if (val !== undefined && val !== null) {
+      // number input は value が文字列でも数値でも対応
+      if (el.tagName === 'TEXTAREA') {
+        el.value = String(val);
+      } else {
+        el.value = String(val);
+      }
+    }
+  });
+
   // スターと履歴は常に更新（入力フィールドではないので安全）
   renderStars(d.star || 0);
+
+  // KDIの集計バー・達成率表示を再計算（DOM書き換えなしで数値のみ更新）
+  _updateKdiRateBars(kdiResults);
+}
+
+// KDIの達成率バーと回数表示をソフト更新
+function _updateKdiRateBars(kdiResults) {
+  try {
+    const p = curP(); if (!p) return;
+    (p.kdis || []).forEach(k => {
+      const res = (kdiResults || {})[k.id] || {};
+      const planned = parseFloat(res.planned) || 0;
+      const actual  = parseFloat(res.actual)  || 0;
+      const rate = planned > 0 ? Math.round((actual / planned) * 100) : null;
+      if (rate === null) return;
+      const rateColor = rate >= 100 ? '#1D9E75' : rate >= 50 ? 'var(--p)' : '#A32D2D';
+      // 達成率バー
+      const bars = document.querySelectorAll(\`[data-kdi-rate-bar="\${k.id}"]\`);
+      bars.forEach(bar => { bar.style.width = Math.min(rate, 100) + '%'; bar.style.background = rateColor; });
+      // テキスト
+      const texts = document.querySelectorAll(\`[data-kdi-rate-text="\${k.id}"]\`);
+      texts.forEach(txt => { txt.textContent = \`\${actual}回 / \${planned}回　\${rate}%\`; txt.style.color = rateColor; });
+    });
+  } catch(e) {}
 }
 
 function saveDB() {
@@ -4552,6 +4595,7 @@ function renderKdiChecks() {
             <div>
               <div class="kdi-count-label">予定回数</div>
               <input type="number" value="${esc(String(planned))}" placeholder="${expectedNum||'例:3'}"
+                data-kdi-input="${k.id}" data-kdi-field="planned"
                 oninput="setKdiResult('${k.id}','planned',this.value)"
                 style="width:100%;font-size:20px;font-weight:700">
             </div>
@@ -4559,17 +4603,19 @@ function renderKdiChecks() {
             <div>
               <div class="kdi-count-label" style="color:var(--teal3)">実際の回数 ✍</div>
               <input type="number" value="${esc(String(actual))}" placeholder="入力"
+                data-kdi-input="${k.id}" data-kdi-field="actual"
                 oninput="setKdiResult('${k.id}','actual',this.value)"
                 style="width:100%;font-size:20px;font-weight:700;color:var(--teal3)">
             </div>
           </div>
           ${rate!==null?`
             <div class="kdi-rate-bar" style="margin-top:10px">
-              <div class="kdi-rate-fill" style="width:${Math.min(rate,100)}%;background:${rateColor}"></div>
+              <div class="kdi-rate-fill" data-kdi-rate-bar="${k.id}" style="width:${Math.min(rate,100)}%;background:${rateColor}"></div>
             </div>
-            <div class="kdi-rate-text" style="color:${rateColor}">${actual}回 / ${planned}回　${rate}%</div>
+            <div class="kdi-rate-text" data-kdi-rate-text="${k.id}" style="color:${rateColor}">${actual}回 / ${planned}回　${rate}%</div>
           `:''}
           <textarea placeholder="コメント（任意）" style="width:100%;font-size:12px;padding:6px;min-height:44px;margin-top:8px"
+            data-kdi-input="${k.id}" data-kdi-field="comment"
             oninput="setKdiResult('${k.id}','comment',this.value)">${esc(res.comment||'')}</textarea>
           ${k.achieved?'<div style="background:var(--teal2);color:var(--teal3);border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;margin-top:6px;text-align:center">🏆 KDI達成済！</div>':
           `<button onclick="achieveKdi('${k.id}')" style="width:100%;margin-top:6px;padding:7px;background:var(--surf2);color:var(--tx2);border:1px solid var(--bd2);border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">🏆 KDI達成にする</button>`}
