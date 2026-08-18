@@ -14,7 +14,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="4.3.3">
+<meta name="app-version" content="4.3.4">
 
 <style>
 /* ── リセット & ベース ── */
@@ -2281,19 +2281,21 @@ function _softUpdateCA() {
 function _updateKdiRateBars(kdiResults) {
   try {
     const p = curP(); if (!p) return;
-    (p.kdis || []).forEach(k => {
+    (p.kdis || []).forEach(function(k) {
       const res = (kdiResults || {})[k.id] || {};
       const planned = parseFloat(res.planned) || 0;
       const actual  = parseFloat(res.actual)  || 0;
       const rate = planned > 0 ? Math.round((actual / planned) * 100) : null;
       if (rate === null) return;
       const rateColor = rate >= 100 ? '#1D9E75' : rate >= 50 ? 'var(--p)' : '#A32D2D';
-      // 達成率バー
-      const bars = document.querySelectorAll(\`[data-kdi-rate-bar="\${k.id}"]\`);
-      bars.forEach(bar => { bar.style.width = Math.min(rate, 100) + '%'; bar.style.background = rateColor; });
-      // テキスト
-      const texts = document.querySelectorAll(\`[data-kdi-rate-text="\${k.id}"]\`);
-      texts.forEach(txt => { txt.textContent = \`\${actual}回 / \${planned}回　\${rate}%\`; txt.style.color = rateColor; });
+      document.querySelectorAll('[data-kdi-rate-bar="' + k.id + '"]').forEach(function(bar) {
+        bar.style.width = Math.min(rate, 100) + '%';
+        bar.style.background = rateColor;
+      });
+      document.querySelectorAll('[data-kdi-rate-text="' + k.id + '"]').forEach(function(txt) {
+        txt.textContent = actual + '回 / ' + planned + '回　' + rate + '%';
+        txt.style.color = rateColor;
+      });
     });
   } catch(e) {}
 }
