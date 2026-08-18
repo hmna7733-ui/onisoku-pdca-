@@ -14,7 +14,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="4.3.0">
+<meta name="app-version" content="4.2.3">
 
 <style>
 /* ── リセット & ベース ── */
@@ -159,40 +159,6 @@ body{
 }
 .new-btn:active{background:rgba(255,255,255,.2)}
 
-/* ── 新規PDCAボタン（大） ── */
-.new-pdca-btn{
-  width:100%;padding:14px 20px;
-  background:linear-gradient(135deg,rgba(127,119,221,.5),rgba(83,74,183,.6));
-  backdrop-filter:blur(8px);
-  color:#fff;border:1px solid rgba(255,255,255,.25);
-  border-radius:16px;font-size:17px;font-weight:700;
-  cursor:pointer;transition:all .15s;letter-spacing:.5px;
-}
-.new-pdca-btn:active{background:linear-gradient(135deg,rgba(127,119,221,.7),rgba(83,74,183,.8));transform:scale(0.98)}
-
-/* ── 格言 ── */
-.home-quotes{
-  margin-top:12px;
-  height:16px;
-  position:relative;
-}
-.home-quote{
-  position:absolute;top:0;left:0;
-  /* 全幅使用（ロゴ+ボタンエリアをまたいで全幅） */
-  width:100%;
-  font-size:9.5px;font-weight:500;
-  color:rgba(175,169,236,.72);letter-spacing:.15px;
-  line-height:1.6;font-style:italic;
-  white-space:nowrap;
-  opacity:0;
-  transition:opacity .8s ease;
-  pointer-events:none;
-}
-.home-quote.active{
-  opacity:1;
-  pointer-events:auto;
-}
-
 /* ホーム統計バー */
 .home-stats-bar{
   display:flex;gap:12px;margin-bottom:0;
@@ -214,7 +180,7 @@ body{
 /* カードリスト */
 .home-cards-area{
   background:#0f0c1e;
-  padding:24px 16px 40px;
+  padding:16px 16px 40px;
   min-height:300px;
 }
 .home-cards-inner{
@@ -236,26 +202,6 @@ body{
 .paused-section-title{font-size:11px;font-weight:700;color:#b0adc8;letter-spacing:.8px;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:6px}
 .settings-scroll{flex:1;overflow-y:auto;padding:16px;-webkit-overflow-scrolling:touch}
 .settings-btn{display:flex;align-items:center;gap:8px;background:none;border:none;cursor:pointer;padding:0;color:#fff;opacity:.7;transition:opacity .15s;position:relative;z-index:1;font-size:22px}
-.settings-btn:active{opacity:1}
-.account-badge{
-  display:flex;align-items:center;gap:6px;
-  background:rgba(255,255,255,.1);
-  border:1px solid rgba(255,255,255,.2);
-  border-radius:20px;padding:5px 10px 5px 6px;
-  cursor:pointer;transition:background .15s;
-  position:relative;z-index:1;
-}
-.account-badge:active{background:rgba(255,255,255,.2)}
-.account-sync-dot{
-  width:8px;height:8px;border-radius:50%;
-  background:#6B6880;flex-shrink:0;
-  transition:background .3s;
-}
-.account-sync-dot.synced{background:#1D9E75;box-shadow:0 0 6px rgba(29,158,117,.6)}
-.account-sync-dot.syncing{background:#BA7517;animation:pulse-dot .8s infinite}
-@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.3}}
-.account-name{font-size:11px;font-weight:600;color:#fff;max-width:90px;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .settings-btn:active{opacity:1}
 .cat-setting-item{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:0.5px solid var(--bd)}
 .cat-setting-item:last-child{border-bottom:none}
@@ -1560,33 +1506,16 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
           <div class="home-hero-circle2"></div>
         </div>
         <div class="home-hero-top">
-          <div class="home-logo-wrap" style="position:relative;z-index:1">
+          <div class="home-logo-wrap">
             <div class="home-logo-sub">PDCA PLANNER</div>
             <div class="home-logo">鬼速<em>PDCA</em></div>
           </div>
-          <!-- 右上ボタン群: アカウント → 📦 → ⚙ -->
-          <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end;position:relative;z-index:1">
-            <div style="display:flex;gap:8px;align-items:center">
-              <div class="account-badge" id="account-badge" onclick="onAccountBadgeClick()" style="display:none">
-                <div class="account-sync-dot" id="sync-dot"></div>
-                <div class="account-name" id="account-name-label">--</div>
-              </div>
-              <button class="settings-btn" onclick="showTransferModal()" title="データ転送" style="font-size:20px">📦</button>
-              <button class="settings-btn" onclick="goScreen('s-settings')" title="設定">⚙</button>
-            </div>
+          <div style="display:flex;gap:8px;align-items:center;position:relative;z-index:1">
+            <button class="settings-btn" onclick="showTransferModal()" title="データ転送" style="font-size:20px">📦</button>
+            <button class="settings-btn" id="logout-btn" onclick="signOut()" title="ログアウト" style="display:none">🚪</button>
+            <button class="settings-btn" onclick="goScreen('s-settings')" title="設定">⚙</button>
+            <button class="new-btn" onclick="showNewModal()">＋ 新規</button>
           </div>
-        </div>
-        <!-- 格言エリア：ヒーロー全幅で表示 -->
-        <div class="home-quotes" id="home-quotes" style="position:relative;z-index:1">
-          <div class="home-quote active">〜 行動からしか何も生まれない 〜</div>
-          <div class="home-quote">〜 自分の人生を自分で前進させていく楽しさ 〜</div>
-          <div class="home-quote">〜 継続は最強の力なり 〜</div>
-          <div class="home-quote">〜 逃げ続けた先に残るものなど何もない 〜</div>
-          <div class="home-quote">〜 失敗は悪い事じゃない。失敗を恐れて無行動の方が恥ずかしい 〜</div>
-        </div>
-        <!-- ＋新規PDCAボタン（大きめ・独立行） -->
-        <div style="position:relative;z-index:1;margin-top:16px;margin-bottom:16px">
-          <button class="new-pdca-btn" onclick="showNewModal()">＋ 新規PDCA</button>
         </div>
         <div class="home-stats-bar">
           <div class="home-stat-item">
@@ -2075,26 +2004,6 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
       <div class="hdr-title">設定</div>
     </div>
     <div class="settings-scroll">
-
-      <!-- クラウド同期カード -->
-      <div class="s-card" style="margin-bottom:12px;border:1.5px solid rgba(83,74,183,0.25)">
-        <div class="s-card-title" style="margin-bottom:4px">☁️ クラウド同期</div>
-        <div style="font-size:12px;color:var(--tx2);margin-bottom:14px;line-height:1.6">
-          データは入力のたびに自動保存されます。<br>
-          手動で「最新の状態として保存」すると、他のデバイスで更新ボタンを押した時にこの状態が反映されます。
-        </div>
-        <div id="sync-user-info" style="font-size:12px;color:var(--tx3);margin-bottom:12px"></div>
-        <button onclick="forceSaveToCloud()" style="
-          width:100%;padding:13px;
-          background:linear-gradient(135deg,#534AB7,#7F77DD);
-          color:#fff;border:none;border-radius:12px;
-          font-size:14px;font-weight:700;cursor:pointer;
-          display:flex;align-items:center;justify-content:center;gap:8px;
-        ">
-          ☁️ 現在の状態を最新として保存する
-        </button>
-      </div>
-
       <div class="s-card">
         <div class="s-card-title" style="margin-bottom:12px">カテゴリー管理</div>
         <div id="cat-settings-list"></div>
@@ -2112,32 +2021,6 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
   </div>
 
 </div><!-- /#app -->
-
-<!-- ════════ 汎用確認ダイアログ ════════ -->
-<div id="confirm-dialog-wrap" style="
-  position:fixed;inset:0;background:rgba(26,26,46,.55);
-  z-index:999;display:none;align-items:center;justify-content:center;
-  padding:24px;
-">
-  <div style="
-    background:#fff;border-radius:20px;padding:24px 20px 20px;
-    width:100%;max-width:340px;
-    box-shadow:0 8px 32px rgba(0,0,0,.18);
-  ">
-    <div id="confirm-dialog-title" style="font-size:17px;font-weight:800;color:#1a1a2e;margin-bottom:10px"></div>
-    <div id="confirm-dialog-body" style="font-size:14px;color:#6B6880;line-height:1.6;margin-bottom:20px;white-space:pre-line"></div>
-    <div style="display:flex;gap:10px">
-      <button onclick="closeConfirmDialog()" style="
-        flex:1;padding:12px;border:1px solid #E5E7EB;border-radius:10px;
-        background:none;color:#6B6880;font-size:14px;cursor:pointer;font-weight:600;
-      ">キャンセル</button>
-      <button id="confirm-dialog-ok" onclick="execConfirmDialog()" style="
-        flex:1;padding:12px;border:none;border-radius:10px;
-        color:#fff;font-size:14px;font-weight:700;cursor:pointer;
-      ">OK</button>
-    </div>
-  </div>
-</div>
 
 <!-- ════════ 新規作成モーダル ════════ -->
 <div class="modal-wrap" id="new-modal" onclick="e=>{if(e.target===this)cancelNew()}">
@@ -2174,27 +2057,6 @@ const CURRENT_VERSION = document.querySelector('meta[name="app-version"]').conte
 const VERSION_URL = location.origin + location.pathname.replace(/index\.html$/, '') + 'version.json';
 let updateAvailable = false;
 
-// ── 格言ローテーション（フェード） ─────────────────────
-let _quoteTimer = null;
-function startQuoteRotation() {
-  if (_quoteTimer) return;
-  const quotes = document.querySelectorAll('.home-quote');
-  if (!quotes.length) return;
-  let idx = 0;
-  // 最初の1枚をすでに表示（CSSのactiveで表示済み）
-  _quoteTimer = setInterval(() => {
-    const current = quotes[idx];
-    // フェードアウト
-    current.classList.remove('active');
-    // 次のインデックス
-    idx = (idx + 1) % quotes.length;
-    // 少し待ってからフェードイン（クロスフェード感）
-    setTimeout(() => {
-      quotes[idx].classList.add('active');
-    }, 400);
-  }, 6000); // 6秒表示
-}
-
 async function checkForUpdate() {
   try {
     const res = await fetch(VERSION_URL + '?t=' + Date.now(), { cache: 'no-store' });
@@ -2219,25 +2081,6 @@ function doUpdate() {
 async function manualRefresh() {
   const fab = document.getElementById('refresh-fab');
   fab.classList.add('spinning');
-  // Firestoreから最新データを強制取得
-  if (currentUser && db_fs) {
-    try {
-      const doc = await db_fs.collection('users').doc(currentUser.uid).get();
-      if (doc.exists) {
-        const data = doc.data();
-        if (data && data.pdcas) {
-          Object.assign(DB, data);
-          try { localStorage.setItem(STORE_KEY, JSON.stringify(DB)); } catch(e) {}
-          ensureCategories();
-          renderHome();
-          fab.classList.remove('spinning');
-          fab.style.background = '#E1F5EE';
-          setTimeout(() => { fab.style.background = ''; }, 1200);
-          return;
-        }
-      }
-    } catch(e) { console.error('manualRefresh error:', e); }
-  }
   await checkForUpdate();
   setTimeout(() => {
     fab.classList.remove('spinning');
@@ -2248,34 +2091,13 @@ async function manualRefresh() {
   }, 800);
 }
 
-// 起動時 & 30秒ごとに自動チェック
+// 起動時 & 5分ごとに自動チェック
 checkForUpdate();
-setInterval(checkForUpdate, 30 * 1000);
+setInterval(checkForUpdate, 5 * 60 * 1000);
 
 // PWA: Service Worker
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').then(reg => {
-    // 新しいSWが見つかったら即座にskipWaiting→自動リロード
-    reg.addEventListener('updatefound', () => {
-      const newWorker = reg.installing;
-      if (!newWorker) return;
-      newWorker.addEventListener('statechange', () => {
-        if (newWorker.state === 'installed') {
-          newWorker.postMessage('skipWaiting');
-        }
-      });
-    });
-    // 30秒ごとにSW自体の更新を確認
-    setInterval(() => reg.update(), 30 * 1000);
-  }).catch(() => {});
-
-  // SWが切り替わったら即リロード
-  let _swRefreshing = false;
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (_swRefreshing) return;
-    _swRefreshing = true;
-    location.reload();
-  });
+  navigator.serviceWorker.register('sw.js').catch(() => {});
 }
 
 /* ══════════════════════════════════════════
@@ -2293,56 +2115,84 @@ let DB = {
 };
 let CUR = null;
 
-let _unsubscribeFirestore = null; // リアルタイム監視の解除用
-let _isSaving = false; // 自分のsave中はonSnapshotを無視するフラグ
+// ── リアルタイム同期用変数 ──────────────────────────────
+let _unsubscribeFirestore = null; // onSnapshot解除用
+let _isSaving = false;            // 自分のsave中フラグ
+let _saveDebounceTimer = null;    // 連続入力のデバウンス用
 
 function loadDB() {
   try { const d = localStorage.getItem(STORE_KEY); if (d) DB = JSON.parse(d); } catch(e) {}
   ensureCategories();
-  // Firestoreをリアルタイム監視（onSnapshot）
+
   if (currentUser && db_fs) {
-    // 既存の監視を解除
+    // 既存の監視を解除してから再登録
     if (_unsubscribeFirestore) { _unsubscribeFirestore(); _unsubscribeFirestore = null; }
+
     _unsubscribeFirestore = db_fs.collection('users').doc(currentUser.uid)
-      .onSnapshot(doc => {
-        // 自分がsave中の場合はスキップ（自分の書き込みによるトリガーを無視）
+      .onSnapshot({ includeMetadataChanges: false }, doc => {
+        // 自分のsave直後は無視（自己ループ防止）
         if (_isSaving) return;
-        if (doc.exists) {
-          const data = doc.data();
-          if (data && data.pdcas) {
-            const localTs = DB._savedAt || 0;
-            const remoteTs = data._savedAt || 0;
-            // リモートの方が新しい場合のみ反映
-            if (remoteTs > localTs) {
-              Object.assign(DB, data);
-              try { localStorage.setItem(STORE_KEY, JSON.stringify(DB)); } catch(e) {}
-              ensureCategories();
-              renderHome();
-            }
-          }
+        if (!doc.exists) return;
+        const data = doc.data();
+        if (!data || !data.pdcas) return;
+
+        const localTs = DB._savedAt || 0;
+        const remoteTs = data._savedAt || 0;
+
+        // リモートが新しい場合のみ反映
+        if (remoteTs > localTs) {
+          Object.assign(DB, data);
+          try { localStorage.setItem(STORE_KEY, JSON.stringify(DB)); } catch(e) {}
+          ensureCategories();
+          // 現在開いている画面に応じて再描画
+          _rerenderCurrentScreen();
         }
-      }, e => console.error('Firestore onSnapshot:', e));
+      }, e => console.error('onSnapshot error:', e));
   }
 }
+
+// 現在表示中の画面を再描画
+function _rerenderCurrentScreen() {
+  try {
+    const screens = ['s-home','s-menu','s-plan','s-do','s-check','s-adjust','s-settings'];
+    const active = screens.find(id => {
+      const el = document.getElementById(id);
+      return el && (el.style.display === 'flex' || el.style.display === 'block' || el.classList.contains('active'));
+    });
+    if (!active || active === 's-home') { renderHome(); return; }
+    if (active === 's-menu') { renderMenu(); return; }
+    if (active === 's-plan') { renderPlan(); return; }
+    if (active === 's-do')   { renderDo();   return; }
+    if (active === 's-check'){ renderCheck(); return; }
+    if (active === 's-adjust'){ renderAdjust(); return; }
+    renderHome();
+  } catch(e) { renderHome(); }
+}
+
 function saveDB() {
-  DB._savedAt = Date.now(); // 保存タイムスタンプ
+  DB._savedAt = Date.now();
   try { localStorage.setItem(STORE_KEY, JSON.stringify(DB)); } catch(e) {}
-  // Firestoreにも保存（_isSavingフラグで自分のonSnapshotを無視）
-  if (currentUser && db_fs) {
+
+  if (!currentUser || !db_fs) return;
+
+  // デバウンス：連続入力時は最後の操作から300ms後にまとめて保存
+  if (_saveDebounceTimer) clearTimeout(_saveDebounceTimer);
+  _saveDebounceTimer = setTimeout(() => {
     _isSaving = true;
     updateSyncDot('syncing');
     db_fs.collection('users').doc(currentUser.uid)
       .set(JSON.parse(JSON.stringify(DB)))
       .then(() => {
-        setTimeout(() => { _isSaving = false; }, 1000);
         updateSyncDot('synced');
+        // 1秒後にフラグ解除（FirestoreのonSnapshot遅延を考慮）
+        setTimeout(() => { _isSaving = false; }, 1000);
       })
       .catch(e => {
-        console.error('Firestore save:', e);
+        console.error('Firestore save error:', e);
         _isSaving = false;
         updateSyncDot('offline');
       });
-  }
+  }, 300);
 }
 function esc(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -2418,21 +2268,9 @@ function goHome() {
    ホーム
 ══════════════════════════════════════════ */
 function renderHome() {
-  // アカウントバッジ表示制御
-  const badge = document.getElementById('account-badge');
-  const nameLabel = document.getElementById('account-name-label');
-  if (badge && nameLabel) {
-    if (currentUser) {
-      badge.style.display = 'flex';
-      // メールの@前だけ表示
-      const shortName = currentUser.email.split('@')[0];
-      nameLabel.textContent = shortName;
-    } else {
-      badge.style.display = 'none';
-    }
-  }
-  updateSyncDot('synced'); // 初期状態は同期済み
-  startQuoteRotation(); // 格言ローテーション開始
+  // ログアウトボタン表示制御
+  const logoutBtn = document.getElementById('logout-btn');
+  if (logoutBtn) logoutBtn.style.display = currentUser ? '' : 'none';
   ensureCategories();
   const active = DB.pdcas.filter(p => !p.paused && !p.completed);
   const paused = DB.pdcas.filter(p => p.paused && !p.completed);
@@ -5368,74 +5206,8 @@ const PRESET_COLORS = [
 
 let editingColorCatId = null;
 
-// ── 汎用確認ダイアログ ──────────────────────────────────────
-let _confirmCallback = null;
-function showConfirmDialog(title, body, okLabel, okColor, callback) {
-  document.getElementById('confirm-dialog-title').textContent = title;
-  document.getElementById('confirm-dialog-body').textContent = body;
-  const okBtn = document.getElementById('confirm-dialog-ok');
-  okBtn.textContent = okLabel;
-  okBtn.style.background = okColor || '#534AB7';
-  _confirmCallback = callback;
-  document.getElementById('confirm-dialog-wrap').style.display = 'flex';
-}
-function closeConfirmDialog() {
-  document.getElementById('confirm-dialog-wrap').style.display = 'none';
-  _confirmCallback = null;
-}
-function execConfirmDialog() {
-  document.getElementById('confirm-dialog-wrap').style.display = 'none';
-  if (_confirmCallback) { _confirmCallback(); _confirmCallback = null; }
-}
-
-// ── 強制クラウド保存 ─────────────────────────────────────────
-function forceSaveToCloud() {
-  if (!currentUser) {
-    alert('ログインが必要です');
-    return;
-  }
-  const ts = new Date().toLocaleString('ja-JP');
-  showConfirmDialog(
-    '☁️ クラウドに保存',
-    `現在の状態を最新データとしてクラウドに保存します。\n\n他のデバイスで更新ボタンを押すと、この状態が反映されます。\n\n保存日時: ${ts}`,
-    '保存する',
-    'linear-gradient(135deg,#534AB7,#7F77DD)',
-    () => {
-      DB._savedAt = Date.now();
-      try { localStorage.setItem(STORE_KEY, JSON.stringify(DB)); } catch(e) {}
-      if (db_fs) {
-        _isSaving = true;
-        db_fs.collection('users').doc(currentUser.uid)
-          .set(JSON.parse(JSON.stringify(DB)))
-          .then(() => {
-            setTimeout(() => { _isSaving = false; }, 1000);
-            // 完了フィードバック
-            const btn = document.querySelector('[onclick="forceSaveToCloud()"]');
-            if (btn) {
-              const orig = btn.innerHTML;
-              btn.innerHTML = '✅ 保存しました';
-              btn.style.background = '#1D9E75';
-              setTimeout(() => { btn.innerHTML = orig; btn.style.background = 'linear-gradient(135deg,#534AB7,#7F77DD)'; }, 2000);
-            }
-          })
-          .catch(e => { console.error(e); _isSaving = false; alert('保存に失敗しました'); });
-      }
-    }
-  );
-}
-
 function renderSettings() {
   ensureCategories();
-  // クラウド同期情報を更新
-  const syncInfo = document.getElementById('sync-user-info');
-  if (syncInfo) {
-    if (currentUser) {
-      const ts = DB._savedAt ? new Date(DB._savedAt).toLocaleString('ja-JP') : '不明';
-      syncInfo.innerHTML = `<span style="color:var(--teal)">● ログイン中</span>：${currentUser.email}<br>最終保存：${ts}`;
-    } else {
-      syncInfo.innerHTML = '<span style="color:var(--tx3)">● 未ログイン（ローカル保存のみ）</span>';
-    }
-  }
   const list = document.getElementById('cat-settings-list');
   list.innerHTML = DB.categories.map(cat => `
     <div class="cat-setting-item">
@@ -5496,12 +5268,13 @@ function deleteCategory(catId) {
    Firebase 設定・認証
 ══════════════════════════════════════════ */
 const firebaseConfig = {
-  apiKey: "AIzaSyDBYjxsUoIQ8hQxJu2IyWHLHwLKzv9h5K0",
-  authDomain: "onisoku-pdca.firebaseapp.com",
-  projectId: "onisoku-pdca",
-  storageBucket: "onisoku-pdca.firebasestorage.app",
-  messagingSenderId: "301353442887",
-  appId: "1:301353442887:web:197072a17363e2bf285b62"
+  apiKey: "AIzaSyAv35i4MSksru9csqLBbtZvHEJbWfaVQGs",
+  authDomain: "boat-d715f.firebaseapp.com",
+  projectId: "boat-d715f",
+  storageBucket: "boat-d715f.firebasestorage.app",
+  messagingSenderId: "143618120714",
+  appId: "1:143618120714:web:8fe8f3548ada361d5053f3",
+  measurementId: "G-JPB6Y4GNP0"
 };
 
 let firebaseApp, auth, db_fs, currentUser = null;
@@ -5658,60 +5431,15 @@ function restoreSavedAuth() {
   } catch(e) {}
 }
 
-// ── 同期ドット状態制御 ──────────────────────────────────
-function updateSyncDot(state) {
-  // state: 'synced' | 'syncing' | 'offline'
-  const dot = document.getElementById('sync-dot');
-  if (!dot) return;
-  dot.className = 'account-sync-dot';
-  if (state === 'synced') dot.classList.add('synced');
-  else if (state === 'syncing') dot.classList.add('syncing');
-  // offlineはデフォルト（グレー）
-}
-
-// ── アカウントバッジクリック → ログアウト確認 ───────────
-function onAccountBadgeClick() {
-  if (!currentUser) return;
-  const email = currentUser.email;
-  showConfirmDialog(
-    'アカウント',
-    `ログイン中：${email}\n\nログアウトしますか？`,
-    'ログアウト',
-    '#A32D2D',
-    () => {
-      skipLoginMode = false;
-      if (_unsubscribeFirestore) { _unsubscribeFirestore(); _unsubscribeFirestore = null; }
-      if (auth) {
-        auth.signOut().then(() => {
-          const badge = document.getElementById('account-badge');
-          if (badge) badge.style.display = 'none';
-          const ls = document.getElementById('login-screen');
-          if (ls) ls.style.display = 'flex';
-          showAuthTab('login');
-        });
-      }
-    }
-  );
-}
-
 function signOut() {
-  showConfirmDialog(
-    '🚪 ログアウト',
-    'ログアウトしますか？\nデータはアカウントに保存されています。',
-    'ログアウト',
-    '#A32D2D',
-    () => {
-      skipLoginMode = false;
-      if (_unsubscribeFirestore) { _unsubscribeFirestore(); _unsubscribeFirestore = null; }
-      if (auth) {
-        auth.signOut().then(() => {
-          const ls = document.getElementById('login-screen');
-          if (ls) ls.style.display = 'flex';
-          showAuthTab('login');
-        });
-      }
-    }
-  );
+  skipLoginMode = false;
+  if (auth) {
+    auth.signOut().then(() => {
+      const ls = document.getElementById('login-screen');
+      if (ls) ls.style.display = 'flex';
+      showAuthTab('login');
+    });
+  }
 }
 
 /* ══════════════════════════════════════════
