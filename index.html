@@ -2139,8 +2139,9 @@ function loadDB() {
         const localTs = DB._savedAt || 0;
         const remoteTs = data._savedAt || 0;
 
-        // リモートが新しい場合のみ反映
-        if (remoteTs > localTs) {
+        // デバイス間の時刻ズレ(最大2秒)を考慮してリモートが新しい場合に反映
+        // remoteTs が localTs より2秒以上古い場合のみスキップ
+        if (remoteTs >= localTs - 2000) {
           Object.assign(DB, data);
           try { localStorage.setItem(STORE_KEY, JSON.stringify(DB)); } catch(e) {}
           ensureCategories();
@@ -2151,22 +2152,34 @@ function loadDB() {
   }
 }
 
-// 現在表示中の画面を再描画
+// 現在表示中の画面を再描画（画面IDはclasslist.active で判定）
 function _rerenderCurrentScreen() {
   try {
-    const screens = ['s-home','s-menu','s-plan','s-do','s-check','s-adjust','s-settings'];
-    const active = screens.find(id => {
-      const el = document.getElementById(id);
-      return el && (el.style.display === 'flex' || el.style.display === 'block' || el.classList.contains('active'));
-    });
-    if (!active || active === 's-home') { renderHome(); return; }
-    if (active === 's-menu') { renderMenu(); return; }
-    if (active === 's-plan') { renderPlan(); return; }
-    if (active === 's-do')   { renderDo();   return; }
-    if (active === 's-check'){ renderCheck(); return; }
-    if (active === 's-adjust'){ renderAdjust(); return; }
-    renderHome();
-  } catch(e) { renderHome(); }
+    // 実際の画面IDと対応するrender関数のマップ
+    const screenMap = {
+      's-home':          () => renderHome(),
+      's-menu':          () => renderMenu(),
+      's-plan':          () => renderPlan(),
+      's-do':            () => renderDo(),
+      's-ca':            () => renderCA(),        // CHECK & ADJUST
+      's-todolist':      () => renderTodoList(),
+      's-cycle-history': () => renderCycleHistory(),
+      's-settings':      () => renderSettings(),
+    };
+    // activeクラスがついている画面を探す
+    const activeEl = document.querySelector('.screen.active');
+    if (!activeEl) { renderHome(); return; }
+    const activeId = activeEl.id;
+    const renderFn = screenMap[activeId];
+    if (renderFn) {
+      renderFn();
+    } else {
+      renderHome();
+    }
+  } catch(e) {
+    console.error('_rerenderCurrentScreen error:', e);
+    try { renderHome(); } catch(e2) {}
+  }
 }
 
 function saveDB() {
@@ -2175,7 +2188,7 @@ function saveDB() {
 
   if (!currentUser || !db_fs) return;
 
-  // デバウンス：連続入力時は最後の操作から300ms後にまとめて保存
+  // デバウンス：100ms後にまとめて保存（即時性とFirestore負荷のバランス）
   if (_saveDebounceTimer) clearTimeout(_saveDebounceTimer);
   _saveDebounceTimer = setTimeout(() => {
     _isSaving = true;
@@ -2184,8 +2197,8 @@ function saveDB() {
       .set(JSON.parse(JSON.stringify(DB)))
       .then(() => {
         updateSyncDot('synced');
-        // 1秒後にフラグ解除（FirestoreのonSnapshot遅延を考慮）
-        setTimeout(() => { _isSaving = false; }, 1000);
+        // 500ms後にフラグ解除（短縮して受信感度を上げる）
+        setTimeout(() => { _isSaving = false; }, 500);
       })
       .catch(e => {
         console.error('Firestore save error:', e);
