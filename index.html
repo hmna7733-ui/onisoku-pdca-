@@ -14,7 +14,7 @@
      APP VERSION — ここを変更すると
      自動更新チェックが走る
      ════════════════════════════════ -->
-<meta name="app-version" content="4.3.1">
+<meta name="app-version" content="4.3.2">
 
 <style>
 /* ── リセット & ベース ── */
@@ -2096,8 +2096,14 @@ checkForUpdate();
 setInterval(checkForUpdate, 30 * 1000);
 
 // PWA: Service Worker
+// 古いSWを全て削除してキャッシュをクリア
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    regs.forEach(reg => reg.unregister());
+  });
+  caches.keys().then(keys => {
+    keys.forEach(key => caches.delete(key));
+  });
 }
 
 /* ══════════════════════════════════════════
